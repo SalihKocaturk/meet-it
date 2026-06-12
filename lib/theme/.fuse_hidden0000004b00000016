@@ -1,0 +1,48 @@
+import 'package:flutter/material.dart';
+
+import '../core/constants/app_colors.dart';
+
+InputDecoration buildCustomInputDecoration({
+  required String label,
+  String? hint,
+  Widget? suffixIcon,
+  bool isSearch = false, // yeni
+}) {
+  return InputDecoration(
+    labelText: label,
+    floatingLabelBehavior: FloatingLabelBehavior.always,
+    labelStyle: const TextStyle(fontSize: 16, color: context.colors.textSecondary),
+    hintText: hint,
+    hintStyle: const TextStyle(color: context.colors.hint),
+
+    filled: true,
+    fillColor: Colors.transparent,
+
+    prefixIcon: isSearch
+        ? const Icon(Icons.search, color: context.colors.textSecondary)
+        : null,
+
+    contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(
+        color: Color.fromARGB(64, 12, 27, 23),
+        width: 1.2,
+      ),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: context.colors.border, width: 1.2),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(
+        color: Color.fromARGB(255, 20, 46, 39),
+        width: 1.6,
+      ),
+    ),
+
+    suffixIcon: suffixIcon,
+  );
+}
