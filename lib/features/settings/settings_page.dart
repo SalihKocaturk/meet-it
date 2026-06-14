@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +7,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/router/app_routes.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
+import 'package:meetit/core/widgets/langauge_switcher.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friend_code_page.dart';
 import 'package:meetit/features/match/match_page.dart';
@@ -26,10 +28,10 @@ class SettingsPage extends ConsumerWidget {
     QuickAlert.show(
       context: context,
       type: QuickAlertType.confirm,
-      title: 'Çıkış Yap',
-      text: 'Hesabından çıkış yapmak istediğinden emin misin?',
-      confirmBtnText: 'Evet, Çık',
-      cancelBtnText: 'İptal',
+      title: 'settings.sign_out_title'.tr(),
+      text: 'settings.sign_out_confirm'.tr(),
+      confirmBtnText: 'settings.sign_out_yes'.tr(),
+      cancelBtnText: 'common.cancel'.tr(),
       confirmBtnColor: context.colors.error,
       headerBackgroundColor: context.colors.error.withOpacity(0.1),
       onConfirmBtnTap: () async {
@@ -56,7 +58,7 @@ class SettingsPage extends ConsumerWidget {
               padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Ayarlar',
+                child: Text('settings.title'.tr(),
                     style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
@@ -93,7 +95,7 @@ class SettingsPage extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(currentUser?.name ?? 'Kullanıcı',
+                            Text(currentUser?.name ?? 'common.user'.tr(),
                                 style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
@@ -123,7 +125,7 @@ class SettingsPage extends ConsumerWidget {
                           color: context.colors.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Text('Düzenle',
+                        child: Text('common.edit'.tr(),
                             style: TextStyle(
                                 fontSize: 11,
                                 color: context.colors.primary,
@@ -142,29 +144,28 @@ class SettingsPage extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 children: [
                   _SettingsSection(
-                    title: 'Hesap',
+                    title: 'settings.section_account'.tr(),
                     items: [
                       _SettingsItem(
                         icon: Icons.person_outline,
-                        title: 'Profili Düzenle',
+                        title: 'settings.edit_profile'.tr(),
                         onTap: () => context.push(AppRoutes.editProfile),
                       ),
-                      // Şifre değiştir sadece email kullanıcısına
                       if (isEmailUser)
                         _SettingsItem(
                           icon: Icons.lock_outline,
-                          title: 'Şifre Değiştir',
+                          title: 'settings.change_password'.tr(),
                           onTap: () => context.push(AppRoutes.changePassword),
                         ),
                       _SettingsItem(
                         icon: Icons.psychology_outlined,
-                        title: 'Kişilik Testini Yenile',
-                        subtitle: 'Testini tekrar alarak mekan önerilerini güncelle',
+                        title: 'settings.retake_quiz'.tr(),
+                        subtitle: 'settings.retake_quiz_desc'.tr(),
                         onTap: () => context.push(AppRoutes.quiz),
                       ),
                       _SettingsItem(
                         icon: Icons.location_on_outlined,
-                        title: 'Konum Güncelle',
+                        title: 'settings.update_location'.tr(),
                         subtitle: ref.watch(userLocationProvider)?.text,
                         onTap: () async {
                           final current = ref.read(userLocationProvider);
@@ -186,8 +187,8 @@ class SettingsPage extends ConsumerWidget {
                       ),
                       _SettingsItem(
                         icon: Icons.tag,
-                        title: 'Kodla Arkadaş Ekle',
-                        subtitle: '6 haneli kod ile arkadaş ekle veya kodunu paylaş',
+                        title: 'settings.add_friend_code'.tr(),
+                        subtitle: 'settings.add_friend_code_desc'.tr(),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(
                               builder: (_) => const FriendCodePage()),
@@ -199,31 +200,46 @@ class SettingsPage extends ConsumerWidget {
                   const SizedBox(height: 16),
 
                   _SettingsSection(
-                    title: 'Uygulama',
+                    title: 'settings.section_app'.tr(),
                     items: [
                       _SettingsItem(
                         icon: Icons.notifications_outlined,
-                        title: 'Bildirimler',
+                        title: 'settings.notifications'.tr(),
                         onTap: () {},
                       ),
                       _SettingsItem(
                         icon: Icons.language_outlined,
-                        title: 'Dil',
-                        trailing: Text('Türkçe',
-                            style: TextStyle(
-                                fontSize: 13, color: context.colors.textSecondary)),
-                        onTap: () {},
+                        title: 'settings.language'.tr(),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              context.locale.languageCode == 'tr' ? '🇹🇷' : '🇬🇧',
+                              style: const TextStyle(fontSize: 18),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              context.locale.languageCode == 'tr'
+                                  ? 'Türkçe'
+                                  : 'English',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color: context.colors.textSecondary),
+                            ),
+                          ],
+                        ),
+                        onTap: () => showLanguagePickerSheet(context),
                       ),
                       _SettingsItem(
                         icon: Icons.info_outline,
-                        title: 'Hakkında',
+                        title: 'settings.about'.tr(),
                         onTap: () {
                           QuickAlert.show(
                             context: context,
                             type: QuickAlertType.info,
                             title: 'MeetIt',
-                            text: 'Versiyon 1.0.0\nBuluşmak hiç bu kadar kolay olmamıştı.',
-                            confirmBtnText: 'Tamam',
+                            text: 'settings.about_text'.tr(),
+                            confirmBtnText: 'common.ok'.tr(),
                             confirmBtnColor: context.colors.primary,
                           );
                         },
@@ -241,7 +257,7 @@ class SettingsPage extends ConsumerWidget {
                     ),
                     child: ListTile(
                       leading: Icon(Icons.logout, color: context.colors.error),
-                      title: Text('Çıkış Yap',
+                      title: Text('settings.sign_out'.tr(),
                           style: TextStyle(
                               color: context.colors.error,
                               fontWeight: FontWeight.w600)),

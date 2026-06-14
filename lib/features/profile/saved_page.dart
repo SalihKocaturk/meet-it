@@ -14,6 +14,8 @@ import 'package:meetit/features/feed/providers/feed_provider.dart';
 import 'package:meetit/features/friends/friend_code_page.dart';
 import 'package:meetit/features/match/match_page.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
+import 'package:meetit/core/widgets/langauge_switcher.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:quickalert/quickalert.dart';
 
 class ProfileMenuPage extends ConsumerStatefulWidget {
@@ -43,10 +45,10 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
     QuickAlert.show(
       context: context,
       type: QuickAlertType.confirm,
-      title: 'Çıkış Yap',
-      text: 'Hesabından çıkış yapmak istediğinden emin misin?',
-      confirmBtnText: 'Evet, Çık',
-      cancelBtnText: 'İptal',
+      title: 'settings.sign_out_title'.tr(),
+      text: 'settings.sign_out_confirm'.tr(),
+      confirmBtnText: 'settings.sign_out_yes'.tr(),
+      cancelBtnText: 'common.cancel'.tr(),
       confirmBtnColor: context.colors.error,
       onConfirmBtnTap: () async {
         Navigator.pop(context);
@@ -99,7 +101,7 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                     onPressed: () => Navigator.pop(context),
                   ),
                   Text(
-                    'Menü',
+                    'profile.menu'.tr(),
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
@@ -124,7 +126,7 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                           controller: _searchCtrl,
                           onChanged: (v) => setState(() => _query = v),
                           decoration: InputDecoration(
-                            hintText: 'Mekan, kişi veya gönderi ara...',
+                            hintText: 'profile.search_hint'.tr(),
                             hintStyle: TextStyle(
                               color: context.colors.hint,
                               fontSize: 14,
@@ -164,45 +166,47 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                         const SizedBox(height: 24),
 
                         // ── Hareketler ──────────────────────────────────
-                        _SectionLabel('Hareketler'),
+                        _SectionLabel('profile.section_activity'.tr()),
                         const SizedBox(height: 8),
                         _MenuSection(
                           items: [
                             _MenuItem(
                               icon: Icons.bookmark_outline,
-                              title: 'Kaydedilenler',
+                              title: 'profile.saved_posts'.tr(),
                               badge: savedPosts.isNotEmpty
                                   ? savedPosts.length
                                   : null,
                               onTap: () => Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (_) => _PostListPage(
-                                    title: 'Kaydedilenler',
+                                    title: 'profile.saved_posts'.tr(),
                                     posts: savedPosts,
-                                    emptyText: 'Henüz kaydettiğin gönderi yok.',
+                                    emptyText: 'profile.empty_saved'.tr(),
+                                    isSaved: true,
                                   ),
                                 ),
                               ),
                             ),
                             _MenuItem(
                               icon: Icons.favorite_border_rounded,
-                              title: 'Beğenilenler',
+                              title: 'profile.liked_posts'.tr(),
                               badge: likedPosts.isNotEmpty
                                   ? likedPosts.length
                                   : null,
                               onTap: () => Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (_) => _PostListPage(
-                                    title: 'Beğenilenler',
+                                    title: 'profile.liked_posts'.tr(),
                                     posts: likedPosts,
-                                    emptyText: 'Henüz beğendiğin gönderi yok.',
+                                    emptyText: 'profile.empty_liked'.tr(),
+                                    isSaved: false,
                                   ),
                                 ),
                               ),
                             ),
                             _MenuItem(
                               icon: Icons.notifications_outlined,
-                              title: 'Bildirimler',
+                              title: 'profile.notifications'.tr(),
                               onTap: () {},
                             ),
                           ],
@@ -211,32 +215,31 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                         const SizedBox(height: 20),
 
                         // ── Hesap ───────────────────────────────────────
-                        _SectionLabel('Hesap'),
+                        _SectionLabel('settings.section_account'.tr()),
                         const SizedBox(height: 8),
                         _MenuSection(
                           items: [
                             _MenuItem(
                               icon: Icons.person_outline,
-                              title: 'Profili Düzenle',
+                              title: 'settings.edit_profile'.tr(),
                               onTap: () => context.push(AppRoutes.editProfile),
                             ),
                             if (isEmailUser)
                               _MenuItem(
                                 icon: Icons.lock_outline,
-                                title: 'Şifre Değiştir',
+                                title: 'settings.change_password'.tr(),
                                 onTap: () =>
                                     context.push(AppRoutes.changePassword),
                               ),
                             _MenuItem(
                               icon: Icons.psychology_outlined,
-                              title: 'Kişilik Testini Yenile',
-                              subtitle:
-                                  'Testini tekrar alarak mekan önerilerini güncelle',
+                              title: 'settings.retake_quiz'.tr(),
+                              subtitle: 'settings.retake_quiz_desc'.tr(),
                               onTap: () => context.push(AppRoutes.quiz),
                             ),
                             _MenuItem(
                               icon: Icons.location_on_outlined,
-                              title: 'Konum Güncelle',
+                              title: 'settings.update_location'.tr(),
                               subtitle: ref.watch(userLocationProvider)?.text,
                               onTap: () async {
                                 final current = ref.read(userLocationProvider);
@@ -263,9 +266,8 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                             ),
                             _MenuItem(
                               icon: Icons.tag,
-                              title: 'Kodla Arkadaş Ekle',
-                              subtitle:
-                                  '6 haneli kod ile arkadaş ekle veya kodunu paylaş',
+                              title: 'settings.add_friend_code'.tr(),
+                              subtitle: 'settings.add_friend_code_desc'.tr(),
                               onTap: () => Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (_) => const FriendCodePage(),
@@ -278,7 +280,7 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                         const SizedBox(height: 20),
 
                         // ── Uygulama ────────────────────────────────────
-                        _SectionLabel('Uygulama'),
+                        _SectionLabel('settings.section_app'.tr()),
                         SizedBox(height: 8),
                         _MenuSection(
                           items: [
@@ -286,33 +288,34 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                               icon: Icons.dark_mode_outlined,
                               title:
                                   ref.watch(themeModeProvider) == ThemeMode.dark
-                                  ? 'Açık Tema'
-                                  : 'Koyu Tema',
+                                  ? 'settings.light_mode'.tr()
+                                  : 'settings.dark_mode'.tr(),
                               onTap: () =>
                                   ref.read(themeModeProvider.notifier).toggle(),
                             ),
                             _MenuItem(
                               icon: Icons.language_outlined,
-                              title: 'Dil',
+                              title: 'settings.language'.tr(),
                               trailing: Text(
-                                'Türkçe',
+                                context.locale.languageCode == 'tr'
+                                    ? 'Türkçe'
+                                    : 'English',
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: context.colors.textSecondary,
                                 ),
                               ),
-                              onTap: () {},
+                              onTap: () => showLanguagePickerSheet(context),
                             ),
                             _MenuItem(
                               icon: Icons.info_outline,
-                              title: 'Hakkında',
+                              title: 'settings.about'.tr(),
                               onTap: () => QuickAlert.show(
                                 context: context,
                                 type: QuickAlertType.info,
-                                title: 'MeetIt',
-                                text:
-                                    'Versiyon 1.0.0\nBuluşmak hiç bu kadar kolay olmamıştı.',
-                                confirmBtnText: 'Tamam',
+                                title: 'app_name'.tr(),
+                                text: 'settings.about_text'.tr(),
+                                confirmBtnText: 'common.ok'.tr(),
                                 confirmBtnColor: context.colors.primary,
                               ),
                             ),
@@ -334,7 +337,7 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                               color: context.colors.error,
                             ),
                             title: Text(
-                              'Çıkış Yap',
+                              'settings.sign_out'.tr(),
                               style: TextStyle(
                                 color: context.colors.error,
                                 fontWeight: FontWeight.w600,
@@ -477,7 +480,7 @@ class _SearchResults extends StatelessWidget {
     if (results.isEmpty) {
       return Center(
         child: Text(
-          '"$query" için sonuç bulunamadı.',
+          'profile.no_search_result'.tr(namedArgs: {'query': query}),
           style: TextStyle(fontSize: 14, color: context.colors.textSecondary),
         ),
       );
@@ -557,11 +560,13 @@ class _PostListPage extends StatelessWidget {
   final String title;
   final List<PostModel> posts;
   final String emptyText;
+  final bool isSaved;
 
   const _PostListPage({
     required this.title,
     required this.posts,
     required this.emptyText,
+    this.isSaved = true,
   });
 
   @override
@@ -594,7 +599,7 @@ class _PostListPage extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    title == 'Kaydedilenler'
+                    isSaved
                         ? Icons.bookmark_border_rounded
                         : Icons.favorite_border_rounded,
                     size: 56,

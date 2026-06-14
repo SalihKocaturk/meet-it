@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -55,7 +56,11 @@ final editPhotoFileProvider = StateProvider.autoDispose<File?>((ref) => null);
 class EditProfilePage extends ConsumerWidget {
   const EditProfilePage({super.key});
 
-  static const _genders = ['Erkek', 'Kadın', 'Belirtmek istemiyorum'];
+  List<String> _genders(BuildContext context) => [
+        'auth.gender_male'.tr(),
+        'auth.gender_female'.tr(),
+        'auth.gender_other'.tr(),
+      ];
 
   Future<void> _pickPhoto(WidgetRef ref) async {
     final picker = ImagePicker();
@@ -93,8 +98,8 @@ class EditProfilePage extends ConsumerWidget {
       QuickAlert.show(
         context: context,
         type: QuickAlertType.warning,
-        title: 'Eksik Alan',
-        text: 'Ad alanı zorunludur.',
+        title: 'validation.missing_field'.tr(),
+        text: 'edit_profile.missing_name'.tr(),
         confirmBtnColor: context.colors.primary,
       );
       return;
@@ -105,8 +110,8 @@ class EditProfilePage extends ConsumerWidget {
       QuickAlert.show(
         context: context,
         type: QuickAlertType.error,
-        title: 'Geçersiz Yaş',
-        text: '18 yaşından büyük olmalısınız.',
+        title: 'validation.invalid_age'.tr(),
+        text: 'edit_profile.invalid_age'.tr(),
         confirmBtnColor: context.colors.primary,
       );
       return;
@@ -154,15 +159,17 @@ class EditProfilePage extends ConsumerWidget {
       }
 
       if (!context.mounted) return;
+      if (!context.mounted) return;
+      final nav = Navigator.of(context);
       QuickAlert.show(
         context: context,
         type: QuickAlertType.success,
-        title: 'Kaydedildi',
-        text: 'Profilin başarıyla güncellendi.',
+        title: 'edit_profile.saved'.tr(),
+        text: 'edit_profile.profile_updated'.tr(),
         confirmBtnColor: context.colors.primary,
         onConfirmBtnTap: () {
-          Navigator.pop(context);
-          context.pop();
+          nav.pop(); // QuickAlert dialog'unu kapat
+          nav.pop(); // Edit Profile sayfasını kapat
         },
       );
     } catch (e) {
@@ -171,8 +178,8 @@ class EditProfilePage extends ConsumerWidget {
       QuickAlert.show(
         context: context,
         type: QuickAlertType.error,
-        title: 'Hata',
-        text: 'Profil güncellenirken bir hata oluştu.',
+        title: 'common.error'.tr(),
+        text: 'edit_profile.update_error'.tr(),
         confirmBtnColor: context.colors.primary,
       );
     }
@@ -205,7 +212,7 @@ class EditProfilePage extends ConsumerWidget {
           onPressed: () => context.pop(),
         ),
         title: Text(
-          'Profili Düzenle',
+          'edit_profile.title'.tr(),
           style: TextStyle(
             color: context.colors.textPrimary,
             fontWeight: FontWeight.w700,
@@ -216,7 +223,7 @@ class EditProfilePage extends ConsumerWidget {
           TextButton(
             onPressed: isLoading ? null : () => _onSave(context, ref),
             child: Text(
-              'Kaydet',
+              'common.save'.tr(),
               style: TextStyle(
                 color: context.colors.primary,
                 fontWeight: FontWeight.w600,
@@ -293,8 +300,8 @@ class EditProfilePage extends ConsumerWidget {
                   ),
                   label: Text(
                     photoFile != null
-                        ? 'Fotoğraf Seçildi ✓'
-                        : 'Fotoğraf Değiştir',
+                        ? 'edit_profile.photo_selected'.tr()
+                        : 'edit_profile.change_photo'.tr(),
                     style: TextStyle(
                       color: photoFile != null
                           ? context.colors.success
@@ -307,13 +314,13 @@ class EditProfilePage extends ConsumerWidget {
 
               const SizedBox(height: 24),
 
-              _SectionLabel(label: 'Kişisel Bilgiler'),
+              _SectionLabel(label: 'edit_profile.section_personal'.tr()),
               const SizedBox(height: 12),
 
               AppTextField(
                 controller: nameCtrl,
-                label: 'Ad Soyad',
-                hint: 'Adın ve soyadın',
+                label: 'auth.name_surname'.tr(),
+                hint: 'auth.name_hint'.tr(),
                 prefixIcon: Icons.person_outline,
                 textInputAction: TextInputAction.next,
               ),
@@ -358,7 +365,7 @@ class EditProfilePage extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 4, left: 4),
                 child: Text(
-                  'Email adresi değiştirilemez.',
+                  'edit_profile.email_locked'.tr(),
                   style: TextStyle(
                     fontSize: 11,
                     color: context.colors.hint.withOpacity(0.8),
@@ -370,8 +377,8 @@ class EditProfilePage extends ConsumerWidget {
 
               AppTextField(
                 controller: locationCtrl,
-                label: 'Şehir / Konum',
-                hint: 'İstanbul, Ankara...',
+                label: 'auth.city_location'.tr(),
+                hint: 'auth.location_hint'.tr(),
                 prefixIcon: Icons.location_on_outlined,
                 textInputAction: TextInputAction.next,
               ),
@@ -379,8 +386,8 @@ class EditProfilePage extends ConsumerWidget {
 
               AppTextField(
                 controller: ageCtrl,
-                label: 'Yaş (+18)',
-                hint: '18',
+                label: 'auth.age'.tr(),
+                hint: 'auth.age_hint'.tr(),
                 prefixIcon: Icons.cake_outlined,
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.done,
@@ -392,7 +399,7 @@ class EditProfilePage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Cinsiyet',
+                    'auth.gender'.tr(),
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -404,13 +411,13 @@ class EditProfilePage extends ConsumerWidget {
                     initialValue: selectedGender,
                     decoration: _dropdownDecoration(context),
                     hint: Text(
-                      'Seç (opsiyonel)',
+                      'auth.gender_hint'.tr(),
                       style: TextStyle(
                         color: context.colors.hint,
                         fontSize: 14,
                       ),
                     ),
-                    items: _genders
+                    items: _genders(context)
                         .map((g) => DropdownMenuItem(value: g, child: Text(g)))
                         .toList(),
                     onChanged: (v) =>
@@ -442,9 +449,9 @@ class EditProfilePage extends ConsumerWidget {
                             color: context.colors.card,
                           ),
                         )
-                      : const Text(
-                          'Değişiklikleri Kaydet',
-                          style: TextStyle(
+                      : Text(
+                          'edit_profile.save_changes'.tr(),
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,

@@ -16,6 +16,7 @@ import 'package:meetit/features/main/main_page.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/profile/saved_page.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:quickalert/quickalert.dart';
 
 // Profil tab index
@@ -162,9 +163,9 @@ class _ProfileHeader extends ConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _Stat(label: 'Gönderi', value: postsCount),
-                    _Stat(label: 'Arkadaş', value: friendsCount),
-                    _Stat(label: 'Bekleyen', value: sentCount),
+                    _Stat(label: 'profile.posts'.tr(), value: postsCount),
+                    _Stat(label: 'profile.friends'.tr(), value: friendsCount),
+                    _Stat(label: 'profile.pending'.tr(), value: sentCount),
                   ],
                 ),
               ),
@@ -354,7 +355,7 @@ class _PostsGrid extends StatelessWidget {
               ),
               SizedBox(height: 12),
               Text(
-                'Henüz paylaşım yok',
+                'profile.no_posts'.tr(),
                 style: TextStyle(fontSize: 14, color: context.colors.textSecondary),
               ),
             ],
@@ -436,7 +437,7 @@ class _FriendsList extends ConsumerWidget {
 
         child: Center(
           child: Text(
-            'Henüz arkadaşın yok.',
+            'profile.no_friends'.tr(),
             style: TextStyle(color: context.colors.textSecondary),
           ),
         ),
@@ -491,7 +492,7 @@ class _FriendsList extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  'Buluş',
+                  'friends.meet'.tr(),
                   style: TextStyle(
                     fontSize: 12,
                     color: context.colors.primary,
@@ -522,7 +523,7 @@ class _SentRequestsList extends ConsumerWidget {
 
         child: Center(
           child: Text(
-            'Bekleyen istek yok.',
+            'profile.no_pending'.tr(),
             style: TextStyle(color: context.colors.textSecondary),
           ),
         ),
@@ -556,10 +557,10 @@ class _SentRequestsList extends ConsumerWidget {
               onTap: () => QuickAlert.show(
                 context: context,
                 type: QuickAlertType.confirm,
-                title: 'İsteği İptal Et',
-                text: '${f.name} kişisine gönderilen istek iptal edilsin mi?',
-                confirmBtnText: 'İptal Et',
-                cancelBtnText: 'Vazgeç',
+                title: 'friends.cancel_request'.tr(),
+                text: 'friends.cancel_request_confirm'.tr(namedArgs: {'name': f.name}),
+                confirmBtnText: 'friends.cancel_btn'.tr(),
+                cancelBtnText: 'common.cancel'.tr(),
                 confirmBtnColor: Colors.red,
                 onConfirmBtnTap: () {
                   Navigator.pop(context);
@@ -573,8 +574,8 @@ class _SentRequestsList extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.red.withOpacity(0.3)),
                 ),
-                child: const Text(
-                  'İptal',
+                child: Text(
+                  'common.cancel'.tr(),
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.red,

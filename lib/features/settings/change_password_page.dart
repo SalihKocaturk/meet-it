@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -43,8 +44,8 @@ class ChangePasswordPage extends ConsumerWidget {
       QuickAlert.show(
         context: context,
         type: QuickAlertType.warning,
-        title: 'Eksik Alan',
-        text: 'Lütfen tüm alanları doldurun.',
+        title: 'validation.missing_field'.tr(),
+        text: 'change_password.empty_fields'.tr(),
         confirmBtnColor: context.colors.primary,
       );
       return;
@@ -54,8 +55,8 @@ class ChangePasswordPage extends ConsumerWidget {
       QuickAlert.show(
         context: context,
         type: QuickAlertType.error,
-        title: 'Geçersiz Şifre',
-        text: 'Yeni şifre en az 6 karakter olmalıdır.',
+        title: 'validation.invalid_age'.tr(),
+        text: 'change_password.too_short'.tr(),
         confirmBtnColor: context.colors.primary,
       );
       return;
@@ -65,8 +66,8 @@ class ChangePasswordPage extends ConsumerWidget {
       QuickAlert.show(
         context: context,
         type: QuickAlertType.error,
-        title: 'Şifre Uyuşmuyor',
-        text: 'Yeni şifre ve tekrar alanları aynı olmalıdır.',
+        title: 'common.error'.tr(),
+        text: 'change_password.dont_match'.tr(),
         confirmBtnColor: context.colors.primary,
       );
       return;
@@ -93,8 +94,8 @@ class ChangePasswordPage extends ConsumerWidget {
       QuickAlert.show(
         context: context,
         type: QuickAlertType.success,
-        title: 'Başarılı',
-        text: 'Şifren başarıyla güncellendi.',
+        title: 'common.success'.tr(),
+        text: 'change_password.updated'.tr(),
         confirmBtnColor: context.colors.primary,
         onConfirmBtnTap: () {
           Navigator.pop(context);
@@ -105,12 +106,12 @@ class ChangePasswordPage extends ConsumerWidget {
       ref.read(changePasswordLoadingProvider.notifier).state = false;
       if (!context.mounted) return;
       final msg = e.code == 'wrong-password'
-          ? 'Mevcut şifren yanlış.'
-          : 'Şifre güncellenemedi: ${e.message}';
+          ? 'change_password.wrong_password'.tr()
+          : '${'change_password.update_failed'.tr()} ${e.message}';
       QuickAlert.show(
         context: context,
         type: QuickAlertType.error,
-        title: 'Hata',
+        title: 'common.error'.tr(),
         text: msg,
         confirmBtnColor: context.colors.primary,
       );
@@ -138,7 +139,7 @@ class ChangePasswordPage extends ConsumerWidget {
           onPressed: () => context.pop(),
         ),
         title: Text(
-          'Şifre Değiştir',
+          'change_password.title'.tr(),
           style: TextStyle(
             color: context.colors.textPrimary,
             fontWeight: FontWeight.w700,
@@ -171,7 +172,7 @@ class ChangePasswordPage extends ConsumerWidget {
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Güçlü bir şifre büyük harf, rakam ve özel karakter içermelidir.',
+                        'change_password.strong_password_info'.tr(),
                         style: TextStyle(
                           fontSize: 12,
                           color: context.colors.primary,
@@ -184,8 +185,8 @@ class ChangePasswordPage extends ConsumerWidget {
               const SizedBox(height: 28),
               AppTextField(
                 controller: currentCtrl,
-                label: 'Mevcut Şifre',
-                hint: 'Mevcut şifreni gir',
+                label: 'change_password.current_password'.tr(),
+                hint: 'change_password.current_password_hint'.tr(),
                 prefixIcon: Icons.lock_outline,
                 isPassword: true,
                 textInputAction: TextInputAction.next,
@@ -193,8 +194,8 @@ class ChangePasswordPage extends ConsumerWidget {
               const SizedBox(height: 20),
               AppTextField(
                 controller: newCtrl,
-                label: 'Yeni Şifre',
-                hint: 'En az 6 karakter',
+                label: 'change_password.new_password'.tr(),
+                hint: 'change_password.new_password_hint'.tr(),
                 prefixIcon: Icons.lock_reset,
                 isPassword: true,
                 textInputAction: TextInputAction.next,
@@ -202,8 +203,8 @@ class ChangePasswordPage extends ConsumerWidget {
               const SizedBox(height: 20),
               AppTextField(
                 controller: confirmCtrl,
-                label: 'Yeni Şifre (Tekrar)',
-                hint: 'Yeni şifreni tekrar gir',
+                label: 'change_password.confirm_password'.tr(),
+                hint: 'change_password.confirm_password_hint'.tr(),
                 prefixIcon: Icons.lock_reset,
                 isPassword: true,
                 textInputAction: TextInputAction.done,
@@ -230,8 +231,8 @@ class ChangePasswordPage extends ConsumerWidget {
                             color: context.colors.card,
                           ),
                         )
-                      : const Text(
-                          'Şifremi Güncelle',
+                      : Text(
+                          'change_password.update_btn'.tr(),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
