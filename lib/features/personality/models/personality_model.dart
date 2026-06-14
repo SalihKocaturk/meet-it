@@ -2,6 +2,8 @@
 
 import 'dart:math';
 
+import 'package:easy_localization/easy_localization.dart';
+
 /// Uygulamadaki kişilik tipleri
 enum PersonalityType {
   sosyalKelebek,
@@ -14,16 +16,11 @@ enum PersonalityType {
 extension PersonalityTypeX on PersonalityType {
   String get displayName {
     switch (this) {
-      case PersonalityType.sosyalKelebek:
-        return 'Sosyal Kelebek';
-      case PersonalityType.sakinRuh:
-        return 'Sakin Ruh';
-      case PersonalityType.maceraperest:
-        return 'Maceraperest';
-      case PersonalityType.entelektuel:
-        return 'Entelektüel';
-      case PersonalityType.gurme:
-        return 'Gurme';
+      case PersonalityType.sosyalKelebek: return 'personality.social_butterfly'.tr();
+      case PersonalityType.sakinRuh:      return 'personality.calm_soul'.tr();
+      case PersonalityType.maceraperest:  return 'personality.adventurer'.tr();
+      case PersonalityType.entelektuel:   return 'personality.intellectual'.tr();
+      case PersonalityType.gurme:         return 'personality.foodie'.tr();
     }
   }
 
@@ -44,16 +41,11 @@ extension PersonalityTypeX on PersonalityType {
 
   String get description {
     switch (this) {
-      case PersonalityType.sosyalKelebek:
-        return 'Canlı atmosferleri seven, yeni insanlarla kolayca kaynaşan birisin. Enerjin bulaşıcı!';
-      case PersonalityType.sakinRuh:
-        return 'Huzurlu ve sessiz ortamları tercih edersin. Derin sohbetler ve anlamlı anlar senin için değerli.';
-      case PersonalityType.maceraperest:
-        return 'Her deneyimi yaşamak istersin. Sıradışı aktiviteler ve keşifler seni mutlu eder.';
-      case PersonalityType.entelektuel:
-        return 'Kültür, sanat ve bilgi senin için önemli. Derinlikli konuşmalar ve ilham verici mekanlar seni çekiyor.';
-      case PersonalityType.gurme:
-        return 'Yemek senin için bir deneyim. Kaliteli lezzetler ve özel mekanlar arayışındasın.';
+      case PersonalityType.sosyalKelebek: return 'personality.social_butterfly_desc'.tr();
+      case PersonalityType.sakinRuh:      return 'personality.calm_soul_desc'.tr();
+      case PersonalityType.maceraperest:  return 'personality.adventurer_desc'.tr();
+      case PersonalityType.entelektuel:   return 'personality.intellectual_desc'.tr();
+      case PersonalityType.gurme:         return 'personality.foodie_desc'.tr();
     }
   }
 

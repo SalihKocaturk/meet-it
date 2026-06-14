@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -120,7 +121,10 @@ class _QuizPageState extends ConsumerState<QuizPage>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Soru ${quizState.currentQuestionIndex + 1} / ${kQuizQuestions.length}',
+                          'quiz.question_of'.tr(namedArgs: {
+                            'current': '${quizState.currentQuestionIndex + 1}',
+                            'total': '${kQuizQuestions.length}',
+                          }),
                           style: TextStyle(
                             fontSize: 12,
                             color: context.colors.textSecondary,
@@ -152,7 +156,7 @@ class _QuizPageState extends ConsumerState<QuizPage>
               // Başlık
               Center(
                 child: Text(
-                  '🧠 Kişilik Testi',
+                  '🧠 ${'quiz.title'.tr()}',
                   style: TextStyle(
                     fontSize: 13,
                     color: context.colors.primary,
@@ -218,7 +222,7 @@ class _QuizPageState extends ConsumerState<QuizPage>
                       elevation: 0,
                     ),
                     child: Text(
-                      quizState.isLastQuestion ? 'Sonucu Gör 🎉' : 'Devam Et',
+                      quizState.isLastQuestion ? 'quiz.see_results'.tr() : 'common.continue'.tr(),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -341,7 +345,7 @@ class _ResultPage extends ConsumerWidget {
               SizedBox(height: 12),
 
               Text(
-                'Kişilik Profiliniz Hazır!',
+                'quiz.profile_ready'.tr(),
                 style: TextStyle(
                   fontSize: 16,
                   color: context.colors.textSecondary,
@@ -375,7 +379,10 @@ class _ResultPage extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    '${secondary.emoji} ${secondary.displayName} de var',
+                    'quiz.secondary_type'.tr(namedArgs: {
+                      'emoji': secondary.emoji,
+                      'name': secondary.displayName,
+                    }),
                     style: TextStyle(
                       fontSize: 13,
                       color: context.colors.primary,
@@ -420,7 +427,7 @@ class _ResultPage extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Kişilik Dağılımınız',
+                      'quiz.personality_distribution'.tr(),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -461,7 +468,7 @@ class _ResultPage extends ConsumerWidget {
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Mekan önerileri profilinize göre kişiselleştirilir!',
+                        'quiz.venue_personalized'.tr(),
                         style: TextStyle(
                           fontSize: 12,
                           color: context.colors.primary,
@@ -495,9 +502,9 @@ class _ResultPage extends ConsumerWidget {
                     ),
                     elevation: 0,
                   ),
-                  child: const Text(
-                    'Uygulamayı Keşfet! 🚀',
-                    style: TextStyle(
+                  child: Text(
+                    'quiz.explore_app'.tr(),
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
@@ -514,7 +521,7 @@ class _ResultPage extends ConsumerWidget {
                   ref.read(quizProvider.notifier).reset();
                 },
                 child: Text(
-                  'Testi Tekrar Al',
+                  'quiz.retake_test'.tr(),
                   style: TextStyle(
                     color: context.colors.textSecondary,
                     fontSize: 13,
