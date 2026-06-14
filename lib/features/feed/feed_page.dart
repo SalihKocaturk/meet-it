@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
@@ -26,15 +27,25 @@ class FeedPage extends ConsumerWidget {
         ),
         backgroundColor: context.colors.primary,
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Paylaş',
-            style: TextStyle(
+        label: Text('feed.share_btn'.tr(),
+            style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,
                 fontSize: 14)),
         elevation: 3,
       ),
       body: SafeArea(
-        child: CustomScrollView(
+        child: RefreshIndicator(
+          color: context.colors.primary,
+          backgroundColor: context.colors.card,
+          onRefresh: () async {
+            await Future.wait([
+              ref.read(feedProvider.notifier).loadFeed(),
+              Future.delayed(const Duration(milliseconds: 700)),
+            ]);
+          },
+          child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             // ── Header ────────────────────────────────────────────────────
             SliverToBoxAdapter(
@@ -43,12 +54,12 @@ class FeedPage extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('MeetIt Feed',
+                    Text('feed.title'.tr(),
                         style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
                             color: context.colors.textPrimary)),
-                    Text('Buluşmaları keşfet',
+                    Text('feed.subtitle'.tr(),
                         style: TextStyle(
                             fontSize: 13,
                             color: context.colors.textSecondary)),
@@ -86,8 +97,8 @@ class FeedPage extends ConsumerWidget {
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12))),
-                        child: const Text('Tekrar Dene',
-                            style: TextStyle(color: Colors.white)),
+                        child: Text('common.retry'.tr(),
+                            style: const TextStyle(color: Colors.white)),
                       ),
                     ],
                   ),
@@ -104,13 +115,13 @@ class FeedPage extends ConsumerWidget {
                       Text('🍽️',
                           style: TextStyle(fontSize: 56)),
                       SizedBox(height: 16),
-                      Text('Henüz paylaşım yok',
+                      Text('feed.no_posts'.tr(),
                           style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
                               color: context.colors.textPrimary)),
                       SizedBox(height: 8),
-                      Text('İlk buluşmayı sen paylaş!',
+                      Text('feed.be_first'.tr(),
                           style: TextStyle(
                               fontSize: 14, color: context.colors.textSecondary)),
                       SizedBox(height: 24),
@@ -120,8 +131,8 @@ class FeedPage extends ConsumerWidget {
                               builder: (_) => const CreatePostPage()),
                         ),
                         icon: Icon(Icons.add, color: Colors.white),
-                        label: Text('Buluşmayı Paylaş',
-                            style: TextStyle(color: Colors.white)),
+                        label: Text('feed.share_meetup'.tr(),
+                            style: const TextStyle(color: Colors.white)),
                         style: ElevatedButton.styleFrom(
                             backgroundColor: context.colors.primary,
                             elevation: 0,
@@ -153,6 +164,7 @@ class FeedPage extends ConsumerWidget {
             const SliverToBoxAdapter(child: SizedBox(height: 20)),
           ],
         ),
+        ),
       ),
     );
   }
@@ -168,10 +180,10 @@ class _PostCard extends ConsumerWidget {
 
   String _timeAgo(DateTime dt) {
     final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'az önce';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} dk önce';
-    if (diff.inHours < 24) return '${diff.inHours} sa önce';
-    if (diff.inDays < 7) return '${diff.inDays} gün önce';
+    if (diff.inMinutes < 1) return 'feed.just_now'.tr();
+    if (diff.inMinutes < 60) return '${diff.inMinutes} ${'feed.min_ago'.tr()}';
+    if (diff.inHours < 24) return '${diff.inHours} ${'feed.hr_ago'.tr()}';
+    if (diff.inDays < 7) return '${diff.inDays} ${'feed.days_ago'.tr()}';
     return '${dt.day}/${dt.month}/${dt.year}';
   }
 
@@ -255,10 +267,10 @@ class _PostCard extends ConsumerWidget {
                         QuickAlert.show(
                           context: context,
                           type: QuickAlertType.confirm,
-                          title: 'Postu Sil',
-                          text: 'Bu paylaşım silinsin mi?',
-                          confirmBtnText: 'Sil',
-                          cancelBtnText: 'Vazgeç',
+                          title: 'feed.delete_post'.tr(),
+                          text: 'feed.delete_post_confirm'.tr(),
+                          confirmBtnText: 'common.delete'.tr(),
+                          cancelBtnText: 'common.cancel'.tr(),
                           confirmBtnColor: Colors.red,
                           onConfirmBtnTap: () {
                             Navigator.pop(context);
@@ -273,15 +285,15 @@ class _PostCard extends ConsumerWidget {
                         child: Row(children: [
                           Icon(Icons.edit_outlined, size: 18, color: context.colors.primary),
                           SizedBox(width: 10),
-                          Text('Düzenle'),
+                          Text('common.edit'.tr()),
                         ]),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'delete',
                         child: Row(children: [
-                          Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                          SizedBox(width: 10),
-                          Text('Sil', style: TextStyle(color: Colors.red)),
+                          const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                          const SizedBox(width: 10),
+                          Text('common.delete'.tr(), style: const TextStyle(color: Colors.red)),
                         ]),
                       ),
                     ],
@@ -356,27 +368,64 @@ class _PostCard extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(bottom: Radius.circular(0)),
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(0)),
                 child: CachedNetworkImage(
                   imageUrl: post.postPhotoUrl!,
                   width: double.infinity,
                   height: 220,
                   fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(
+                    width: double.infinity,
+                    height: 220,
+                    color: context.colors.border,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: context.colors.primary,
+                      ),
+                    ),
+                  ),
+                  errorWidget: (_, __, ___) => Container(
+                    width: double.infinity,
+                    height: 220,
+                    color: context.colors.border,
+                    child: Center(
+                      child: Icon(
+                        Icons.image_not_supported_outlined,
+                        size: 36,
+                        color: context.colors.hint,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             )
           else if (post.venuePhotoUrl != null)
             Padding(
               padding: const EdgeInsets.only(top: 12),
-              child: ClipRRect(
-                child: CachedNetworkImage(
-                  imageUrl: post.venuePhotoUrl!,
+              child: CachedNetworkImage(
+                imageUrl: post.venuePhotoUrl!,
+                width: double.infinity,
+                height: 180,
+                fit: BoxFit.cover,
+                color: Colors.black.withOpacity(0.15),
+                colorBlendMode: BlendMode.darken,
+                placeholder: (_, __) => Container(
                   width: double.infinity,
                   height: 180,
-                  fit: BoxFit.cover,
-                  color: Colors.black.withOpacity(0.15),
-                  colorBlendMode: BlendMode.darken,
+                  color: context.colors.border,
+                ),
+                errorWidget: (_, __, ___) => Container(
+                  width: double.infinity,
+                  height: 180,
+                  color: context.colors.primary.withOpacity(0.06),
+                  child: Center(
+                    child: Icon(
+                      Icons.location_on_outlined,
+                      size: 40,
+                      color: context.colors.primary.withOpacity(0.35),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -411,7 +460,7 @@ class _PostCard extends ConsumerWidget {
                       color: isLiked ? Colors.red : context.colors.textSecondary),
                 ),
                 const SizedBox(width: 4),
-                Text('beğeni',
+                Text('feed.likes'.tr(),
                     style: TextStyle(
                         fontSize: 12, color: context.colors.textSecondary)),
                 const Spacer(),
@@ -467,10 +516,10 @@ class _PostCard extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(2)),
                     ),
                   ),
-                  const Text('Gönderiyi Düzenle',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  Text('feed.edit_post'.tr(),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 16),
-                  Text('Değerlendirme',
+                  Text('feed.rating_label'.tr(),
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textSecondary)),
                   const SizedBox(height: 8),
                   Row(
@@ -490,14 +539,14 @@ class _PostCard extends ConsumerWidget {
                     }),
                   ),
                   const SizedBox(height: 16),
-                  Text('Açıklama', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textSecondary)),
+                  Text('feed.description'.tr(), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textSecondary)),
                   const SizedBox(height: 8),
                   TextField(
                     controller: captionCtrl,
                     maxLines: 3,
                     maxLength: 280,
                     decoration: InputDecoration(
-                      hintText: 'Ne yaşadınız?',
+                      hintText: 'feed.what_happened'.tr(),
                       hintStyle: TextStyle(color: context.colors.hint, fontSize: 14),
                       filled: true,
                       fillColor: const Color(0xFFF5F5F5),
@@ -526,8 +575,8 @@ class _PostCard extends ConsumerWidget {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
                       ),
-                      child: const Text('Kaydet',
-                          style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+                      child: Text('common.save'.tr(),
+                          style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
                     ),
                   ),
                 ],
@@ -541,11 +590,11 @@ class _PostCard extends ConsumerWidget {
 
   String _ratingLabel(int r) {
     switch (r) {
-      case 1: return 'Berbattı';
-      case 2: return 'İdare eder';
-      case 3: return 'İyiydi';
-      case 4: return 'Çok güzeldi';
-      case 5: return 'Mükemmeldi! 🎉';
+      case 1: return 'feed.rating_1'.tr();
+      case 2: return 'feed.rating_2'.tr();
+      case 3: return 'feed.rating_3'.tr();
+      case 4: return 'feed.rating_4'.tr();
+      case 5: return 'feed.rating_5'.tr();
       default: return '';
     }
   }

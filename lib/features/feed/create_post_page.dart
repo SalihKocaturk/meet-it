@@ -13,6 +13,7 @@ import 'package:meetit/features/feed/providers/feed_provider.dart';
 import 'package:meetit/features/friends/models/user_friend_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/feed/venue_picker_page.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:quickalert/quickalert.dart';
 
 class CreatePostPage extends ConsumerStatefulWidget {
@@ -112,8 +113,8 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
       QuickAlert.show(
         context: context,
         type: QuickAlertType.warning,
-        title: 'Mekan Gerekli',
-        text: 'Lütfen haritadan buluştuğunuz mekanı seçin.',
+        title: 'validation.missing_field'.tr(),
+        text: 'feed.venue_required'.tr(),
         confirmBtnColor: context.colors.primary,
       );
       return;
@@ -152,8 +153,8 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
     QuickAlert.show(
       context: context,
       type: QuickAlertType.success,
-      title: 'Paylaşıldı!',
-      text: 'Buluşman feed\'e eklendi.',
+      title: 'feed.post_shared'.tr(),
+      text: 'feed.post_shared_desc'.tr(),
       confirmBtnColor: context.colors.primary,
       onConfirmBtnTap: () {
         Navigator.pop(context); // alert kapat
@@ -176,7 +177,7 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
           icon: Icon(Icons.close, color: context.colors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Buluşmayı Paylaş',
+        title: Text('feed.share_meetup'.tr(),
             style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
@@ -192,7 +193,7 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
                       height: 18,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: context.colors.primary))
-                  : Text('Paylaş',
+                  : Text('feed.post'.tr(),
                       style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -223,7 +224,7 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
             SizedBox(height: 20),
 
             // Mekan — haritadan seç
-            const _Label('Buluşulan Mekan *'),
+            _Label('feed.select_venue_label'.tr()),
             SizedBox(height: 8),
             GestureDetector(
               onTap: _pickVenueFromMap,
@@ -250,7 +251,7 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        _venueName ?? 'Haritadan mekan seç',
+                        _venueName ?? 'feed.select_venue_map'.tr(),
                         style: TextStyle(
                           fontSize: 14,
                           color: _venueName != null
@@ -270,10 +271,10 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
             SizedBox(height: 20),
 
             // Arkadaş seç
-            const _Label('Birlikte Buluştuğun Kişi'),
+            _Label('feed.with_friend_label'.tr()),
             SizedBox(height: 8),
             if (connections.isEmpty)
-              Text('Henüz arkadaşın yok.',
+              Text('friends.no_friends'.tr(),
                   style: TextStyle(fontSize: 13, color: context.colors.textSecondary))
             else
               SizedBox(
@@ -325,7 +326,7 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
             const SizedBox(height: 20),
 
             // Yıldız değerlendirmesi
-            const _Label('Bu mekanı değerlendir (opsiyonel)'),
+            _Label('feed.rate_venue_optional'.tr()),
             const SizedBox(height: 10),
             Row(
               children: [
@@ -368,19 +369,19 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
             const SizedBox(height: 20),
 
             // Caption
-            const _Label('Ne yaşadınız? (opsiyonel)'),
+            _Label('feed.caption_label_optional'.tr()),
             const SizedBox(height: 8),
             TextField(
               controller: _captionCtrl,
               maxLines: 3,
               maxLength: 280,
-              decoration: _inputDeco(context, hint: 'Harika bir akşamdı...'),
+              decoration: _inputDeco(context, hint: 'feed.caption_hint'.tr()),
             ),
 
             const SizedBox(height: 20),
 
             // Fotoğraf
-            const _Label('Fotoğraf Ekle (opsiyonel)'),
+            _Label('feed.add_photo'.tr()),
             const SizedBox(height: 8),
             GestureDetector(
               onTap: _pickPhoto,
@@ -429,14 +430,14 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
                                   color: Colors.black.withOpacity(0.35),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Center(
+                                child: Center(
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(Icons.add_a_photo_outlined,
                                           color: Colors.white, size: 32),
                                       SizedBox(height: 6),
-                                      Text('Kendi fotoğrafını ekle',
+                                      Text('feed.add_own_photo'.tr(),
                                           style: TextStyle(
                                               color: Colors.white,
                                               fontSize: 13,
@@ -464,7 +465,7 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
                                 Icon(Icons.add_photo_alternate_outlined,
                                     size: 36, color: context.colors.hint),
                                 SizedBox(height: 6),
-                                Text('Fotoğraf seç',
+                                Text('feed.select_photo'.tr(),
                                     style: TextStyle(
                                         fontSize: 13,
                                         color: context.colors.textSecondary)),
@@ -483,11 +484,11 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
 
   String _ratingLabel(int r) {
     switch (r) {
-      case 1: return 'Berbattı';
-      case 2: return 'İdare eder';
-      case 3: return 'İyiydi';
-      case 4: return 'Çok güzeldi';
-      case 5: return 'Mükemmeldi! 🎉';
+      case 1: return 'feed.rating_1'.tr();
+      case 2: return 'feed.rating_2'.tr();
+      case 3: return 'feed.rating_3'.tr();
+      case 4: return 'feed.rating_4'.tr();
+      case 5: return 'feed.rating_5'.tr();
       default: return '';
     }
   }

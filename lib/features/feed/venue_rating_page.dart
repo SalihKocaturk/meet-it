@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
@@ -46,8 +47,8 @@ class _VenueRatingPageState extends ConsumerState<VenueRatingPage> {
       QuickAlert.show(
         context: context,
         type: QuickAlertType.warning,
-        title: 'Puan Ver',
-        text: 'Lütfen en az 1 yıldız seçin.',
+        title: 'venue_rating.rating_title'.tr(),
+        text: 'venue_rating.no_rating_warning'.tr(),
         confirmBtnColor: context.colors.primary,
       );
       return;
@@ -87,8 +88,8 @@ class _VenueRatingPageState extends ConsumerState<VenueRatingPage> {
     QuickAlert.show(
       context: context,
       type: QuickAlertType.success,
-      title: 'Değerlendirme Paylaşıldı!',
-      text: '${widget.venueName} için değerlendirmen feed\'e eklendi.',
+      title: 'venue_rating.rating_shared'.tr(),
+      text: 'venue_rating.rating_shared_desc'.tr(namedArgs: {'venue': widget.venueName}),
       confirmBtnColor: context.colors.primary,
       onConfirmBtnTap: () {
         Navigator.pop(context); // alert
@@ -110,7 +111,7 @@ class _VenueRatingPageState extends ConsumerState<VenueRatingPage> {
           icon: Icon(Icons.close, color: context.colors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Değerlendir',
+        title: Text('venue_rating.title'.tr(),
             style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
@@ -126,7 +127,7 @@ class _VenueRatingPageState extends ConsumerState<VenueRatingPage> {
                       height: 18,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: context.colors.primary))
-                  : Text('Paylaş',
+                  : Text('feed.share_btn'.tr(),
                       style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -177,7 +178,7 @@ class _VenueRatingPageState extends ConsumerState<VenueRatingPage> {
             SizedBox(height: 28),
 
             // Yıldız puanı
-            Text('Puanın',
+            Text('venue_rating.your_rating'.tr(),
                 style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -224,7 +225,7 @@ class _VenueRatingPageState extends ConsumerState<VenueRatingPage> {
             SizedBox(height: 28),
 
             // Yorum
-            Text('Yorumun (opsiyonel)',
+            Text('venue_rating.comment_label'.tr(),
                 style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -235,8 +236,7 @@ class _VenueRatingPageState extends ConsumerState<VenueRatingPage> {
               maxLines: 3,
               maxLength: 280,
               decoration: InputDecoration(
-                hintText:
-                    'Bu mekan hakkında ne düşünüyorsun?',
+                hintText: 'venue_rating.comment_hint'.tr(),
                 hintStyle: TextStyle(
                     color: context.colors.hint, fontSize: 14),
                 filled: true,
@@ -260,14 +260,14 @@ class _VenueRatingPageState extends ConsumerState<VenueRatingPage> {
             SizedBox(height: 20),
 
             // Birlikte gidilen kişi
-            Text('Birlikte Gittiğin Kişi (opsiyonel)',
+            Text('venue_rating.select_friend'.tr(),
                 style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: context.colors.textPrimary)),
             SizedBox(height: 8),
             if (connections.isEmpty)
-              Text('Arkadaş listeniz boş.',
+              Text('venue_rating.no_friends'.tr(),
                   style: TextStyle(
                       fontSize: 13,
                       color: context.colors.textSecondary))
@@ -342,18 +342,12 @@ class _VenueRatingPageState extends ConsumerState<VenueRatingPage> {
 
   String _ratingLabel(int r) {
     switch (r) {
-      case 1:
-        return 'Berbattı';
-      case 2:
-        return 'İdare eder';
-      case 3:
-        return 'İyiydi';
-      case 4:
-        return 'Çok güzeldi';
-      case 5:
-        return 'Mükemmeldi! 🎉';
-      default:
-        return 'Puan seç';
+      case 1: return 'feed.rating_1'.tr();
+      case 2: return 'feed.rating_2'.tr();
+      case 3: return 'feed.rating_3'.tr();
+      case 4: return 'feed.rating_4'.tr();
+      case 5: return 'feed.rating_5'.tr();
+      default: return 'venue_rating.select_rating'.tr();
     }
   }
 }

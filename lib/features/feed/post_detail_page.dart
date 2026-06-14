@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
@@ -85,10 +87,10 @@ class PostDetailPage extends ConsumerWidget {
                       QuickAlert.show(
                         context: context,
                         type: QuickAlertType.confirm,
-                        title: 'Postu Sil',
-                        text: 'Bu paylaşım silinsin mi?',
-                        confirmBtnText: 'Sil',
-                        cancelBtnText: 'Vazgeç',
+                        title: 'feed.delete_post'.tr(),
+                        text: 'feed.delete_post_confirm'.tr(),
+                        confirmBtnText: 'common.delete'.tr(),
+                        cancelBtnText: 'common.cancel'.tr(),
                         confirmBtnColor: Colors.red,
                         onConfirmBtnTap: () {
                           Navigator.pop(context);
@@ -111,11 +113,11 @@ class PostDetailPage extends ConsumerWidget {
                             color: context.colors.primary,
                           ),
                           SizedBox(width: 10),
-                          Text('Düzenle'),
+                          Text('common.edit'.tr()),
                         ],
                       ),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'delete',
                       child: Row(
                         children: [
@@ -125,7 +127,7 @@ class PostDetailPage extends ConsumerWidget {
                             color: Colors.red,
                           ),
                           SizedBox(width: 10),
-                          Text('Sil', style: TextStyle(color: Colors.red)),
+                          Text('common.delete'.tr(), style: TextStyle(color: Colors.red)),
                         ],
                       ),
                     ),
@@ -245,7 +247,7 @@ class PostDetailPage extends ConsumerWidget {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
                     child: Text(
-                      '${currentPost.likeCount} beğeni',
+                      'feed.like_count'.tr(namedArgs: {'count': '${currentPost.likeCount}'}),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -362,7 +364,7 @@ class PostDetailPage extends ConsumerWidget {
                                 ),
                               if (currentPost.venueLat != null)
                                 Text(
-                                  'Haritada gör →',
+                                  'feed.view_on_map'.tr(),
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: context.colors.primary,
@@ -394,7 +396,7 @@ class PostDetailPage extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Birlikte',
+                              'feed.together'.tr(),
                               style: TextStyle(
                                 fontSize: 11,
                                 color: context.colors.textSecondary,
@@ -419,7 +421,7 @@ class PostDetailPage extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                   child: Text(
-                    _fullDate(currentPost.createdAt),
+                    _fullDate(context, currentPost.createdAt),
                     style: TextStyle(fontSize: 12, color: context.colors.hint),
                   ),
                 ),
@@ -456,9 +458,9 @@ class PostDetailPage extends ConsumerWidget {
             ),
             ListTile(
               leading: Icon(Icons.edit_outlined, color: context.colors.primary),
-              title: const Text(
-                'Düzenle',
-                style: TextStyle(fontWeight: FontWeight.w600),
+              title: Text(
+                'common.edit'.tr(),
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               onTap: () {
                 Navigator.pop(context);
@@ -467,9 +469,9 @@ class PostDetailPage extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(Icons.delete_outline, color: Colors.red),
-              title: const Text(
-                'Sil',
-                style: TextStyle(
+              title: Text(
+                'common.delete'.tr(),
+                style: const TextStyle(
                   fontWeight: FontWeight.w600,
                   color: Colors.red,
                 ),
@@ -479,10 +481,10 @@ class PostDetailPage extends ConsumerWidget {
                 QuickAlert.show(
                   context: context,
                   type: QuickAlertType.confirm,
-                  title: 'Postu Sil',
-                  text: 'Bu paylaşım silinsin mi?',
-                  confirmBtnText: 'Sil',
-                  cancelBtnText: 'Vazgeç',
+                  title: 'feed.delete_post'.tr(),
+                  text: 'feed.delete_post_confirm'.tr(),
+                  confirmBtnText: 'common.delete'.tr(),
+                  cancelBtnText: 'common.cancel'.tr(),
                   confirmBtnColor: Colors.red,
                   onConfirmBtnTap: () {
                     Navigator.pop(context);
@@ -535,13 +537,13 @@ class PostDetailPage extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  const Text(
-                    'Gönderiyi Düzenle',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  Text(
+                    'feed.edit_post'.tr(),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Değerlendirme',
+                    'feed.rating_label'.tr(),
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -572,7 +574,7 @@ class PostDetailPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Açıklama',
+                    'feed.description'.tr(),
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -585,7 +587,7 @@ class PostDetailPage extends ConsumerWidget {
                     maxLines: 3,
                     maxLength: 280,
                     decoration: InputDecoration(
-                      hintText: 'Ne yaşadınız?',
+                      hintText: 'feed.what_happened'.tr(),
                       hintStyle: TextStyle(
                         color: context.colors.hint,
                         fontSize: 14,
@@ -624,9 +626,9 @@ class PostDetailPage extends ConsumerWidget {
                         ),
                         elevation: 0,
                       ),
-                      child: const Text(
-                          'Kaydet',
-                          style: TextStyle(
+                      child: Text(
+                          'common.save'.tr(),
+                          style: const TextStyle(
                               color: Colors.white,
                               fontSize: 15,
                               fontWeight: FontWeight.w700),
@@ -653,28 +655,23 @@ class PostDetailPage extends ConsumerWidget {
 
   String _timeAgo(DateTime dt) {
     final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'az önce';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} dk önce';
-    if (diff.inHours < 24) return '${diff.inHours} sa önce';
-    if (diff.inDays < 7) return '${diff.inDays} gün önce';
+    if (diff.inMinutes < 1) return 'feed.just_now'.tr();
+    if (diff.inMinutes < 60) return '${diff.inMinutes} ${'feed.min_ago'.tr()}';
+    if (diff.inHours < 24) return '${diff.inHours} ${'feed.hr_ago'.tr()}';
+    if (diff.inDays < 7) return '${diff.inDays} ${'feed.days_ago'.tr()}';
     return '${dt.day}/${dt.month}/${dt.year}';
   }
 
-  String _fullDate(DateTime dt) =>
-      '${dt.day} ${_month(dt.month)} ${dt.year}';
-
-  String _month(int m) => [
-        '', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
-        'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
-      ][m];
+  String _fullDate(BuildContext context, DateTime dt) =>
+      DateFormat('d MMMM yyyy', Localizations.localeOf(context).toLanguageTag()).format(dt);
 
   String _ratingLabel(int r) {
     switch (r) {
-      case 1: return 'Berbattı';
-      case 2: return 'İdare eder';
-      case 3: return 'İyiydi';
-      case 4: return 'Çok güzeldi';
-      case 5: return 'Mükemmeldi! 🎉';
+      case 1: return 'feed.rating_1'.tr();
+      case 2: return 'feed.rating_2'.tr();
+      case 3: return 'feed.rating_3'.tr();
+      case 4: return 'feed.rating_4'.tr();
+      case 5: return 'feed.rating_5'.tr();
       default: return '';
     }
   }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -33,6 +34,100 @@ class VenuePickerPage extends StatefulWidget {
 
   @override
   State<VenuePickerPage> createState() => _VenuePickerPageState();
+}
+
+// ── Sonuçlardan her zaman hariç tutulacak Google Place type'ları ─────────────
+const _excludedTypes = {
+  'lodging',           // oteller
+  'real_estate_agency',
+  'insurance_agency',
+  'lawyer',
+  'doctor',
+  'hospital',
+  'pharmacy',
+  'bank',
+  'atm',
+  'finance',
+  'accounting',
+  'embassy',
+  'local_government_office',
+  'courthouse',
+  'funeral_home',
+  'storage',
+  'car_dealer',
+  'car_repair',
+  'gas_station',
+};
+
+// ── Türkçe arama terimi → Google Place type eşleşmesi ───────────────────────
+const _keywordTypeMap = <String, String>{
+  'restoran': 'restaurant',
+  'restaurant': 'restaurant',
+  'yemek': 'restaurant',
+  'lokanta': 'restaurant',
+  'kafe': 'cafe',
+  'cafe': 'cafe',
+  'kahve': 'cafe',
+  'coffee': 'cafe',
+  'bar': 'bar',
+  'pub': 'bar',
+  'müze': 'museum',
+  'muze': 'museum',
+  'kültür': 'museum',
+  'kultur': 'museum',
+  'galeri': 'art_gallery',
+  'sanat': 'art_gallery',
+  'park': 'park',
+  'bahçe': 'park',
+  'sinema': 'movie_theater',
+  'film': 'movie_theater',
+  'tiyatro': 'movie_theater',
+  'alışveriş': 'shopping_mall',
+  'alisveris': 'shopping_mall',
+  'mall': 'shopping_mall',
+  'market': 'supermarket',
+  'spor': 'gym',
+  'gym': 'gym',
+  'fitness': 'gym',
+  'kulüp': 'night_club',
+  'club': 'night_club',
+  'gece': 'night_club',
+  'fırın': 'bakery',
+  'pastane': 'bakery',
+  'bakery': 'bakery',
+  'spa': 'spa',
+  'bowling': 'bowling_alley',
+  'akvaryum': 'aquarium',
+  'hayvanat': 'zoo',
+  'otel': 'lodging',
+  'hotel': 'lodging',
+};
+
+// Keyword içinde eşleşen type'ı döndürür
+String? _mapKeywordToType(String keyword) {
+  final q = keyword.toLowerCase().trim();
+  // Önce tam eşleşme
+  if (_keywordTypeMap.containsKey(q)) return _keywordTypeMap[q];
+  // Sonra içerme kontrolü
+  for (final entry in _keywordTypeMap.entries) {
+    if (q.contains(entry.key)) return entry.value;
+  }
+  return null;
+}
+
+// Bir mekanın yalnızca "istenmeyen" tiplerden oluşup oluşmadığını kontrol et
+bool _shouldExclude(List<String> types, {bool searchingForHotel = false}) {
+  if (types.isEmpty) return false;
+  // types listesindeki HERHANGİ bir type excludedTypes içindeyse çıkar.
+  // İstisna: otel arıyorsa ve types'ta lodging varsa tutmaya devam et.
+  for (final t in types) {
+    if (t == 'lodging') {
+      if (searchingForHotel) continue; // otel aramasında otel göster
+      return true;                     // diğer aramalarda oteli HİÇ gösterme
+    }
+    if (_excludedTypes.contains(t)) return true;
+  }
+  return false;
 }
 
 class _VenuePickerPageState extends State<VenuePickerPage> {
@@ -78,7 +173,7 @@ class _VenuePickerPageState extends State<VenuePickerPage> {
           perm == LocationPermission.deniedForever) {
         setState(() {
           _isLoadingLocation = false;
-          _errorText = 'Konum izni gerekli. Haritadan manuel seçebilirsin.';
+          _errorText = 'venue.permission_error'.tr();
         });
         return;
       }
@@ -99,7 +194,7 @@ class _VenuePickerPageState extends State<VenuePickerPage> {
     } catch (_) {
       setState(() {
         _isLoadingLocation = false;
-        _errorText = 'Konum alınamadı. Haritadan seçebilirsin.';
+        _errorText = 'venue.load_error'.tr();
       });
     }
   }
@@ -134,11 +229,26 @@ class _VenuePickerPageState extends State<VenuePickerPage> {
     });
 
     final places = <_NearbyPlace>[];
+    final bool searchingForHotel =
+        keyword != null && _mapKeywordToType(keyword) == 'lodging';
 
     if (keyword != null && keyword.isNotEmpty) {
-      // Arama varsa keyword ile tek istek
-      final batch = await _fetchNearby(keyword: keyword);
-      places.addAll(batch);
+      // Türkçe terimi önce type'a çevir, bulamazsa keyword olarak gönder
+      final mappedType = _mapKeywordToType(keyword);
+      if (mappedType != null) {
+        // Type eşleşti → sadece type ile ara (çok daha isabetli)
+        final batch = await _fetchNearby(type: mappedType);
+        places.addAll(batch);
+        // Ek olarak keyword ile de ara (isim bazlı eşleşmeler için)
+        final batchKw = await _fetchNearby(type: mappedType, keyword: keyword);
+        for (final p in batchKw) {
+          if (!places.any((x) => x.placeId == p.placeId)) places.add(p);
+        }
+      } else {
+        // Bilinen type yok → keyword ile ara ama sonuçları filtrele
+        final batch = await _fetchNearby(keyword: keyword);
+        places.addAll(batch);
+      }
     } else {
       // Arama yoksa birkaç type
       for (final type in [
@@ -163,12 +273,26 @@ class _VenuePickerPageState extends State<VenuePickerPage> {
       }
     }
 
+    // İstenmeyen tipleri (otel, banka, hastane vb.) çıkar
+    places.removeWhere(
+      (p) => _shouldExclude(p.types, searchingForHotel: searchingForHotel),
+    );
+
     // Her mekanın mesafesini hesapla ve kaydet
     for (final p in places) {
       p.distanceM = _distanceM(_lat!, _lng!, p.lat, p.lng);
     }
-    // Her zaman en yakından en uzağa sırala
-    places.sort((a, b) => a.distanceM.compareTo(b.distanceM));
+    // Yakınlık + puana göre sırala (0.4 km içindekiler puana göre, uzaktakiler mesafeye)
+    places.sort((a, b) {
+      final distDiff = a.distanceM - b.distanceM;
+      if (distDiff.abs() < 400) {
+        // Çok yakınsa puanı önceliklendir
+        final ra = a.rating ?? 0;
+        final rb = b.rating ?? 0;
+        return rb.compareTo(ra);
+      }
+      return distDiff.sign.toInt();
+    });
 
     setState(() {
       _allPlaces = places;
@@ -210,6 +334,8 @@ class _VenuePickerPageState extends State<VenuePickerPage> {
                 '${AppConfig.placesPhotoUrl}?maxwidth=400&photo_reference=$ref&key=${AppConfig.googleMapsApiKey}';
           }
         }
+        final rawTypes = r['types'] as List?;
+        final placeTypes = rawTypes?.map((t) => t as String).toList() ?? [];
         return _NearbyPlace(
           placeId: r['place_id'] as String,
           name: r['name'] as String,
@@ -217,7 +343,9 @@ class _VenuePickerPageState extends State<VenuePickerPage> {
           lat: (loc['lat'] as num).toDouble(),
           lng: (loc['lng'] as num).toDouble(),
           rating: (r['rating'] as num?)?.toDouble(),
+          priceLevel: (r['price_level'] as num?)?.toInt(),
           photoUrl: photoUrl,
+          types: placeTypes,
         );
       }).toList();
     } catch (_) {
@@ -304,7 +432,7 @@ class _VenuePickerPageState extends State<VenuePickerPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Mekan Seç',
+          'venue.picker_title'.tr(),
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
@@ -356,8 +484,8 @@ class _VenuePickerPageState extends State<VenuePickerPage> {
                           Expanded(
                             child: Text(
                               _isLoadingLocation
-                                  ? 'Konum alınıyor...'
-                                  : _locationLabel ?? 'Konumumu Al',
+                                  ? 'venue.location_loading'.tr()
+                                  : _locationLabel ?? 'venue.get_location'.tr(),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: context.colors.primary,
@@ -396,7 +524,7 @@ class _VenuePickerPageState extends State<VenuePickerPage> {
                         ),
                         SizedBox(width: 5),
                         Text(
-                          'Konum Seç',
+                          'venue.change_location'.tr(),
                           style: TextStyle(
                             fontSize: 12,
                             color: context.colors.textPrimary,
@@ -420,7 +548,7 @@ class _VenuePickerPageState extends State<VenuePickerPage> {
               controller: _searchCtrl,
               onChanged: _onSearch,
               decoration: InputDecoration(
-                hintText: 'Mekan ara...',
+                hintText: 'venue.search_hint'.tr(),
                 hintStyle: TextStyle(color: context.colors.hint, fontSize: 14),
                 prefixIcon: Icon(
                   Icons.search,
@@ -479,7 +607,7 @@ class _VenuePickerPageState extends State<VenuePickerPage> {
                         ),
                         SizedBox(height: 12),
                         Text(
-                          'Yakındaki mekanlar yükleniyor...',
+                          'venue.loading_nearby'.tr(),
                           style: TextStyle(
                             fontSize: 13,
                             color: context.colors.textSecondary,
@@ -517,8 +645,8 @@ class _VenuePickerPageState extends State<VenuePickerPage> {
                               size: 16,
                             ),
                             label: Text(
-                              'Haritadan Seç',
-                              style: TextStyle(color: Colors.white),
+                              'venue.select_on_map'.tr(),
+                              style: const TextStyle(color: Colors.white),
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: context.colors.primary,
@@ -535,7 +663,7 @@ class _VenuePickerPageState extends State<VenuePickerPage> {
                 : _filtered.isEmpty
                 ? Center(
                     child: Text(
-                      'Mekan bulunamadı.',
+                      'venue.no_venues'.tr(),
                       style: TextStyle(color: context.colors.textSecondary),
                     ),
                   )
@@ -614,6 +742,17 @@ class _VenuePickerPageState extends State<VenuePickerPage> {
                                     ),
                                   ),
                                 ],
+                                if (p.priceLevel != null) ...[
+                                  SizedBox(width: 8),
+                                  Text(
+                                    '₺' * (p.priceLevel! + 1),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: context.colors.hint,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ],
@@ -667,16 +806,11 @@ class _NearbyPlace {
   final double lng;
   final double? rating;
   final String? photoUrl;
+  final List<String> types;
+  final int? priceLevel; // 0–4
   double distanceM;
 
   _NearbyPlace({
     required this.placeId,
     required this.name,
-    required this.address,
-    required this.lat,
-    required this.lng,
-    this.rating,
-    this.photoUrl,
-    this.distanceM = 0,
-  });
-}
+    required this.a
