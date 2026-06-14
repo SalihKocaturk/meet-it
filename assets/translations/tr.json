@@ -330,10 +330,13 @@
     "search_hint": "Mekan, kişi veya gönderi ara...",
     "no_search_result": "\"{query}\" için sonuç bulunamadı.",
     "saved_venues": "Kaydedilen",
-    "navigated_venues": "Gidilen",
+    "navigated_venues": "Tarifi Alınan",
     "no_saved_venues": "Henüz kaydedilen mekan yok.",
     "no_navigated_venues": "Henüz tarif alınan mekan yok.",
-    "share": "Feedde Paylaş"
+    "share": "Feedde Paylaş",
+    "stat_posts": "Gönderi",
+    "stat_friends": "Arkadaş",
+    "stat_likes": "Beğeni"
   },
 
   "settings": {
@@ -426,5 +429,4 @@
     "adventurer": "Maceraperest",
     "foodie": "Gurme",
     "social_butterfly_desc": "Canlı atmosferleri seven, yeni insanlarla kolayca kaynaşan birisin. Enerjin bulaşıcı!",
-    "calm_soul_desc": "Huzurlu ve sessiz ortamları tercih edersin. Derin sohbetler ve anlamlı anlar senin için değerli.",
-    "adventurer_desc": "Her deneyimi yaşamak istersin. Sıradışı aktiviteler ve keşifler 
+    "calm_soul_desc": "Huzurlu ve sessiz ortamları tercih edersin. Derin sohbetler ve anlamlı anlar senin için değerli

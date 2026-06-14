@@ -330,10 +330,13 @@
     "search_hint": "Search venues, people or posts...",
     "no_search_result": "No results for \"{query}\".",
     "saved_venues": "Saved",
-    "navigated_venues": "Visited",
+    "navigated_venues": "Navigated",
     "no_saved_venues": "No saved venues yet.",
     "no_navigated_venues": "No navigated venues yet.",
-    "share": "Share to Feed"
+    "share": "Share to Feed",
+    "stat_posts": "Posts",
+    "stat_friends": "Friends",
+    "stat_likes": "Likes"
   },
 
   "settings": {
@@ -427,4 +430,4 @@
     "foodie": "Foodie",
     "social_butterfly_desc": "You love lively atmospheres and connect easily with new people. Your energy is contagious!",
     "calm_soul_desc": "You prefer peaceful and quiet environments. Deep conversations and meaningful moments matter to you.",
-    "adventurer_desc": "You want to experience everything. Unusual activities and exploration make 
+    "adventu

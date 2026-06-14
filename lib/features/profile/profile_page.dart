@@ -11,6 +11,7 @@ import 'package:meetit/features/feed/models/post_model.dart';
 import 'package:meetit/features/feed/post_detail_page.dart';
 import 'package:meetit/features/feed/providers/feed_provider.dart';
 import 'package:meetit/features/feed/create_post_page.dart';
+import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/providers/saved_venues_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
@@ -28,13 +29,17 @@ class ProfilePage extends ConsumerWidget {
     final user = ref.watch(currentUserProvider);
     final feedState = ref.watch(feedProvider);
     final tabIndex = ref.watch(profileTabProvider);
+    final connections = ref.watch(connectionsProvider);
 
     // Kendi postları
     final myPosts = feedState.posts
         .where((p) => p.authorUid == (user?.uid ?? ''))
         .toList();
 
-    final savedVenues    = ref.watch(savedVenuesProvider);
+    // Toplam alınan beğeni
+    final totalLikes = myPosts.fold(0, (sum, p) => sum + p.likeCount);
+
+    final savedVenues     = ref.watch(savedVenuesProvider);
     final navigatedVenues = ref.watch(navigatedVenuesProvider);
 
     return Scaffold(
@@ -45,8 +50,8 @@ class ProfilePage extends ConsumerWidget {
               child: _ProfileHeader(
                 user: user,
                 postsCount: myPosts.length,
-                savedCount: savedVenues.length,
-                navigatedCount: navigatedVenues.length,
+                friendsCount: connections.length,
+                totalLikes: totalLikes,
               ),
             ),
             SliverPersistentHeader(
@@ -74,14 +79,14 @@ class ProfilePage extends ConsumerWidget {
 class _ProfileHeader extends ConsumerWidget {
   final UserModel? user;
   final int postsCount;
-  final int savedCount;
-  final int navigatedCount;
+  final int friendsCount;
+  final int totalLikes;
 
   const _ProfileHeader({
     required this.user,
     required this.postsCount,
-    required this.savedCount,
-    required this.navigatedCount,
+    required this.friendsCount,
+    required this.totalLikes,
   });
 
   @override
@@ -162,9 +167,9 @@ class _ProfileHeader extends ConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _Stat(label: 'profile.posts'.tr(), value: postsCount),
-                    _Stat(label: 'profile.saved_venues'.tr(), value: savedCount),
-                    _Stat(label: 'profile.navigated_venues'.tr(), value: navigatedCount),
+                    _Stat(label: 'profile.stat_posts'.tr(), value: postsCount),
+                    _Stat(label: 'profile.stat_friends'.tr(), value: friendsCount),
+                    _Stat(label: 'profile.stat_likes'.tr(), value: totalLikes),
                   ],
                 ),
               ),
@@ -579,7 +584,4 @@ class _VenueTile extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: context.colors.primary.withOpacity(0.08),
+                      p
