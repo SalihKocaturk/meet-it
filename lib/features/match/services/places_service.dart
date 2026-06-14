@@ -55,13 +55,20 @@ class PlacesService {
   }
 
   // ── Kişilik tipi → Places API type eşlemesi ───────────────────────────────
+  //
+  // Google Places'te yemek yerleri çok farklı type'lara dağılır:
+  //   restaurant  → resmi oturmalı restoran
+  //   food        → tüm yemek yerleri (kebapçı, dönerci, fast food dahil)
+  //   meal_takeaway → paket servis / ayaküstü yemek
+  //   meal_delivery → eve servis odaklı
+  // Geniş kapsam için hepsini birlikte arıyoruz.
 
   static const Map<PersonalityType, List<String>> _personalityTypes = {
-    PersonalityType.sosyalKelebek: ['bar', 'night_club', 'restaurant'],
-    PersonalityType.sakinRuh: ['cafe', 'park', 'library'],
-    PersonalityType.maceraperest: ['gym', 'park', 'bowling_alley', 'amusement_park'],
-    PersonalityType.entelektuel: ['museum', 'art_gallery', 'library', 'movie_theater'],
-    PersonalityType.gurme: ['restaurant', 'bakery', 'cafe'],
+    PersonalityType.sosyalKelebek: ['bar', 'night_club', 'restaurant', 'food', 'meal_takeaway'],
+    PersonalityType.sakinRuh:      ['cafe', 'park', 'library', 'bakery'],
+    PersonalityType.maceraperest:  ['gym', 'park', 'bowling_alley', 'amusement_park', 'stadium'],
+    PersonalityType.entelektuel:   ['museum', 'art_gallery', 'library', 'movie_theater', 'tourist_attraction'],
+    PersonalityType.gurme:         ['restaurant', 'food', 'meal_takeaway', 'bakery', 'cafe'],
   };
 
   // ── Kişilik tipi → mekan tipi AĞIRLIK skoru ──────────────────────────────
@@ -109,26 +116,39 @@ class PlacesService {
     },
   };
 
-  // ── Aktivite metni → Places type ──────────────────────────────────────────
+  // ── Aktivite metni → Places type listesi ─────────────────────────────────
+  //
+  // Tek type değil, o kategorideki TÜM Google Places type'larını listele.
+  // "Restoran" seçilince kebapçı, dönerci, fast-food da dahil olsun.
 
-  static const Map<String, String> _activityToType = {
-    'kafe': 'cafe',
-    'kahve': 'cafe',
-    'restoran': 'restaurant',
-    'yemek': 'restaurant',
-    'bar': 'bar',
-    'müze': 'museum',
-    'kültür': 'museum',
-    'galeri': 'art_gallery',
-    'park': 'park',
-    'doğa': 'park',
-    'spor': 'gym',
-    'sinema': 'movie_theater',
-    'alışveriş': 'shopping_mall',
-    'bowling': 'bowling_alley',
-    'kitap': 'library',
-    'spa': 'spa',
-    'eğlence': 'amusement_park',
+  static const Map<String, List<String>> _activityToTypes = {
+    // Yemek — en geniş kapsam
+    'restoran': ['restaurant', 'food', 'meal_takeaway', 'meal_delivery'],
+    'yemek':    ['restaurant', 'food', 'meal_takeaway', 'meal_delivery'],
+    // Kafe
+    'kafe':     ['cafe', 'bakery'],
+    'kahve':    ['cafe', 'bakery'],
+    // Bar / gece
+    'bar':      ['bar', 'night_club'],
+    // Kültür / müze
+    'müze':     ['museum', 'art_gallery', 'tourist_attraction'],
+    'kültür':   ['museum', 'art_gallery', 'tourist_attraction'],
+    // Galeri
+    'galeri':   ['art_gallery', 'museum'],
+    // Park / doğa
+    'park':     ['park', 'campground', 'natural_feature'],
+    'doğa':     ['park', 'campground', 'natural_feature'],
+    // Spor
+    'spor':     ['gym', 'stadium', 'bowling_alley', 'amusement_park'],
+    // Sinema / eğlence
+    'sinema':   ['movie_theater'],
+    'eğlence':  ['amusement_park', 'bowling_alley', 'movie_theater'],
+    // Alışveriş
+    'alışveriş': ['shopping_mall', 'department_store'],
+    // Diğer
+    'bowling':  ['bowling_alley'],
+    'kitap':    ['library', 'book_store'],
+    'spa':      ['spa', 'beauty_salon'],
   };
 
   // ── Ana Arama Metodu ───────────────────────────────────────────────────────
@@ -220,9 +240,10 @@ class PlacesService {
     // Seçili aktiviteler bonus — eğer mekan seçilen aktivite tipindeyse +1
     for (final activity in selectedActivities) {
       final lower = activity.toLowerCase();
-      for (final entry in _activityToType.entries) {
+      for (final entry in _activityToTypes.entries) {
         if (lower.contains(entry.key)) {
-          if (place.types.contains(entry.value)) {
+          // Aktiviteye karşılık gelen type'lardan herhangi biri mekanla eşleşirse bonus
+          if (entry.value.any((t) => place.types.contains(t))) {
             score += 1.0;
             matched++;
           }
@@ -254,48 +275,4 @@ class PlacesService {
 
   // ── Places Nearby Search HTTP ─────────────────────────────────────────────
 
-  static Future<List<PlaceResult>> _fetchNearby({
-    required double lat,
-    required double lng,
-    required String type,
-    int? priceLevel,
-  }) async {
-    final params = <String, String>{
-      'location': '$lat,$lng',
-      'radius': '${AppConfig.defaultSearchRadius}',
-      'type': type,
-      'language': 'tr',
-      'key': AppConfig.googleMapsApiKey,
-    };
-    if (priceLevel != null) {
-      params['minprice'] = '$priceLevel';
-      params['maxprice'] = '$priceLevel';
-    }
-
-    final uri = Uri.parse(AppConfig.placesNearbyUrl)
-        .replace(queryParameters: params);
-
-    try {
-      final response =
-          await http.get(uri).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode != 200) return [];
-
-      final body = jsonDecode(response.body) as Map<String, dynamic>;
-      final status = body['status'] as String?;
-
-      // ignore: avoid_print
-      print('[PlacesService] type=$type status=$status');
-
-      if (status == 'REQUEST_DENIED') {
-        final msg = body['error_message'] ?? 'API key sorunu veya Maps/Places API etkin değil';
-        // ignore: avoid_print
-        print('[PlacesService] ❌ REQUEST_DENIED: $msg');
-        return [];
-      }
-      if (status == 'OVER_QUERY_LIMIT') {
-        // ignore: avoid_print
-        print('[PlacesService] ❌ OVER_QUERY_LIMIT: Günlük kota dolmuş');
-        return [];
-      }
-      if (status != 'OK' && status != 'Z
+  static Future<List<Place
