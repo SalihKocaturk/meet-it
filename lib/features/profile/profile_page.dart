@@ -10,14 +10,12 @@ import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/feed/models/post_model.dart';
 import 'package:meetit/features/feed/post_detail_page.dart';
 import 'package:meetit/features/feed/providers/feed_provider.dart';
-import 'package:meetit/features/friends/models/user_friend_model.dart';
-import 'package:meetit/features/friends/providers/friends_provider.dart';
-import 'package:meetit/features/main/main_page.dart';
-import 'package:meetit/features/match/providers/match_provider.dart';
+import 'package:meetit/features/feed/create_post_page.dart';
+import 'package:meetit/features/match/models/place_result.dart';
+import 'package:meetit/features/match/providers/saved_venues_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/profile/saved_page.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:quickalert/quickalert.dart';
 
 // Profil tab index
 final profileTabProvider = StateProvider.autoDispose<int>((ref) => 0);
@@ -29,14 +27,15 @@ class ProfilePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
     final feedState = ref.watch(feedProvider);
-    final connections = ref.watch(connectionsProvider);
-    final sentRequests = ref.watch(sentRequestsProvider);
     final tabIndex = ref.watch(profileTabProvider);
 
     // Kendi postları
     final myPosts = feedState.posts
         .where((p) => p.authorUid == (user?.uid ?? ''))
         .toList();
+
+    final savedVenues    = ref.watch(savedVenuesProvider);
+    final navigatedVenues = ref.watch(navigatedVenuesProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -46,8 +45,8 @@ class ProfilePage extends ConsumerWidget {
               child: _ProfileHeader(
                 user: user,
                 postsCount: myPosts.length,
-                friendsCount: connections.length,
-                sentCount: sentRequests.length,
+                savedCount: savedVenues.length,
+                navigatedCount: navigatedVenues.length,
               ),
             ),
             SliverPersistentHeader(
@@ -61,8 +60,8 @@ class ProfilePage extends ConsumerWidget {
           ],
           body: switch (tabIndex) {
             0 => _PostsGrid(posts: myPosts),
-            1 => _FriendsList(friends: connections),
-            _ => _SentRequestsList(sent: sentRequests),
+            1 => _SavedVenuesList(venues: savedVenues),
+            _ => _NavigatedVenuesList(venues: navigatedVenues),
           },
         ),
       ),
@@ -75,14 +74,14 @@ class ProfilePage extends ConsumerWidget {
 class _ProfileHeader extends ConsumerWidget {
   final UserModel? user;
   final int postsCount;
-  final int friendsCount;
-  final int sentCount;
+  final int savedCount;
+  final int navigatedCount;
 
   const _ProfileHeader({
     required this.user,
     required this.postsCount,
-    required this.friendsCount,
-    required this.sentCount,
+    required this.savedCount,
+    required this.navigatedCount,
   });
 
   @override
@@ -164,8 +163,8 @@ class _ProfileHeader extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     _Stat(label: 'profile.posts'.tr(), value: postsCount),
-                    _Stat(label: 'profile.friends'.tr(), value: friendsCount),
-                    _Stat(label: 'profile.pending'.tr(), value: sentCount),
+                    _Stat(label: 'profile.saved_venues'.tr(), value: savedCount),
+                    _Stat(label: 'profile.navigated_venues'.tr(), value: navigatedCount),
                   ],
                 ),
               ),
@@ -278,12 +277,12 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
           onTap: () => onTabChanged(0),
         ),
         _Tab(
-          icon: Icons.people_outline,
+          icon: Icons.bookmark_border_outlined,
           isSelected: tabIndex == 1,
           onTap: () => onTabChanged(1),
         ),
         _Tab(
-          icon: Icons.schedule_outlined,
+          icon: Icons.navigation_outlined,
           isSelected: tabIndex == 2,
           onTap: () => onTabChanged(2),
         ),
@@ -422,171 +421,165 @@ class _PlaceholderTile extends StatelessWidget {
   }
 }
 
-// ── Arkadaşlar Listesi ────────────────────────────────────────────────────────
+// ── Kaydedilen Mekanlar ───────────────────────────────────────────────────────
 
-class _FriendsList extends ConsumerWidget {
-  final List<UserFriendModel> friends;
+class _SavedVenuesList extends ConsumerWidget {
+  final List<PlaceResult> venues;
 
-  const _FriendsList({required this.friends});
+  const _SavedVenuesList({required this.venues});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (friends.isEmpty) {
-      return Container(
-        color: context.colors.card,
-
-        child: Center(
-          child: Text(
-            'profile.no_friends'.tr(),
-            style: TextStyle(color: context.colors.textSecondary),
-          ),
-        ),
+    if (venues.isEmpty) {
+      return _EmptyTab(
+        icon: Icons.bookmark_border_outlined,
+        message: 'profile.no_saved_venues'.tr(),
       );
     }
 
-    return Container(
-      color: context.colors.card,
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: venues.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (_, i) => _VenueTile(
+        place: venues[i],
+        trailing: GestureDetector(
+          onTap: () =>
+              ref.read(savedVenuesProvider.notifier).toggle(venues[i]),
+          child: Icon(Icons.bookmark, color: context.colors.primary, size: 22),
+        ),
+      ),
+    );
+  }
+}
 
-      child: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: friends.length,
-        separatorBuilder: (_, _) => const Divider(height: 1, indent: 56),
-        itemBuilder: (_, i) {
-          final f = friends[i];
-          return ListTile(
-            contentPadding: const EdgeInsets.symmetric(vertical: 4),
-            leading: CircularAvatar(
-              name: f.name,
-              photoUrl: f.photoUrl,
-              radius: 22,
-            ),
-            title: Text(
-              f.name,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: context.colors.textPrimary,
+// ── Tarifi Alınan Mekanlar ────────────────────────────────────────────────────
+
+class _NavigatedVenuesList extends ConsumerWidget {
+  final List<PlaceResult> venues;
+
+  const _NavigatedVenuesList({required this.venues});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (venues.isEmpty) {
+      return _EmptyTab(
+        icon: Icons.navigation_outlined,
+        message: 'profile.no_navigated_venues'.tr(),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: venues.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (_, i) {
+        final place = venues[i];
+        return _VenueTile(
+          place: place,
+          trailing: GestureDetector(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => CreatePostPage(
+                  venueName: place.name,
+                  venueAddress: place.vicinity,
+                  venuePhotoUrl: place.photoUrl,
+                  venueLat: place.lat,
+                  venueLng: place.lng,
+                ),
               ),
             ),
-            subtitle: f.personalityProfile != null
-                ? Text(
-                    '${f.personalityProfile!.dominantType.emoji} ${f.personalityProfile!.dominantType.displayName}',
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: context.colors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.share_outlined,
+                      size: 13, color: context.colors.primary),
+                  const SizedBox(width: 4),
+                  Text(
+                    'profile.share'.tr(),
                     style: TextStyle(
-                      fontSize: 12,
+                        fontSize: 12,
+                        color: context.colors.primary,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ── Ortak Venue Tile ──────────────────────────────────────────────────────────
+
+class _VenueTile extends StatelessWidget {
+  final PlaceResult place;
+  final Widget trailing;
+
+  const _VenueTile({required this.place, required this.trailing});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.colors.card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.colors.border),
+      ),
+      child: Row(
+        children: [
+          // Küçük fotoğraf veya emoji
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: place.photoUrl != null
+                ? Image.network(
+                    place.photoUrl!,
+                    width: 52,
+                    height: 52,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => _PlaceholderBox(place),
+                  )
+                : _PlaceholderBox(place),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  place.name,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: context.colors.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (place.vicinity != null)
+                  Text(
+                    place.vicinity!,
+                    style: TextStyle(
+                      fontSize: 11,
                       color: context.colors.textSecondary,
                     ),
-                  )
-                : null,
-            trailing: GestureDetector(
-              onTap: () {
-                ref.read(selectedFriendUidProvider.notifier).state = f.uid;
-                ref.read(mainTabIndexProvider.notifier).state = 2;
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: context.colors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'friends.meet'.tr(),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: context.colors.primary,
-                    fontWeight: FontWeight.w600,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-// ── Bekleyen İstekler ────────────────────────────────────────────────────────
-
-class _SentRequestsList extends ConsumerWidget {
-  final List<UserFriendModel> sent;
-
-  const _SentRequestsList({required this.sent});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (sent.isEmpty) {
-      return Container(
-        color: context.colors.card,
-
-        child: Center(
-          child: Text(
-            'profile.no_pending'.tr(),
-            style: TextStyle(color: context.colors.textSecondary),
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      color: context.colors.card,
-      child: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: sent.length,
-        separatorBuilder: (_, _) => const Divider(height: 1, indent: 56),
-        itemBuilder: (_, i) {
-          final f = sent[i];
-          return ListTile(
-            contentPadding: const EdgeInsets.symmetric(vertical: 4),
-            leading: CircularAvatar(
-              name: f.name,
-              photoUrl: f.photoUrl,
-              radius: 22,
-            ),
-            title: Text(
-              f.name,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: context.colors.textPrimary,
-              ),
-            ),
-            trailing: GestureDetector(
-              onTap: () => QuickAlert.show(
-                context: context,
-                type: QuickAlertType.confirm,
-                title: 'friends.cancel_request'.tr(),
-                text: 'friends.cancel_request_confirm'.tr(namedArgs: {'name': f.name}),
-                confirmBtnText: 'friends.cancel_btn'.tr(),
-                cancelBtnText: 'common.cancel'.tr(),
-                confirmBtnColor: Colors.red,
-                onConfirmBtnTap: () {
-                  Navigator.pop(context);
-                  ref.read(friendsProvider.notifier).cancelSentRequest(f.uid);
-                },
-              ),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.withOpacity(0.3)),
-                ),
-                child: Text(
-                  'common.cancel'.tr(),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.red,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: context.colors.primary.withOpacity(0.08),

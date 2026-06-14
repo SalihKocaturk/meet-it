@@ -252,8 +252,10 @@
     "see_venues": "Mekan Önerilerini Gör",
     "midpoint_section": "📍 İkinizin Buluşma Noktası",
     "other_venues": "Diğer Öneriler",
-    "navigate": "Yol Tarifi",
+    "navigate": "Gitmeye Başla",
     "share_on_feed": "Feed'de Paylaş",
+    "save": "Kaydet",
+    "saved": "Kaydedildi",
     "open_maps": "Haritada Aç",
     "compatibility": "Uyumluluk",
     "activity_types": "Aktivite Türü (Birden Fazla Seçebilirsin)",
@@ -326,7 +328,12 @@
     "empty_saved": "Henüz kaydettiğin gönderi yok.",
     "empty_liked": "Henüz beğendiğin gönderi yok.",
     "search_hint": "Mekan, kişi veya gönderi ara...",
-    "no_search_result": "\"{query}\" için sonuç bulunamadı."
+    "no_search_result": "\"{query}\" için sonuç bulunamadı.",
+    "saved_venues": "Kaydedilen",
+    "navigated_venues": "Gidilen",
+    "no_saved_venues": "Henüz kaydedilen mekan yok.",
+    "no_navigated_venues": "Henüz tarif alınan mekan yok.",
+    "share": "Feedde Paylaş"
   },
 
   "settings": {
@@ -420,8 +427,4 @@
     "foodie": "Gurme",
     "social_butterfly_desc": "Canlı atmosferleri seven, yeni insanlarla kolayca kaynaşan birisin. Enerjin bulaşıcı!",
     "calm_soul_desc": "Huzurlu ve sessiz ortamları tercih edersin. Derin sohbetler ve anlamlı anlar senin için değerli.",
-    "adventurer_desc": "Her deneyimi yaşamak istersin. Sıradışı aktiviteler ve keşifler seni mutlu eder.",
-    "intellectual_desc": "Kültür, sanat ve bilgi senin için önemli. Derinlikli konuşmalar ve ilham verici mekanlar seni çekiyor.",
-    "foodie_desc": "Yemek senin için bir deneyim. Kaliteli lezzetler ve özel mekanlar arayışındasın."
-  }
-}
+    "adventurer_desc": "Her deneyimi yaşamak istersin. Sıradışı aktiviteler ve keşifler 

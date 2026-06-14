@@ -17,6 +17,7 @@ import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/match/providers/venue_search_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
+import 'package:meetit/features/match/providers/saved_venues_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class MatchPage extends ConsumerWidget {
@@ -1495,9 +1496,10 @@ class _PersonalityPill extends StatelessWidget {
 
 // ── Mekan Kartı (Places API) ──────────────────────────────────────────────────
 
-class _VenueCard extends StatelessWidget {
+class _VenueCard extends ConsumerWidget {
   final PlaceResult place;
   final int rank;
+  // ignore: avoid_field_initializers_in_const_classes
   final BuildContext context;
   const _VenueCard({
     required this.place,
@@ -1505,14 +1507,16 @@ class _VenueCard extends StatelessWidget {
     required this.context,
   });
 
-  Color get _rankColor {
+  Color _rankColor(BuildContext ctx) {
     if (rank == 1) return const Color(0xFFFFD700);
     if (rank == 2) return const Color(0xFFC0C0C0);
     if (rank == 3) return const Color(0xFFCD7F32);
-    return context.colors.border;
+    return ctx.colors.border;
   }
 
-  Future<void> _openInMaps() async {
+  Future<void> _openInMaps(WidgetRef ref) async {
+    // Tarifi alınan mekanlara ekle
+    await ref.read(navigatedVenuesProvider.notifier).add(place);
     final uri = Uri.parse(place.googleMapsUrl);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -1520,7 +1524,7 @@ class _VenueCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
@@ -1528,7 +1532,7 @@ class _VenueCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: rank <= 3
-              ? _rankColor.withOpacity(0.5)
+              ? _rankColor(context).withOpacity(0.5)
               : context.colors.border,
         ),
         boxShadow: rank == 1
@@ -1595,7 +1599,7 @@ class _VenueCard extends StatelessWidget {
                       height: 30,
                       decoration: BoxDecoration(
                         color: rank <= 3
-                            ? _rankColor.withOpacity(0.15)
+                            ? _rankColor(context).withOpacity(0.15)
                             : Colors.grey[100],
                         shape: BoxShape.circle,
                       ),
@@ -1716,118 +1720,82 @@ class _VenueCard extends StatelessWidget {
 
                     const Spacer(),
 
-                    // Haritada Gör butonu
+                    // Haritada Gör (küçük link)
                     GestureDetector(
-                      onTap: _openInMaps,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: context.colors.primary,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.map_outlined,
-                              size: 13,
-                              color: Colors.white,
+                      onTap: () async {
+                        final uri = Uri.parse(place.googleMapsUrl);
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        }
+                      },
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.open_in_new, size: 13, color: context.colors.hint),
+                          SizedBox(width: 3),
+                          Text(
+                            'match.open_maps'.tr(),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: context.colors.hint,
+                              decoration: TextDecoration.underline,
                             ),
-                            SizedBox(width: 4),
-                            Text(
-                              'match.open_maps'.tr(),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
 
-                // Paylaş + Değerlendir
+                // ── Kaydet + Gitmeye Başla ───────────────────────────────────
                 const SizedBox(height: 10),
-                GestureDetector(
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => CreatePostPage(
-                        venueName: place.name,
-                        venueAddress: place.vicinity,
-                        venuePhotoUrl: place.photoUrl,
-                        venueLat: place.lat,
-                        venueLng: place.lng,
-                      ),
-                    ),
-                  ),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      color: context.colors.success.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: context.colors.success.withOpacity(0.4),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                Consumer(
+                  builder: (ctx, ref, _) {
+                    final isSaved = ref.watch(savedVenuesProvider
+                        .select((list) => list.any((p) => p.placeId == place.placeId)));
+                    return Row(
                       children: [
-                        Icon(
-                          Icons.share_outlined,
-                          size: 14,
-                          color: context.colors.success,
-                        ),
-                        SizedBox(width: 5),
-                        Text(
-                          'match.share_on_feed'.tr(),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: context.colors.success,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Açık mı?
-                if (place.isOpenNow) ...[
-                  SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF3FB950),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        'match.now_open'.tr(),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: context.colors.success,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+                        // Kaydet butonu
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => ref
+                                .read(savedVenuesProvider.notifier)
+                                .toggle(place),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              decoration: BoxDecoration(
+                                color: isSaved
+                                    ? context.colors.primary.withOpacity(0.12)
+                                    : context.colors.card,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isSaved
+                                      ? context.colors.primary
+                                      : context.colors.border,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    isSaved
+                                        ? Icons.bookmark
+                                        : Icons.bookmark_border_outlined,
+                                    size: 15,
+                                    color: isSaved
+                                        ? context.colors.primary
+                                        : context.colors.textSecondary,
+                                  ),
+                                  SizedBox(width: 5),
+                                  Text(
+                                    isSaved
+                                        ? 'match.saved'.tr()
+                                        : 'match.save'.tr(),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: isSaved
+                                          ? context.colors.primary
+                                          : context.colors.textSecondary,
+           

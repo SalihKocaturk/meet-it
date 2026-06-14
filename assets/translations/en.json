@@ -252,8 +252,10 @@
     "see_venues": "See Venue Suggestions",
     "midpoint_section": "📍 Your Meetup Midpoint",
     "other_venues": "Other Suggestions",
-    "navigate": "Navigate",
+    "navigate": "Get Directions",
     "share_on_feed": "Share on Feed",
+    "save": "Save",
+    "saved": "Saved",
     "open_maps": "Open in Maps",
     "compatibility": "Compatibility",
     "activity_types": "Activity Types (Multi-select)",
@@ -326,7 +328,12 @@
     "empty_saved": "No saved posts yet.",
     "empty_liked": "No liked posts yet.",
     "search_hint": "Search venues, people or posts...",
-    "no_search_result": "No results for \"{query}\"."
+    "no_search_result": "No results for \"{query}\".",
+    "saved_venues": "Saved",
+    "navigated_venues": "Visited",
+    "no_saved_venues": "No saved venues yet.",
+    "no_navigated_venues": "No navigated venues yet.",
+    "share": "Share to Feed"
   },
 
   "settings": {
@@ -420,8 +427,4 @@
     "foodie": "Foodie",
     "social_butterfly_desc": "You love lively atmospheres and connect easily with new people. Your energy is contagious!",
     "calm_soul_desc": "You prefer peaceful and quiet environments. Deep conversations and meaningful moments matter to you.",
-    "adventurer_desc": "You want to experience everything. Unusual activities and exploration make you happy.",
-    "intellectual_desc": "Culture, art and knowledge are important to you. Deep discussions and inspiring venues attract you.",
-    "foodie_desc": "Food is an experience for you. You seek quality flavors and special venues."
-  }
-}
+    "adventurer_desc": "You want to experience everything. Unusual activities and exploration make 
