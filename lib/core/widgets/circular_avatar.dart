@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 class CircularAvatar extends StatelessWidget {
@@ -32,24 +33,8 @@ class CircularAvatar extends StatelessWidget {
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // 1) URL varsa network image göster
-    if (photoUrl != null && photoUrl!.isNotEmpty) {
-      return CircleAvatar(
-        radius: radius,
-        backgroundImage: NetworkImage(photoUrl!),
-        backgroundColor: Colors.grey[200],
-      );
-    }
-
-    // 2) ImageProvider verilmişse kullan
-    if (image != null) {
-      return CircleAvatar(radius: radius, backgroundImage: image);
-    }
-
-    // 3) Harf avatar
-    final text = name?.isNotEmpty == true ? _initials(name!) : '?';
+  Widget _letterAvatar(String seed) {
+    final text = seed.isNotEmpty ? _initials(seed) : '?';
     return CircleAvatar(
       radius: radius,
       backgroundColor: _pickColor(text),
@@ -62,5 +47,33 @@ class CircularAvatar extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // 1) URL varsa CachedNetworkImage göster — hata durumunda harfli avatara düş
+    if (photoUrl != null && photoUrl!.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: photoUrl!,
+        imageBuilder: (_, provider) => CircleAvatar(
+          radius: radius,
+          backgroundImage: provider,
+          backgroundColor: Colors.grey[200],
+        ),
+        placeholder: (_, __) => CircleAvatar(
+          radius: radius,
+          backgroundColor: Colors.grey[200],
+        ),
+        errorWidget: (_, __, ___) => _letterAvatar(name ?? ''),
+      );
+    }
+
+    // 2) ImageProvider verilmişse kullan
+    if (image != null) {
+      return CircleAvatar(radius: radius, backgroundImage: image);
+    }
+
+    // 3) Harf avatar
+    return _letterAvatar(name ?? '');
   }
 }

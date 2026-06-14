@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
@@ -64,7 +65,7 @@ class _MainBottomNavBar extends ConsumerWidget {
               _NavItem(
                 icon: Icons.dynamic_feed_outlined,
                 activeIcon: Icons.dynamic_feed,
-                label: 'Feed',
+                label: 'nav.feed'.tr(),
                 isSelected: currentIndex == 0,
                 onTap: () =>
                     ref.read(mainTabIndexProvider.notifier).state = 0,
@@ -73,7 +74,7 @@ class _MainBottomNavBar extends ConsumerWidget {
               _NavItem(
                 icon: Icons.people_outline,
                 activeIcon: Icons.people,
-                label: 'Arkadaşlar',
+                label: 'nav.friends'.tr(),
                 isSelected: currentIndex == 1,
                 onTap: () =>
                     ref.read(mainTabIndexProvider.notifier).state = 1,
@@ -82,7 +83,7 @@ class _MainBottomNavBar extends ConsumerWidget {
               _NavItem(
                 icon: Icons.location_on_outlined,
                 activeIcon: Icons.location_on,
-                label: 'Buluşma',
+                label: 'nav.meetup'.tr(),
                 isSelected: currentIndex == 2,
                 onTap: () =>
                     ref.read(mainTabIndexProvider.notifier).state = 2,
@@ -123,7 +124,7 @@ class _MainBottomNavBar extends ConsumerWidget {
                       ),
                       SizedBox(height: 3),
                       Text(
-                        'Profil',
+                        'nav.profile'.tr(),
                         style: TextStyle(
                           fontSize: 10,
                           color: currentIndex == 3
