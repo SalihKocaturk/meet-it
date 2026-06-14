@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -46,7 +47,7 @@ class MatchPage extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Buluşma Yeri Bul',
+                            'match.title'.tr(),
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w700,
@@ -55,7 +56,7 @@ class MatchPage extends ConsumerWidget {
                           ),
                           SizedBox(height: 4),
                           Text(
-                            'Arkadaşın ve senin kişiliğine göre özel mekan önerileri.',
+                            'match.subtitle'.tr(),
                             style: TextStyle(
                               fontSize: 13,
                               color: context.colors.textSecondary,
@@ -85,7 +86,7 @@ class MatchPage extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Senin Konumun',
+                            'match.your_location'.tr(),
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -95,7 +96,7 @@ class MatchPage extends ConsumerWidget {
                           const SizedBox(height: 8),
                           _LocationField(
                             defaultHint:
-                                currentUser?.location ?? 'Konumunu gir',
+                                currentUser?.location ?? 'match.location_hint'.tr(),
                           ),
                         ],
                       ),
@@ -110,7 +111,7 @@ class MatchPage extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Buluşmak İstediğin Arkadaş',
+                            'match.friend_to_meet'.tr(),
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -169,7 +170,7 @@ class MatchPage extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Aktivite Türü (Birden Fazla Seçebilirsin)',
+                            'match.activity_types'.tr(),
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -191,7 +192,7 @@ class MatchPage extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Fiyat Aralığı',
+                            'match.price_level'.tr(),
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -272,8 +273,8 @@ class MatchPage extends ConsumerWidget {
                                     Icons.search,
                                     color: Colors.white,
                                   ),
-                                  label: const Text(
-                                    'Mekan Önerilerini Gör',
+                                  label: Text(
+                                    'match.see_venues'.tr(),
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
@@ -300,7 +301,7 @@ class MatchPage extends ConsumerWidget {
                                 Padding(
                                   padding: EdgeInsets.only(top: 8),
                                   child: Text(
-                                    '* Önce bir arkadaş seç',
+                                    'match.select_friend_hint'.tr(),
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: context.colors.hint,
@@ -348,7 +349,7 @@ class _PersonalityBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Senin Kişilik Tipin: ${type.displayName}',
+                  'match.personality_type_label'.tr(namedArgs: {'name': type.displayName}),
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -356,7 +357,7 @@ class _PersonalityBanner extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Mekan önerileri bu tipe göre kişiselleştirildi.',
+                  'match.personality_customized'.tr(),
                   style: TextStyle(
                     fontSize: 11,
                     color: context.colors.textSecondary,
@@ -436,7 +437,7 @@ class _CompatibilityCard extends StatelessWidget {
                 ),
               ),
               Text(
-                'Uyum',
+                'match.compatibility'.tr(),
                 style: TextStyle(
                   fontSize: 11,
                   color: context.colors.textSecondary,
@@ -702,7 +703,7 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
                                 ),
                                 SizedBox(width: 8),
                                 Text(
-                                  'Adres alınıyor...',
+                                  'map_picker.searching'.tr(),
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: context.colors.textSecondary,
@@ -711,7 +712,7 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
                               ],
                             )
                           : Text(
-                              _address ?? 'Haritayı sürükle',
+                              _address ?? 'map_picker.drag_hint'.tr(),
                               style: TextStyle(
                                 fontSize: 13,
                                 color: context.colors.textPrimary,
@@ -779,7 +780,7 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
                         color: context.colors.card,
                       ),
                     )
-                  : const Row(
+                  : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
@@ -789,7 +790,7 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
                         ),
                         SizedBox(width: 8),
                         Text(
-                          'Bu Konumu Onayla',
+                          'map_picker.confirm'.tr(),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -884,7 +885,7 @@ class _EmptyFriendsCard extends StatelessWidget {
           Icon(Icons.people_outline, color: context.colors.hint),
           SizedBox(width: 12),
           Text(
-            'Önce Arkadaşlar sekmesinden arkadaş ekle',
+            'match.add_friend_hint'.tr(),
             style: TextStyle(color: context.colors.textSecondary, fontSize: 13),
           ),
         ],
@@ -898,15 +899,16 @@ class _EmptyFriendsCard extends StatelessWidget {
 class _ActivityGrid extends ConsumerWidget {
   const _ActivityGrid();
 
+  // (key used in provider, translation key, icon)
   static const _activities = [
-    ('Kafe', Icons.local_cafe_outlined),
-    ('Restoran', Icons.restaurant_outlined),
-    ('Park', Icons.park_outlined),
-    ('Sinema', Icons.movie_outlined),
-    ('Alışveriş', Icons.shopping_bag_outlined),
-    ('Spor', Icons.fitness_center_outlined),
-    ('Kültür/Müze', Icons.museum_outlined),
-    ('Bar', Icons.local_bar_outlined),
+    ('Kafe', 'match.activity_cafe', Icons.local_cafe_outlined),
+    ('Restoran', 'match.activity_restaurant', Icons.restaurant_outlined),
+    ('Park', 'match.activity_park', Icons.park_outlined),
+    ('Sinema', 'match.activity_cinema', Icons.movie_outlined),
+    ('Alışveriş', 'match.activity_shopping', Icons.shopping_bag_outlined),
+    ('Spor', 'match.activity_sports', Icons.fitness_center_outlined),
+    ('Kültür/Müze', 'match.activity_culture', Icons.museum_outlined),
+    ('Bar', 'match.activity_bar', Icons.local_bar_outlined),
   ];
 
   @override
@@ -944,7 +946,7 @@ class _ActivityGrid extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  a.$2,
+                  a.$3,
                   size: 16,
                   color: isSelected
                       ? Colors.white
@@ -952,7 +954,7 @@ class _ActivityGrid extends ConsumerWidget {
                 ),
                 SizedBox(width: 6),
                 Text(
-                  a.$1,
+                  a.$2.tr(),
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -975,12 +977,13 @@ class _ActivityGrid extends ConsumerWidget {
 class _PriceFilter extends ConsumerWidget {
   const _PriceFilter();
 
+  // (price level int?, translation key, ₺ symbol)
   static const _options = [
-    (null, 'Tümü', ''),
-    (1, 'Ucuz', '₺'),
-    (2, 'Orta', '₺₺'),
-    (3, 'Pahalı', '₺₺₺'),
-    (4, 'Lüks', '₺₺₺₺'),
+    (null, 'match.price_all', ''),
+    (1, 'match.price_cheap', '₺'),
+    (2, 'match.price_mid', '₺₺'),
+    (3, 'match.price_expensive', '₺₺₺'),
+    (4, 'match.price_luxury', '₺₺₺₺'),
   ];
 
   @override
@@ -1031,7 +1034,7 @@ class _PriceFilter extends ConsumerWidget {
                       SizedBox(width: 4),
                     ],
                     Text(
-                      opt.$2,
+                      opt.$2.tr(),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
@@ -1096,7 +1099,7 @@ class _VenueResultsView extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Önerilen Mekanlar',
+                        'match.results_title'.tr(),
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
@@ -1104,7 +1107,7 @@ class _VenueResultsView extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        'Kişilik analizine göre seçildi',
+                        'match.personality_selected'.tr(),
                         style: TextStyle(
                           fontSize: 12,
                           color: context.colors.textSecondary,
@@ -1141,7 +1144,7 @@ class _VenueResultsView extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     _PersonalityPill(
-                      name: currentUser?.name.split(' ').first ?? 'Sen',
+                      name: currentUser?.name.split(' ').first ?? 'match.you'.tr(),
                       type: currentUser?.personalityProfile?.dominantType,
                     ),
                     Column(
@@ -1155,7 +1158,7 @@ class _VenueResultsView extends ConsumerWidget {
                           ),
                         ),
                         Text(
-                          'Uyum',
+                          'match.compatibility'.tr(),
                           style: TextStyle(
                             fontSize: 11,
                             color: context.colors.textSecondary,
@@ -1183,7 +1186,7 @@ class _VenueResultsView extends ConsumerWidget {
                   CircularProgressIndicator(color: context.colors.primary),
                   SizedBox(height: 16),
                   Text(
-                    'Yakındaki mekanlar aranıyor...',
+                    'match.loading_venues'.tr(),
                     style: TextStyle(
                       fontSize: 14,
                       color: context.colors.textSecondary,
@@ -1221,7 +1224,7 @@ class _VenueResultsView extends ConsumerWidget {
                       onPressed: onBack,
                       icon: Icon(Icons.arrow_back, color: Colors.white),
                       label: Text(
-                        'Geri Dön',
+                        'common.back'.tr(),
                         style: TextStyle(color: Colors.white),
                       ),
                       style: ElevatedButton.styleFrom(
@@ -1255,7 +1258,7 @@ class _VenueResultsView extends ConsumerWidget {
                         color: context.colors.primary,
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
@@ -1265,7 +1268,7 @@ class _VenueResultsView extends ConsumerWidget {
                           ),
                           SizedBox(width: 6),
                           Text(
-                            'Ortanıza En Yakın',
+                            'match.midpoint_badge'.tr(),
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -1291,7 +1294,7 @@ class _VenueResultsView extends ConsumerWidget {
                           Padding(
                             padding: EdgeInsets.symmetric(horizontal: 10),
                             child: Text(
-                              'Diğer Öneriler',
+                              'match.other_venues'.tr(),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: context.colors.textSecondary,
@@ -1315,8 +1318,11 @@ class _VenueResultsView extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      '${searchState.venues.length} mekan önerildi'
-                      ' • Sayfa ${searchState.currentPage + 1}/${searchState.totalPages}',
+                      'match.venue_count'.tr(namedArgs: {
+                        'count': '${searchState.venues.length}',
+                        'page': '${searchState.currentPage + 1}',
+                        'total': '${searchState.totalPages}',
+                      }),
                       style: TextStyle(
                         fontSize: 13,
                         color: context.colors.textSecondary,
@@ -1350,7 +1356,7 @@ class _VenueResultsView extends ConsumerWidget {
                             ),
                             SizedBox(width: 4),
                             Text(
-                              'Değiştir',
+                              'venue.change_venue'.tr(),
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -1400,7 +1406,7 @@ class _VenueResultsView extends ConsumerWidget {
                           color: context.colors.primary,
                         ),
                         label: Text(
-                          'Önceki',
+                          'match.prev_page'.tr(),
                           style: TextStyle(
                             color: context.colors.primary,
                             fontSize: 13,
@@ -1438,7 +1444,7 @@ class _VenueResultsView extends ConsumerWidget {
                           color: context.colors.primary,
                         ),
                         label: Text(
-                          'Sonraki',
+                          'match.next_page'.tr(),
                           style: TextStyle(
                             color: context.colors.primary,
                             fontSize: 13,
@@ -1722,7 +1728,7 @@ class _VenueCard extends StatelessWidget {
                           color: context.colors.primary,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
@@ -1732,7 +1738,7 @@ class _VenueCard extends StatelessWidget {
                             ),
                             SizedBox(width: 4),
                             Text(
-                              'Haritada Gör',
+                              'match.open_maps'.tr(),
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -1780,7 +1786,7 @@ class _VenueCard extends StatelessWidget {
                         ),
                         SizedBox(width: 5),
                         Text(
-                          'Paylaş',
+                          'match.share_on_feed'.tr(),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -1807,7 +1813,7 @@ class _VenueCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        'Şu an açık',
+                        'match.now_open'.tr(),
                         style: TextStyle(
                           fontSize: 11,
                           color: context.colors.success,

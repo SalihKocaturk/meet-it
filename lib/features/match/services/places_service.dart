@@ -13,6 +13,47 @@ import 'package:meetit/features/personality/models/personality_model.dart';
 class PlacesService {
   const PlacesService._();
 
+  // ── Hiçbir zaman gösterilmeyecek type'lar ────────────────────────────────
+  //
+  // Google Places bazen restoran/kafe aramasında otel içindeki restoranları
+  // veya tamamen alakasız iş yerlerini döndürüyor. Bu liste her aramada
+  // post-fetch aşamasında uygulanır.
+  // İSTİSNA: Kullanıcı açıkça 'lodging' type'ı aratıyorsa bu filtre bypass edilir.
+  static const Set<String> _alwaysExcluded = {
+    'lodging',          // otel, motel, pansiyon
+    'hospital',         // hastane
+    'doctor',           // doktor muayenehanesi
+    'pharmacy',         // eczane
+    'bank',             // banka
+    'atm',              // ATM
+    'insurance_agency', // sigorta
+    'real_estate_agency',// emlak
+    'lawyer',           // avukat
+    'accounting',       // muhasebe
+    'storage',          // depo
+    'car_repair',       // oto servis
+    'car_dealer',       // oto galeri
+    'gas_station',      // benzin istasyonu
+    'funeral_home',     // cenaze evi
+    'embassy',          // büyükelçilik
+    'local_government_office', // devlet dairesi
+  };
+
+  /// Bir mekan listesinden `_alwaysExcluded` type içerenleri temizler.
+  /// [searchingForLodging] true ise otel filtresi atlanır.
+  static List<PlaceResult> _filterExcluded(
+    List<PlaceResult> places, {
+    bool searchingForLodging = false,
+  }) {
+    return places.where((p) {
+      for (final t in p.types) {
+        if (t == 'lodging' && searchingForLodging) continue;
+        if (_alwaysExcluded.contains(t)) return false;
+      }
+      return true;
+    }).toList();
+  }
+
   // ── Kişilik tipi → Places API type eşlemesi ───────────────────────────────
 
   static const Map<PersonalityType, List<String>> _personalityTypes = {
@@ -108,8 +149,11 @@ class PlacesService {
       selectedActivities: selectedActivities,
     );
 
+    // Kullanıcı otel mi arıyor? (lodging filtresi bypass edilsin mi?)
+    final searchingForLodging = types.contains('lodging');
+
     // ignore: avoid_print
-    print('🔍 PlacesService types: $types');
+    print('🔍 PlacesService types: $types  lodgingSearch=$searchingForLodging');
 
     final seen = <String>{};
     final results = <PlaceResult>[];
@@ -129,8 +173,21 @@ class PlacesService {
 
     if (results.isEmpty) return [];
 
+    // ── Otel + alakasız type'ları temizle ─────────────────────────────────
+    // Restoran/kafe ararken içinde restoran olan oteller de geliyor.
+    // Post-fetch filtresiyle bunları çıkarıyoruz.
+    final filtered = _filterExcluded(
+      results,
+      searchingForLodging: searchingForLodging,
+    );
+
+    // ignore: avoid_print
+    print('🔍 PlacesService after filter: ${filtered.length}/${results.length}');
+
+    if (filtered.isEmpty) return [];
+
     // ── Kişilik + rating kombinasyon skoru ─────────────────────────────────
-    final scored = results.map((place) {
+    final scored = filtered.map((place) {
       final personalityScore = _personalityMatch(
         place, userProfile, friendProfile, selectedActivities,
       );
@@ -142,7 +199,10 @@ class PlacesService {
       ..sort((a, b) => b.$2.compareTo(a.$2));
 
     // Maksimum 20 mekan döner (sayfalama için)
-    return scored.take(20).map((e) => e.$1).toList();
+    final finalList = scored.take(20).map((e) => e.$1).toList();
+    // ignore: avoid_print
+    print('🔍 PlacesService final: ${finalList.length} mekan');
+    return finalList;
   }
 
   // ── Kişilik uyum skoru hesapla ────────────────────────────────────────────
@@ -224,68 +284,18 @@ class PlacesService {
       final body = jsonDecode(response.body) as Map<String, dynamic>;
       final status = body['status'] as String?;
 
-      if (status != 'OK' && status != 'ZERO_RESULTS') {
+      // ignore: avoid_print
+      print('[PlacesService] type=$type status=$status');
+
+      if (status == 'REQUEST_DENIED') {
+        final msg = body['error_message'] ?? 'API key sorunu veya Maps/Places API etkin değil';
         // ignore: avoid_print
-        print('[PlacesService] status=$status body=${response.body}');
+        print('[PlacesService] ❌ REQUEST_DENIED: $msg');
         return [];
       }
-
-      final rawResults = body['results'] as List<dynamic>? ?? [];
-      // API'dan gelen tüm sonuçları al (max 20)
-      return rawResults
-          .map((r) => PlaceResult.fromJson(r as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      // ignore: avoid_print
-      print('[PlacesService] fetch error: $e');
-      return [];
-    }
-  }
-
-  // ── Type Çözümleme ─────────────────────────────────────────────────────────
-
-  static List<String> _resolveTypes({
-    required PersonalityProfile userProfile,
-    required PersonalityProfile friendProfile,
-    required List<String> selectedActivities,
-  }) {
-    // ── MOD 1: Aktivite seçilmişse SADECE o tipler ───────────────────────────
-    // Kullanıcı ne seçtiyse onu göster, kişilik karıştırma.
-    if (selectedActivities.isNotEmpty) {
-      final types = <String>{};
-      for (final activity in selectedActivities) {
-        final lower = activity.toLowerCase();
-        for (final entry in _activityToType.entries) {
-          if (lower.contains(entry.key)) {
-            types.add(entry.value);
-            break;
-          }
-        }
+      if (status == 'OVER_QUERY_LIMIT') {
+        // ignore: avoid_print
+        print('[PlacesService] ❌ OVER_QUERY_LIMIT: Günlük kota dolmuş');
+        return [];
       }
-      // Eşleşen type yoksa (tanımsız aktivite) kişiliğe geri dön
-      if (types.isNotEmpty) return types.toList();
-    }
-
-    // ── MOD 2: Aktivite seçilmemişse SADECE kişiliğe göre ────────────────────
-    final types = <String>{};
-
-    final userTypes = _personalityTypes[userProfile.dominantType] ?? [];
-    final friendTypes = _personalityTypes[friendProfile.dominantType] ?? [];
-
-    // İki kişinin ortak tipleri önce (her ikisine de uygun)
-    final common = userTypes.toSet().intersection(friendTypes.toSet());
-    types.addAll(common);
-    types.addAll(userTypes);
-    types.addAll(friendTypes);
-
-    // Secondary tipler — daha geniş havuz
-    if (userProfile.secondaryType != null) {
-      types.addAll(_personalityTypes[userProfile.secondaryType!] ?? []);
-    }
-    if (friendProfile.secondaryType != null) {
-      types.addAll(_personalityTypes[friendProfile.secondaryType!] ?? []);
-    }
-
-    return types.take(5).toList();
-  }
-}
+      if (status != 'OK' && status != 'Z

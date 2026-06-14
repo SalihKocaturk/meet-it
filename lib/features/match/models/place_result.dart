@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:meetit/core/constants/app_config.dart';
 
 /// Google Places API'dan dönen tek bir mekan sonucu
@@ -74,7 +75,7 @@ class PlaceResult {
   /// Fiyat gösterimi: ₺, ₺₺, ₺₺₺, ₺₺₺₺
   String? get priceLabelText {
     if (priceLevel == null) return null;
-    if (priceLevel == 0) return 'Ücretsiz';
+    if (priceLevel == 0) return 'match.free'.tr();
     return '₺' * priceLevel!;
   }
 
