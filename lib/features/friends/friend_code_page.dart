@@ -8,6 +8,7 @@ import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/models/friendship_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:quickalert/quickalert.dart';
 
 class FriendCodePage extends ConsumerStatefulWidget {
@@ -37,7 +38,7 @@ class _FriendCodePageState extends ConsumerState<FriendCodePage> {
   Future<void> _searchByCode() async {
     final code = _codeController.text.trim().toUpperCase();
     if (code.length < 6) {
-      setState(() => _errorText = '6 haneli kodu eksiksiz gir.');
+      setState(() => _errorText = 'friend_code.incomplete_code'.tr());
       return;
     }
 
@@ -62,11 +63,11 @@ class _FriendCodePageState extends ConsumerState<FriendCodePage> {
       setState(() {
         _isSearching = false;
         if (found == null) {
-          _errorText = 'Bu koda sahip kullanıcı bulunamadı.';
+          _errorText = 'friend_code.user_not_found'.tr();
         } else {
           final myUid = ref.read(authProvider).user?.uid;
           if (found.uid == myUid) {
-            _errorText = 'Bu senin kendi kodun 😄';
+            _errorText = 'friend_code.own_code'.tr();
           } else {
             _foundUser = found;
           }
@@ -75,7 +76,7 @@ class _FriendCodePageState extends ConsumerState<FriendCodePage> {
     } catch (e) {
       setState(() {
         _isSearching = false;
-        _errorText = 'Arama sırasında bir hata oluştu.';
+        _errorText = 'friend_code.search_error'.tr();
       });
     }
   }
@@ -96,8 +97,8 @@ class _FriendCodePageState extends ConsumerState<FriendCodePage> {
       QuickAlert.show(
         context: context,
         type: QuickAlertType.warning,
-        title: 'Zaten Mevcut',
-        text: 'Bu kişiyle zaten bir arkadaşlık isteğin var.',
+        title: 'friend_code.already_exists'.tr(),
+        text: 'friend_code.already_exists_desc'.tr(),
         confirmBtnColor: context.colors.primary,
       );
       return;
@@ -109,8 +110,8 @@ class _FriendCodePageState extends ConsumerState<FriendCodePage> {
     QuickAlert.show(
       context: context,
       type: QuickAlertType.success,
-      title: 'İstek Gönderildi!',
-      text: '${targetUser.name} kişisine arkadaşlık isteği gönderildi.',
+      title: 'friend_code.request_sent'.tr(),
+      text: 'friend_code.request_sent_desc'.tr(namedArgs: {'name': targetUser.name}),
       confirmBtnColor: context.colors.primary,
       onConfirmBtnTap: () {
         Navigator.pop(context);
@@ -138,7 +139,7 @@ class _FriendCodePageState extends ConsumerState<FriendCodePage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Kodla Arkadaş Ekle',
+          'friend_code.title'.tr(),
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
@@ -168,8 +169,8 @@ class _FriendCodePageState extends ConsumerState<FriendCodePage> {
               ),
               child: Column(
                 children: [
-                  const Text(
-                    'Arkadaş Kodun',
+                  Text(
+                    'friend_code.my_code'.tr(),
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.white70,
@@ -192,7 +193,7 @@ class _FriendCodePageState extends ConsumerState<FriendCodePage> {
                       Clipboard.setData(ClipboardData(text: myCode));
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Kod kopyalandı!'),
+                          content: Text('friend_code.code_copied'.tr()),
                           backgroundColor: context.colors.success,
                           duration: Duration(seconds: 2),
                         ),
@@ -207,13 +208,13 @@ class _FriendCodePageState extends ConsumerState<FriendCodePage> {
                         color: context.colors.card.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.copy, size: 14, color: Colors.white),
-                          SizedBox(width: 6),
+                          const Icon(Icons.copy, size: 14, color: Colors.white),
+                          const SizedBox(width: 6),
                           Text(
-                            'Kopyala',
+                            'friend_code.copy'.tr(),
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.white,
@@ -232,7 +233,7 @@ class _FriendCodePageState extends ConsumerState<FriendCodePage> {
 
             // ── Kod ile ara ────────────────────────────────────────────────
             Text(
-              'Arkadaş Kodu Gir',
+              'friend_code.enter_code'.tr(),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -311,9 +312,9 @@ class _FriendCodePageState extends ConsumerState<FriendCodePage> {
                             color: context.colors.card,
                           ),
                         )
-                      : const Text(
-                          'Ara',
-                          style: TextStyle(
+                      : Text(
+                          'common.search'.tr(),
+                          style: const TextStyle(
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
@@ -398,9 +399,9 @@ class _FriendCodePageState extends ConsumerState<FriendCodePage> {
                         ),
                         elevation: 0,
                       ),
-                      child: const Text(
-                        'Ekle',
-                        style: TextStyle(
+                      child: Text(
+                        'friend_code.add'.tr(),
+                        style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -434,7 +435,7 @@ class _FriendCodePageState extends ConsumerState<FriendCodePage> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Kodunu paylaşarak arkadaşlarını uygulamaya davet edebilirsin.',
+                      'friend_code.share_info'.tr(),
                       style: TextStyle(
                         fontSize: 12,
                         color: context.colors.textSecondary,

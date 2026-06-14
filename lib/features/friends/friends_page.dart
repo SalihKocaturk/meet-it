@@ -1,7 +1,9 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
+import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friend_code_page.dart';
 import 'package:meetit/features/friends/models/user_friend_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
@@ -39,21 +41,83 @@ class FriendsPage extends ConsumerWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      'Arkadaşlar',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: context.colors.textPrimary,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'friends.title'.tr(),
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: context.colors.textPrimary,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const FriendCodePage(),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.person_add_alt_1_outlined,
+                                size: 12,
+                                color: context.colors.primary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'friends.invite_friends'.tr(),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: context.colors.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(Icons.tag, color: context.colors.textPrimary),
-                    onPressed: () => Navigator.of(context).push(
+                  // Arkadaş kodu butonu
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const FriendCodePage()),
                     ),
-                    tooltip: 'Kodla Arkadaş Ekle',
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: context.colors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: context.colors.primary.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.tag,
+                            size: 14,
+                            color: context.colors.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'friends.my_code'.tr(),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: context.colors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -74,28 +138,28 @@ class FriendsPage extends ConsumerWidget {
               child: Container(
                 height: 42,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF0F0F0),
+                  color: context.colors.scaffold,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
                     _TabButton(
-                      label: 'Öneri',
+                      label: 'friends.tab_suggestions'.tr(),
                       isSelected: tabIndex == 0,
                       onTap: () =>
                           ref.read(friendsTabIndexProvider.notifier).state = 0,
                     ),
                     _TabButton(
                       label: requestsBadge > 0
-                          ? 'İstekler ($requestsBadge)'
-                          : 'İstekler',
+                          ? 'friends.tab_requests_badge'.tr(namedArgs: {'count': '$requestsBadge'})
+                          : 'friends.tab_requests'.tr(),
                       isSelected: tabIndex == 1,
                       onTap: () =>
                           ref.read(friendsTabIndexProvider.notifier).state = 1,
                       hasBadge: invitationsCount > 0,
                     ),
                     _TabButton(
-                      label: 'Arkadaşlarım ($connectionsCount)',
+                      label: 'friends.tab_my_friends'.tr(namedArgs: {'count': '$connectionsCount'}),
                       isSelected: tabIndex == 2,
                       onTap: () =>
                           ref.read(friendsTabIndexProvider.notifier).state = 2,
@@ -109,11 +173,23 @@ class FriendsPage extends ConsumerWidget {
 
             // İçerik
             Expanded(
-              child: switch (tabIndex) {
-                0 => const _SuggestionsTab(),
-                1 => const _RequestsTab(),
-                _ => _ConnectionsTab(connectionsCount: connectionsCount),
-              },
+              child: RefreshIndicator(
+                color: context.colors.primary,
+                backgroundColor: context.colors.card,
+                onRefresh: () async {
+                  final uid = ref.read(currentUserProvider)?.uid ?? '';
+                  await Future.wait([
+                    if (uid.isNotEmpty)
+                      ref.read(friendsProvider.notifier).loadAll(uid),
+                    Future.delayed(const Duration(milliseconds: 700)),
+                  ]);
+                },
+                child: switch (tabIndex) {
+                  0 => const _SuggestionsTab(),
+                  1 => const _RequestsTab(),
+                  _ => _ConnectionsTab(connectionsCount: connectionsCount),
+                },
+              ),
             ),
           ],
         ),
@@ -136,7 +212,7 @@ class _SearchBar extends ConsumerWidget {
         ref.read(friendsProvider.notifier).updateSearchQuery(v);
       },
       decoration: InputDecoration(
-        hintText: 'Arkadaş Bul',
+        hintText: 'friends.search_hint'.tr(),
         hintStyle: TextStyle(color: context.colors.hint, fontSize: 14),
         prefixIcon: Icon(Icons.search, color: context.colors.hint),
         filled: true,
@@ -239,16 +315,17 @@ class _SuggestionsTab extends ConsumerWidget {
     }
 
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 20),
       children: [
-        _SectionHeader(title: 'Tanıyor Olabilirsin (${suggestions.length})'),
+        _SectionHeader(title: 'friends.suggestions_section'.tr(namedArgs: {'count': '${suggestions.length}'})),
         ...suggestions.map((f) => _SuggestionTile(friend: f)),
         if (suggestions.isEmpty)
           Padding(
             padding: EdgeInsets.symmetric(vertical: 40),
             child: Center(
               child: Text(
-                'Aramanızla eşleşen kimse bulunamadı.',
+                'common.no_result'.tr(),
                 style: TextStyle(color: context.colors.textSecondary),
               ),
             ),
@@ -276,7 +353,7 @@ class _RequestsTab extends ConsumerWidget {
             Icon(Icons.people_outline, size: 56, color: context.colors.hint),
             SizedBox(height: 12),
             Text(
-              'Henüz bekleyen istek yok.',
+              'friends.no_requests'.tr(),
               style: TextStyle(
                 color: context.colors.textSecondary,
                 fontSize: 14,
@@ -288,17 +365,18 @@ class _RequestsTab extends ConsumerWidget {
     }
 
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 20),
       children: [
         // Gelen istekler
         if (incoming.isNotEmpty) ...[
-          _SectionHeader(title: 'Gelen İstekler (${incoming.length})'),
+          _SectionHeader(title: 'friends.incoming_section'.tr(namedArgs: {'count': '${incoming.length}'})),
           ...incoming.map((f) => _InvitationTile(friend: f)),
           const SizedBox(height: 16),
         ],
         // Gönderilen istekler
         if (sent.isNotEmpty) ...[
-          _SectionHeader(title: 'Gönderilen İstekler (${sent.length})'),
+          _SectionHeader(title: 'friends.sent_section'.tr(namedArgs: {'count': '${sent.length}'})),
           ...sent.map((f) => _SentRequestTile(friend: f)),
           const SizedBox(height: 16),
         ],
@@ -319,16 +397,17 @@ class _ConnectionsTab extends ConsumerWidget {
     final connections = ref.watch(connectionsProvider);
 
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 20),
       children: [
-        _SectionHeader(title: 'Arkadaşlarım ($connectionsCount)'),
+        _SectionHeader(title: 'friends.my_friends_section'.tr(namedArgs: {'count': '$connectionsCount'})),
         ...connections.map((f) => _ConnectionTile(friend: f)),
         if (connections.isEmpty)
           Padding(
             padding: EdgeInsets.symmetric(vertical: 40),
             child: Center(
               child: Text(
-                'Henüz arkadaşın yok. Öneri sekmesinden arkadaş ekleyebilirsin.',
+                'friends.no_friends_desc'.tr(),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: context.colors.textSecondary),
               ),
@@ -412,7 +491,7 @@ class _SuggestionTile extends ConsumerWidget {
               color: context.colors.primary,
             ),
             label: Text(
-              'Ekle',
+              'friends.add'.tr(),
               style: TextStyle(fontSize: 12, color: context.colors.primary),
             ),
             style: OutlinedButton.styleFrom(
@@ -446,7 +525,7 @@ class _InvitationTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final daysAgo = DateTime.now().difference(friend.addedAt).inDays;
-    final timeText = daysAgo == 0 ? 'Bugün' : '$daysAgo gün önce';
+    final timeText = daysAgo == 0 ? 'friends.today'.tr() : '$daysAgo ${'feed.days_ago'.tr()}';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -561,7 +640,7 @@ class _SentRequestTile extends ConsumerWidget {
                 Icon(Icons.schedule, size: 12, color: context.colors.primary),
                 SizedBox(width: 4),
                 Text(
-                  'Bekliyor',
+                  'friends.pending'.tr(),
                   style: TextStyle(
                     fontSize: 11,
                     color: context.colors.primary,
@@ -578,11 +657,10 @@ class _SentRequestTile extends ConsumerWidget {
               QuickAlert.show(
                 context: context,
                 type: QuickAlertType.confirm,
-                title: 'İsteği İptal Et',
-                text:
-                    '${friend.name} kişisine gönderilen istek iptal edilsin mi?',
-                confirmBtnText: 'İptal Et',
-                cancelBtnText: 'Vazgeç',
+                title: 'friends.cancel_request'.tr(),
+                text: 'friends.cancel_request_confirm'.tr(namedArgs: {'name': friend.name}),
+                confirmBtnText: 'friends.cancel_btn'.tr(),
+                cancelBtnText: 'common.cancel'.tr(),
                 confirmBtnColor: Colors.red,
                 onConfirmBtnTap: () {
                   Navigator.pop(context);
@@ -679,7 +757,7 @@ class _ConnectionTile extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Buluş',
+                    'friends.meet'.tr(),
                     style: TextStyle(
                       fontSize: 12,
                       color: context.colors.primary,

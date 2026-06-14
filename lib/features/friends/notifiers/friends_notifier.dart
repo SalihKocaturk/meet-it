@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/features/auth/models/user_model.dart';
@@ -185,7 +186,7 @@ class FriendsNotifier extends Notifier<FriendsState> {
         sentRequests: [...state.sentRequests, sent],
       );
     } catch (e) {
-      state = state.copyWith(errorMessage: 'İstek gönderilirken hata oluştu.');
+      state = state.copyWith(errorMessage: 'friends.error_send'.tr());
     }
   }
 
@@ -212,7 +213,7 @@ class FriendsNotifier extends Notifier<FriendsState> {
         ],
       );
     } catch (e) {
-      state = state.copyWith(errorMessage: 'İstek kabul edilirken hata oluştu.');
+      state = state.copyWith(errorMessage: 'friends.error_accept'.tr());
     }
   }
 
@@ -234,7 +235,7 @@ class FriendsNotifier extends Notifier<FriendsState> {
             state.pendingInvitations.where((f) => f.uid != fromUid).toList(),
       );
     } catch (e) {
-      state = state.copyWith(errorMessage: 'İstek reddedilirken hata oluştu.');
+      state = state.copyWith(errorMessage: 'friends.error_reject'.tr());
     }
   }
 
@@ -259,7 +260,7 @@ class FriendsNotifier extends Notifier<FriendsState> {
         ],
       );
     } catch (e) {
-      state = state.copyWith(errorMessage: 'İstek iptal edilirken hata oluştu.');
+      state = state.copyWith(errorMessage: 'friends.error_cancel'.tr());
     }
   }
 
