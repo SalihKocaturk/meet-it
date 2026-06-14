@@ -208,8 +208,23 @@ class QuizOption {
 }
 
 // ── Quiz Soruları ─────────────────────────────────────────────────────────────
+//
+// DAĞILIM (10 soru × 4 seçenek = 40 slot, 5 tip → her tip tam 8 soruda):
+//  Q1:  sosyal | sakin | macer | entel
+//  Q2:  sosyal | sakin | macer | gurme
+//  Q3:  sosyal | entel | macer | gurme
+//  Q4:  sosyal | sakin | entel | gurme
+//  Q5:  sakin  | entel | macer | gurme
+//  Q6:  sosyal | sakin | macer | entel
+//  Q7:  sosyal | entel | macer | gurme
+//  Q8:  sosyal | sakin | entel | gurme
+//  Q9:  sakin  | entel | macer | gurme
+//  Q10: sosyal | sakin | macer | gurme
+//
+// Toplam: sosyal=8 sakin=8 macer=8 entel=8 gurme=8  ✓ (dengeli)
 
 const List<QuizQuestion> kQuizQuestions = [
+  // ── Soru 1 ── (sosyal | sakin | macer | entel)
   QuizQuestion(
     question: 'Boş zamanında ne yapmaktan en çok keyif alırsın?',
     options: [
@@ -231,6 +246,8 @@ const List<QuizQuestion> kQuizQuestions = [
       ),
     ],
   ),
+
+  // ── Soru 2 ── (sosyal | sakin | macer | gurme)
   QuizQuestion(
     question: 'Arkadaşlarınla buluşunca genellikle ne yaparsınız?',
     options: [
@@ -252,6 +269,8 @@ const List<QuizQuestion> kQuizQuestions = [
       ),
     ],
   ),
+
+  // ── Soru 3 ── (sosyal | entel | macer | gurme)
   QuizQuestion(
     question: 'İdeal bir hafta sonu nasıl geçerdi?',
     options: [
@@ -260,19 +279,21 @@ const List<QuizQuestion> kQuizQuestions = [
         type: PersonalityType.sosyalKelebek,
       ),
       QuizOption(
-        text: '🌸 Huzurlu bir doğa yürüyüşü veya spa günü',
-        type: PersonalityType.sakinRuh,
+        text: '📚 Kitap okumak, belgesel izlemek, yeni şeyler öğrenmek',
+        type: PersonalityType.entelektuel,
       ),
       QuizOption(
         text: '🚵 Trekking, bisiklet ya da macera sporu',
         type: PersonalityType.maceraperest,
       ),
       QuizOption(
-        text: '🍷 Yeni restoranlar deneyim, food festival gezmek',
+        text: '🍷 Yeni restoranlar denemek, food festival gezmek',
         type: PersonalityType.gurme,
       ),
     ],
   ),
+
+  // ── Soru 4 ── (sosyal | sakin | entel | gurme)
   QuizQuestion(
     question: 'Bir mekan seçerken en önemli kriterini söyle.',
     options: [
@@ -285,25 +306,27 @@ const List<QuizQuestion> kQuizQuestions = [
         type: PersonalityType.sakinRuh,
       ),
       QuizOption(
-        text: '⚡ Aktivite veya deneyim imkanı sunuyor mu?',
-        type: PersonalityType.maceraperest,
+        text: '📰 Merak uyandıran, ilham veren bir yer olmalı',
+        type: PersonalityType.entelektuel,
       ),
       QuizOption(
-        text: '🌟 Menü kalitesi ve şefin becerisi benim için önemli',
+        text: '🌟 Menü kalitesi ve şefin becerisi önemli',
         type: PersonalityType.gurme,
       ),
     ],
   ),
+
+  // ── Soru 5 ── (sakin | entel | macer | gurme)
   QuizQuestion(
     question: 'Seni en iyi tanımlayan cümle hangisi?',
     options: [
       QuizOption(
-        text: '"Tanımadığım insanlarla da hemen kaynaşırım."',
-        type: PersonalityType.sosyalKelebek,
-      ),
-      QuizOption(
         text: '"Az insanla derin ilişkiler kurmayı tercih ederim."',
         type: PersonalityType.sakinRuh,
+      ),
+      QuizOption(
+        text: '"Her şeyin neden sorusunu sormadan duramam."',
+        type: PersonalityType.entelektuel,
       ),
       QuizOption(
         text: '"Konfor alanımın dışına çıkmaktan keyif alırım."',
@@ -315,6 +338,8 @@ const List<QuizQuestion> kQuizQuestions = [
       ),
     ],
   ),
+
+  // ── Soru 6 ── (sosyal | sakin | macer | entel)
   QuizQuestion(
     question: 'Stresli bir günden sonra ne yaparsın?',
     options: [
@@ -323,7 +348,7 @@ const List<QuizQuestion> kQuizQuestions = [
         type: PersonalityType.sosyalKelebek,
       ),
       QuizOption(
-        text: '🛁 Sessiz bir ortamda dinlenirim',
+        text: '🛁 Sessiz bir ortamda yalnız dinlenirim',
         type: PersonalityType.sakinRuh,
       ),
       QuizOption(
@@ -331,28 +356,99 @@ const List<QuizQuestion> kQuizQuestions = [
         type: PersonalityType.maceraperest,
       ),
       QuizOption(
-        text: '🍜 Güzel bir yemek pişirir ya da dışarıda iyi bir şey yerim',
-        type: PersonalityType.gurme,
+        text: '🎙️ Podcast dinler ya da ilginç bir makale okurum',
+        type: PersonalityType.entelektuel,
       ),
     ],
   ),
+
+  // ── Soru 7 ── (sosyal | entel | macer | gurme)
   QuizQuestion(
     question: 'Tatilde hangi aktiviteyi seçerdin?',
     options: [
       QuizOption(
-        text: '🏖️ Büyük resort otelde eğlenceli aktiviteler',
+        text: '🏖️ Büyük resort otelde eğlenceli sosyal aktiviteler',
         type: PersonalityType.sosyalKelebek,
       ),
       QuizOption(
-        text: '🏡 Küçük, sakin bir butik otel veya doğa evi',
-        type: PersonalityType.sakinRuh,
+        text: '🏛️ Tarihi ve kültürel mekânları derinlemesine keşfetmek',
+        type: PersonalityType.entelektuel,
       ),
       QuizOption(
-        text: '🧭 Backpacking, yeni şehirler keşfetmek',
+        text: '🧭 Backpacking, yeni şehirler ve doğa keşfi',
         type: PersonalityType.maceraperest,
       ),
       QuizOption(
-        text: '🥂 Gastronomi turu, yerel mutfaklar denemek',
+        text: '🥂 Gastronomi turu, yerel mutfakları tatmak',
+        type: PersonalityType.gurme,
+      ),
+    ],
+  ),
+
+  // ── Soru 8 ── (sosyal | sakin | entel | gurme)
+  QuizQuestion(
+    question: 'Film veya dizi seçerken hangisini tercih edersin?',
+    options: [
+      QuizOption(
+        text: '🎉 Komedi ya da romantik — arkadaşlarla izlemek çok daha iyi',
+        type: PersonalityType.sosyalKelebek,
+      ),
+      QuizOption(
+        text: '🌿 Yavaş tempolu, duygusal bir drama',
+        type: PersonalityType.sakinRuh,
+      ),
+      QuizOption(
+        text: '🧠 Belgesel, bilim kurgu ya da düşündürücü yapım',
+        type: PersonalityType.entelektuel,
+      ),
+      QuizOption(
+        text: '🍿 Fark etmez, asıl önemli ortam ve atıştırmalıklar',
+        type: PersonalityType.gurme,
+      ),
+    ],
+  ),
+
+  // ── Soru 9 ── (sakin | entel | macer | gurme)
+  QuizQuestion(
+    question: 'Yeni bir şehre taşınsaydın ilk ne yapardın?',
+    options: [
+      QuizOption(
+        text: '🌳 Mahallemi yavaşça keşfedip dingin bir köşe bulurdum',
+        type: PersonalityType.sakinRuh,
+      ),
+      QuizOption(
+        text: '🗺️ Şehrin tarihini, müzelerini ve kütüphanelerini araştırırdım',
+        type: PersonalityType.entelektuel,
+      ),
+      QuizOption(
+        text: '🏃 Yakın parkurları ve spor alanlarını hemen keşfederdim',
+        type: PersonalityType.maceraperest,
+      ),
+      QuizOption(
+        text: '🍜 En iyi restoranları ve yemek mekanlarını araştırırdım',
+        type: PersonalityType.gurme,
+      ),
+    ],
+  ),
+
+  // ── Soru 10 ── (sosyal | sakin | macer | gurme)
+  QuizQuestion(
+    question: 'Akşam yemeği planlarken hangisini söylersin?',
+    options: [
+      QuizOption(
+        text: '🥳 "Büyük bir grup toplayalım, ne olursa olsun!"',
+        type: PersonalityType.sosyalKelebek,
+      ),
+      QuizOption(
+        text: '🕯️ "Küçük, samimi ve huzurlu bir akşam yemeği olsun."',
+        type: PersonalityType.sakinRuh,
+      ),
+      QuizOption(
+        text: '🌍 "Hiç denemediğim egzotik bir mutfağı deneyelim!"',
+        type: PersonalityType.maceraperest,
+      ),
+      QuizOption(
+        text: '⭐ "En iyi restoranı araştırayım, rezervasyon yapayım."',
         type: PersonalityType.gurme,
       ),
     ],
@@ -969,108 +1065,4 @@ const _venueMap = <String, List<VenueRecommendation>>{
       compatibilityScore: 0.94,
       tags: ['restoran', 'yemek', 'kültür'],
     ),
-    VenueRecommendation(
-      name: 'Gastronomi & Tarih Turu',
-      description: 'Tarihi yapıları gezerken yerel lezzetleri tadın.',
-      type: 'Yemek Turu',
-      emoji: '🗺️',
-      compatibilityScore: 0.91,
-      tags: ['yemek', 'kültür', 'tarih', 'tur'],
-    ),
-    VenueRecommendation(
-      name: 'Şarap & Sanat Gecesi',
-      description: 'Bir şişe iyi şarap eşliğinde galeri gezisi.',
-      type: 'Kültür + Bar',
-      emoji: '🍷',
-      compatibilityScore: 0.88,
-      tags: ['şarap', 'sanat', 'kültür'],
-    ),
-    VenueRecommendation(
-      name: 'Çarşı Gastronomi Keşfi',
-      description: 'Tarihi çarşıda gezerek yerel üreticileri tanıma.',
-      type: 'Yemek Turu',
-      emoji: '🧺',
-      compatibilityScore: 0.85,
-      tags: ['yemek', 'kültür', 'tarih'],
-    ),
-  ],
-
-  'entelektuel_entelektuel': [
-    VenueRecommendation(
-      name: 'Felsefe Kulübü Kafesi',
-      description: 'Düzenli tartışma gruplarının toplandığı entelektüel mekan.',
-      type: 'Kafe',
-      emoji: '🤔',
-      compatibilityScore: 0.97,
-      tags: ['kafe', 'kültür', 'sakin'],
-    ),
-    VenueRecommendation(
-      name: 'Sanat Galerisi + Söyleşi',
-      description: 'Sanatçı söyleşisi ve ardından galeri turu.',
-      type: 'Kültür',
-      emoji: '🎨',
-      compatibilityScore: 0.94,
-      tags: ['sanat', 'kültür', 'galeri'],
-    ),
-    VenueRecommendation(
-      name: 'Belgesel Film Gösterimi',
-      description: 'Küçük salon, seçkin film, derin tartışma.',
-      type: 'Sinema',
-      emoji: '🎞️',
-      compatibilityScore: 0.91,
-      tags: ['sinema', 'kültür', 'belgesel'],
-    ),
-    VenueRecommendation(
-      name: 'Tarihi Kütüphane',
-      description: 'Şehrin en güzel kütüphanesinde buluşma.',
-      type: 'Kültür',
-      emoji: '🏛️',
-      compatibilityScore: 0.88,
-      tags: ['kültür', 'kitap', 'sakin'],
-    ),
-    VenueRecommendation(
-      name: 'Planetaryum Gecesi',
-      description: 'Gökyüzünün sırlarını birlikte keşfedin.',
-      type: 'Kültür / Bilim',
-      emoji: '🌌',
-      compatibilityScore: 0.85,
-      tags: ['bilim', 'kültür', 'müze'],
-    ),
-  ],
-
-  // Varsayılan (tüm kombinasyonlar için fallback)
-  'default': [
-    VenueRecommendation(
-      name: 'Şehrin Popüler Kafesi',
-      description: 'Her zevke hitap eden, şık ve konforlu buluşma noktası.',
-      type: 'Kafe',
-      emoji: '☕',
-      compatibilityScore: 0.80,
-      tags: ['kafe', 'sosyal'],
-    ),
-    VenueRecommendation(
-      name: 'Park ve Açık Hava Alanı',
-      description: 'Doğal ortamda rahat ve keyifli buluşma.',
-      type: 'Park',
-      emoji: '🌳',
-      compatibilityScore: 0.75,
-      tags: ['park', 'doğa'],
-    ),
-    VenueRecommendation(
-      name: 'Alışveriş Merkezi Food Court',
-      description: 'Çeşitli seçenekler sunan merkezi buluşma noktası.',
-      type: 'Yemek',
-      emoji: '🛍️',
-      compatibilityScore: 0.70,
-      tags: ['yemek', 'alışveriş'],
-    ),
-    VenueRecommendation(
-      name: 'Sinema',
-      description: 'Her zaman bir klasik: birlikte film izlemek.',
-      type: 'Sinema',
-      emoji: '🎬',
-      compatibilityScore: 0.72,
-      tags: ['sinema', 'eğlence'],
-    ),
-  ],
-};
+    VenueRecomme
