@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,14 +10,21 @@ import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await EasyLocalization.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Firestore boşsa 10 mock kullanıcı ekle
+  // Firestore boşsa mock kullanıcılar ekle
   await FirestoreSeedService.seedIfEmpty();
 
   runApp(
-    const ProviderScope(
-      child: MyApp(),
+    EasyLocalization(
+      supportedLocales: const [Locale('tr'), Locale('en')],
+      path: 'assets/translations',
+      fallbackLocale: const Locale('tr'),
+      startLocale: const Locale('tr'),
+      child: const ProviderScope(
+        child: MyApp(),
+      ),
     ),
   );
 }
@@ -36,6 +44,9 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
+      localizationsDelegates: context.localizationDelegates,
+      supportedLocales: context.supportedLocales,
+      locale: context.locale,
     );
   }
 }

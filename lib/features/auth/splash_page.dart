@@ -15,17 +15,20 @@ class SplashPage extends ConsumerStatefulWidget {
 class _SplashPageState extends ConsumerState<SplashPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _fadeAnim;
+  late final Animation<double> _pulseAnim;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 900),
     );
-    _fadeAnim = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
-    _controller.forward();
+    // 0.35 → 1.0 arası yumuşak nabız
+    _pulseAnim = Tween<double>(begin: 0.35, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+    _controller.repeat(reverse: true);
     _navigate();
   }
 
@@ -63,31 +66,11 @@ class _SplashPageState extends ConsumerState<SplashPage>
       backgroundColor: context.colors.primary,
       body: Center(
         child: FadeTransition(
-          opacity: _fadeAnim,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset(
-                'assets/images/logo.png',
-                height: 120,
-                color: Colors.white,
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'MeetIt',
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  letterSpacing: 1.5,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Buluşmak hiç bu kadar kolay olmamıştı',
-                style: TextStyle(fontSize: 14, color: Colors.white70),
-              ),
-            ],
+          opacity: _pulseAnim,
+          child: Image.asset(
+            'assets/images/logo.png',
+            height: 120,
+            color: Colors.white,
           ),
         ),
       ),

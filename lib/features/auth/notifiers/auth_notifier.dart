@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -114,7 +115,7 @@ class AuthNotifier extends Notifier<AuthState> {
   }) async {
     if (email.isEmpty || password.isEmpty) {
       state = state.copyWith(
-          errorMessage: 'Email ve şifre alanları boş bırakılamaz.');
+          errorMessage: 'validation.email_empty');
       return;
     }
 
@@ -149,7 +150,7 @@ class AuthNotifier extends Notifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Giriş yapılırken bir hata oluştu.',
+        errorMessage: 'auth.sign_in_failed',
       );
     }
   }
@@ -164,7 +165,7 @@ class AuthNotifier extends Notifier<AuthState> {
     String? photoUrl,
   }) async {
     if (email.isEmpty || password.isEmpty || name.isEmpty) {
-      state = state.copyWith(errorMessage: 'Lütfen zorunlu alanları doldurun.');
+      state = state.copyWith(errorMessage: 'validation.fill_required');
       return;
     }
 
@@ -197,7 +198,7 @@ class AuthNotifier extends Notifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Kayıt sırasında bir hata oluştu.',
+        errorMessage: 'auth.sign_up_failed',
       );
     }
   }
@@ -226,7 +227,7 @@ class AuthNotifier extends Notifier<AuthState> {
 
       final userModel = UserModel(
         uid: fbUser.uid,
-        name: fbUser.displayName ?? googleUser.displayName ?? 'Kullanıcı',
+        name: fbUser.displayName ?? googleUser.displayName ?? 'common.user'.tr(),
         email: fbUser.email ?? googleUser.email,
         photoUrl: fbUser.photoURL ?? googleUser.photoUrl,
         createdAt: DateTime.now(),
@@ -245,7 +246,7 @@ class AuthNotifier extends Notifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Google ile giriş başarısız: $e',
+        errorMessage: 'auth.sign_in_failed',
       );
     }
   }
@@ -254,7 +255,7 @@ class AuthNotifier extends Notifier<AuthState> {
 
   Future<void> forgotPassword(String email) async {
     if (email.isEmpty) {
-      state = state.copyWith(errorMessage: 'Email adresi boş bırakılamaz.');
+      state = state.copyWith(errorMessage: 'auth.enter_email_warning');
       return;
     }
     state = state.copyWith(isLoading: true, clearError: true);
@@ -314,22 +315,14 @@ class AuthNotifier extends Notifier<AuthState> {
 
   String _authError(String code) {
     switch (code) {
-      case 'user-not-found':
-        return 'Bu email ile kayıtlı kullanıcı bulunamadı.';
-      case 'wrong-password':
-        return 'Şifre hatalı. Lütfen tekrar deneyin.';
-      case 'email-already-in-use':
-        return 'Bu email adresi zaten kullanımda.';
-      case 'weak-password':
-        return 'Şifre çok zayıf. En az 6 karakter kullanın.';
-      case 'invalid-email':
-        return 'Geçersiz email adresi.';
-      case 'too-many-requests':
-        return 'Çok fazla deneme. Lütfen biraz bekleyin.';
-      case 'network-request-failed':
-        return 'İnternet bağlantısı yok.';
-      default:
-        return 'Bir hata oluştu. Lütfen tekrar deneyin.';
+      case 'user-not-found':       return 'auth.error_user_not_found';
+      case 'wrong-password':       return 'auth.error_wrong_password';
+      case 'email-already-in-use': return 'auth.error_email_in_use';
+      case 'weak-password':        return 'auth.error_weak_password';
+      case 'invalid-email':        return 'auth.error_invalid_email';
+      case 'too-many-requests':    return 'auth.error_too_many_requests';
+      case 'network-request-failed': return 'auth.error_no_network';
+      default:                     return 'auth.error_generic';
     }
   }
 }

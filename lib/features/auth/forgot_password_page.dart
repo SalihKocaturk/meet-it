@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,8 +17,8 @@ class ForgotPasswordPage extends ConsumerWidget {
     if (email.isEmpty) {
       AppSnackbar.warning(
         context,
-        title: 'Eksik Alan',
-        message: 'Lütfen email adresinizi girin.',
+        title: 'validation.missing_field'.tr(),
+        message: 'auth.enter_email_warning'.tr(),
       );
       return;
     }
@@ -27,7 +28,7 @@ class ForgotPasswordPage extends ConsumerWidget {
     if (!context.mounted) return;
     final error = ref.read(authErrorProvider);
     if (error != null) {
-      AppSnackbar.error(context, title: 'Gönderim Başarısız', message: error);
+      AppSnackbar.error(context, title: 'auth.send_failed'.tr(), message: error.tr());
       ref.read(authProvider.notifier).clearError();
       return;
     }
@@ -55,7 +56,7 @@ class ForgotPasswordPage extends ConsumerWidget {
           onPressed: () => context.pop(),
         ),
         title: Text(
-          'Şifremi Unuttum',
+          'auth.forgot_password_title'.tr(),
           style: TextStyle(
             color: context.colors.textPrimary,
             fontWeight: FontWeight.w700,
@@ -86,7 +87,7 @@ class ForgotPasswordPage extends ConsumerWidget {
         Icon(Icons.lock_reset, size: 56, color: context.colors.primary),
         SizedBox(height: 20),
         Text(
-          'Şifreni sıfırla',
+          'auth.forgot_password_subtitle'.tr(),
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -95,14 +96,14 @@ class ForgotPasswordPage extends ConsumerWidget {
         ),
         SizedBox(height: 8),
         Text(
-          'Kayıtlı email adresine şifre sıfırlama bağlantısı göndereceğiz.',
+          'auth.forgot_password_desc'.tr(),
           style: TextStyle(fontSize: 14, color: context.colors.textSecondary),
         ),
         const SizedBox(height: 32),
         AppTextField(
           controller: emailController,
-          label: 'Email',
-          hint: 'ornek@email.com',
+          label: 'auth.email'.tr(),
+          hint: 'auth.email_hint'.tr(),
           prefixIcon: Icons.mail_outline,
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.done,
@@ -129,9 +130,9 @@ class ForgotPasswordPage extends ConsumerWidget {
                       color: context.colors.card,
                     ),
                   )
-                : const Text(
-                    'Bağlantı Gönder',
-                    style: TextStyle(
+                : Text(
+                    'auth.send_link'.tr(),
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
@@ -154,7 +155,7 @@ class ForgotPasswordPage extends ConsumerWidget {
         ),
         SizedBox(height: 24),
         Text(
-          'Email Gönderildi!',
+          'auth.email_sent'.tr(),
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -163,7 +164,7 @@ class ForgotPasswordPage extends ConsumerWidget {
         ),
         SizedBox(height: 12),
         Text(
-          'Şifre sıfırlama bağlantısı email adresinize gönderildi. Lütfen gelen kutunuzu kontrol edin.',
+          'auth.email_sent_desc'.tr(),
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 14, color: context.colors.textSecondary),
         ),
@@ -180,7 +181,7 @@ class ForgotPasswordPage extends ConsumerWidget {
               ),
             ),
             child: Text(
-              'Giriş Sayfasına Dön',
+              'auth.back_to_sign_in'.tr(),
               style: TextStyle(
                 fontSize: 16,
                 color: context.colors.primary,
