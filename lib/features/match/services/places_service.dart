@@ -20,23 +20,79 @@ class PlacesService {
   // post-fetch aşamasında uygulanır.
   // İSTİSNA: Kullanıcı açıkça 'lodging' type'ı aratıyorsa bu filtre bypass edilir.
   static const Set<String> _alwaysExcluded = {
-    'lodging',          // otel, motel, pansiyon
-    'hospital',         // hastane
-    'doctor',           // doktor muayenehanesi
-    'pharmacy',         // eczane
-    'bank',             // banka
-    'atm',              // ATM
-    'insurance_agency', // sigorta
-    'real_estate_agency',// emlak
-    'lawyer',           // avukat
-    'accounting',       // muhasebe
-    'storage',          // depo
-    'car_repair',       // oto servis
-    'car_dealer',       // oto galeri
-    'gas_station',      // benzin istasyonu
-    'funeral_home',     // cenaze evi
-    'embassy',          // büyükelçilik
-    'local_government_office', // devlet dairesi
+    // Konaklama
+    'lodging',
+
+    // Sağlık
+    'hospital',
+    'doctor',
+    'dentist',
+    'pharmacy',
+    'physiotherapist',
+    'veterinary_care',
+
+    // Finans / hukuk / idare
+    'bank',
+    'atm',
+    'finance',
+    'insurance_agency',
+    'real_estate_agency',
+    'lawyer',
+    'accounting',
+    'local_government_office',
+    'city_hall',
+    'courthouse',
+    'embassy',
+    'post_office',
+    'police',
+    'fire_station',
+
+    // Eğitim kurumları — anaokulu, ilkokul, ortaokul, lise, üniversite
+    'school',
+    'primary_school',
+    'secondary_school',
+    'university',
+
+    // Araç / taşıt
+    'car_repair',
+    'car_dealer',
+    'car_wash',
+    'car_rental',
+    'parking',
+    'gas_station',
+    'taxi_stand',
+    'bus_station',
+    'train_station',
+    'transit_station',
+    'subway_station',
+    'airport',
+    'light_rail_station',
+
+    // Depo / endüstri
+    'storage',
+    'moving_company',
+    'electrician',
+    'plumber',
+    'painter',
+    'locksmith',
+    'roofing_contractor',
+    'general_contractor',
+
+    // Cenaze / dini hizmet
+    'funeral_home',
+    'cemetery',
+    'place_of_worship',
+
+    // Güzellik / bakım (eğlence değil)
+    'hair_care',
+    'laundry',
+    'dry_cleaning',
+
+    // Takı / aksesuar
+    'jewelry_store',
+
+    // Diğer alakasız
+    'rv_park',
   };
 
   /// Bir mekan listesinden `_alwaysExcluded` type içerenleri temizler.
@@ -256,23 +312,4 @@ class PlacesService {
     void addProfileScore(PersonalityProfile profile) {
       for (final entry in profile.scores.entries) {
         final typeWeight = entry.value; // kişilik tipine verilen ağırlık
-        final placeScores = _personalityScores[entry.key] ?? {};
-        for (final placeType in place.types) {
-          if (placeScores.containsKey(placeType)) {
-            score += placeScores[placeType]! * typeWeight;
-            matched++;
-          }
-        }
-      }
-    }
-
-    addProfileScore(userProfile);
-    addProfileScore(friendProfile);
-
-    if (matched == 0) return 0.3; // eşleşme yoksa düşük ama sıfır değil
-    return (score / matched).clamp(0.0, 1.0);
-  }
-
-  // ── Places Nearby Search HTTP ─────────────────────────────────────────────
-
-  static Future<List<Place
+        final pla
