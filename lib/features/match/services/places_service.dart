@@ -23,13 +23,14 @@ class PlacesService {
     // Konaklama
     'lodging',
 
-    // Sağlık
+    // Sağlık / optik
     'hospital',
     'doctor',
     'dentist',
     'pharmacy',
     'physiotherapist',
     'veterinary_care',
+    'optician',
 
     // Finans / hukuk / idare
     'bank',
@@ -47,13 +48,13 @@ class PlacesService {
     'police',
     'fire_station',
 
-    // Eğitim kurumları — anaokulu, ilkokul, ortaokul, lise, üniversite
+    // Eğitim — anaokulu → üniversite
     'school',
     'primary_school',
     'secondary_school',
     'university',
 
-    // Araç / taşıt
+    // Araç / ulaşım
     'car_repair',
     'car_dealer',
     'car_wash',
@@ -68,7 +69,24 @@ class PlacesService {
     'airport',
     'light_rail_station',
 
-    // Depo / endüstri
+    // Perakende / mağaza — giyim, optik, elektronik vs.
+    'clothing_store',
+    'shoe_store',
+    'jewelry_store',
+    'electronics_store',
+    'hardware_store',
+    'home_goods_store',
+    'furniture_store',
+    'pet_store',
+    'florist',
+    'bicycle_store',
+    'convenience_store',
+    'supermarket',
+    'grocery_or_supermarket',
+    'liquor_store',
+    'store',         // Google'ın genel mağaza etiketi
+
+    // Depo / endüstri / tamirat
     'storage',
     'moving_company',
     'electrician',
@@ -83,17 +101,65 @@ class PlacesService {
     'cemetery',
     'place_of_worship',
 
-    // Güzellik / bakım (eğlence değil)
+    // Güzellik / çamaşır / temizlik
     'hair_care',
     'laundry',
     'dry_cleaning',
 
-    // Takı / aksesuar
-    'jewelry_store',
-
     // Diğer alakasız
     'rv_park',
   };
+
+  // ── Aktivite → izin verilen mekan type'ları (whitelist) ──────────────────
+  //
+  // Kullanıcı aktivite seçtiğinde, çekilen sonuçlar bu listeden EN AZ BİRİNİ
+  // taşımak ZORUNDA. Bu sayede Rams Park (stadium+food), optik mağazası
+  // (store+health) gibi false-positive'lar filtrelenir.
+  static const Map<String, Set<String>> _activityRequiredTypes = {
+    'restoran': {'restaurant', 'meal_takeaway', 'meal_delivery'},
+    'yemek':    {'restaurant', 'meal_takeaway', 'meal_delivery'},
+    'kafe':     {'cafe', 'bakery'},
+    'kahve':    {'cafe', 'bakery'},
+    'bar':      {'bar', 'night_club'},
+    'müze':     {'museum', 'art_gallery', 'tourist_attraction'},
+    'kültür':   {'museum', 'art_gallery', 'tourist_attraction'},
+    'galeri':   {'art_gallery', 'museum'},
+    'park':     {'park', 'campground', 'natural_feature'},
+    'doğa':     {'park', 'campground', 'natural_feature'},
+    'spor':     {'gym', 'stadium', 'bowling_alley', 'amusement_park'},
+    'sinema':   {'movie_theater'},
+    'eğlence':  {'amusement_park', 'bowling_alley', 'movie_theater'},
+    'alışveriş':{'shopping_mall', 'department_store'},
+    'bowling':  {'bowling_alley'},
+    'kitap':    {'library', 'book_store'},
+    'spa':      {'spa', 'beauty_salon'},
+  };
+
+  /// Aktivite seçilmişse sonuçların o aktiviteye ait type'lardan en az birini
+  /// taşımasını zorunlu kılar. False-positive sonuçları eler.
+  static List<PlaceResult> _filterByRequiredTypes(
+    List<PlaceResult> places,
+    List<String> selectedActivities,
+  ) {
+    if (selectedActivities.isEmpty) return places;
+
+    // Seçili aktivitelere karşılık gelen zorunlu type'ları birleştir
+    final required = <String>{};
+    for (final activity in selectedActivities) {
+      final lower = activity.toLowerCase();
+      for (final entry in _activityRequiredTypes.entries) {
+        if (lower.contains(entry.key)) {
+          required.addAll(entry.value);
+          break;
+        }
+      }
+    }
+    if (required.isEmpty) return places;
+
+    return places
+        .where((p) => p.types.any((t) => required.contains(t)))
+        .toList();
+  }
 
   /// Bir mekan listesinden `_alwaysExcluded` type içerenleri temizler.
   /// [searchingForLodging] true ise otel filtresi atlanır.
@@ -120,11 +186,11 @@ class PlacesService {
   // Geniş kapsam için hepsini birlikte arıyoruz.
 
   static const Map<PersonalityType, List<String>> _personalityTypes = {
-    PersonalityType.sosyalKelebek: ['bar', 'night_club', 'restaurant', 'food', 'meal_takeaway'],
+    PersonalityType.sosyalKelebek: ['bar', 'night_club', 'restaurant', 'meal_takeaway'],
     PersonalityType.sakinRuh:      ['cafe', 'park', 'library', 'bakery'],
     PersonalityType.maceraperest:  ['gym', 'park', 'bowling_alley', 'amusement_park', 'stadium'],
     PersonalityType.entelektuel:   ['museum', 'art_gallery', 'library', 'movie_theater', 'tourist_attraction'],
-    PersonalityType.gurme:         ['restaurant', 'food', 'meal_takeaway', 'bakery', 'cafe'],
+    PersonalityType.gurme:         ['restaurant', 'meal_takeaway', 'bakery', 'cafe'],
   };
 
   // ── Kişilik tipi → mekan tipi AĞIRLIK skoru ──────────────────────────────
@@ -178,10 +244,12 @@ class PlacesService {
   // "Restoran" seçilince kebapçı, dönerci, fast-food da dahil olsun.
 
   static const Map<String, List<String>> _activityToTypes = {
-    // Yemek — en geniş kapsam
-    'restoran': ['restaurant', 'food', 'meal_takeaway', 'meal_delivery'],
-    'yemek':    ['restaurant', 'food', 'meal_takeaway', 'meal_delivery'],
-    // Kafe
+    // Yemek — 'food' kasıtlı çıkarıldı: çok geniş, stadyum/mağaza gibi
+    // alakasız yerleri de kapsıyor. restaurant + meal_takeaway + meal_delivery
+    // kombinasyonu kebapçı, dönerci, fast-food'u zaten karşılıyor.
+    'restoran': ['restaurant', 'meal_takeaway', 'meal_delivery'],
+    'yemek':    ['restaurant', 'meal_takeaway', 'meal_delivery'],
+    // Kafe — pastane (bakery) buraya ait, restoran aramasına girmesin
     'kafe':     ['cafe', 'bakery'],
     'kahve':    ['cafe', 'bakery'],
     // Bar / gece
@@ -239,77 +307,4 @@ class PlacesService {
       final batch = await _fetchNearby(
           lat: lat, lng: lng, type: type, priceLevel: priceLevel);
 
-      for (final place in batch) {
-        if (!seen.contains(place.placeId)) {
-          seen.add(place.placeId);
-          results.add(place);
-        }
-      }
-    }
-
-    if (results.isEmpty) return [];
-
-    // ── Otel + alakasız type'ları temizle ─────────────────────────────────
-    // Restoran/kafe ararken içinde restoran olan oteller de geliyor.
-    // Post-fetch filtresiyle bunları çıkarıyoruz.
-    final filtered = _filterExcluded(
-      results,
-      searchingForLodging: searchingForLodging,
-    );
-
-    // ignore: avoid_print
-    print('🔍 PlacesService after filter: ${filtered.length}/${results.length}');
-
-    if (filtered.isEmpty) return [];
-
-    // ── Kişilik + rating kombinasyon skoru ─────────────────────────────────
-    final scored = filtered.map((place) {
-      final personalityScore = _personalityMatch(
-        place, userProfile, friendProfile, selectedActivities,
-      );
-      final ratingScore = (place.rating ?? 3.0) / 5.0;
-      // %60 kişilik uyumu + %40 rating
-      final total = personalityScore * 0.6 + ratingScore * 0.4;
-      return (place, total);
-    }).toList()
-      ..sort((a, b) => b.$2.compareTo(a.$2));
-
-    // Maksimum 20 mekan döner (sayfalama için)
-    final finalList = scored.take(20).map((e) => e.$1).toList();
-    // ignore: avoid_print
-    print('🔍 PlacesService final: ${finalList.length} mekan');
-    return finalList;
-  }
-
-  // ── Kişilik uyum skoru hesapla ────────────────────────────────────────────
-
-  /// Bir mekanın iki kişilik profiline ne kadar uyduğunu 0.0–1.0 arası döner.
-  static double _personalityMatch(
-    PlaceResult place,
-    PersonalityProfile userProfile,
-    PersonalityProfile friendProfile,
-    List<String> selectedActivities,
-  ) {
-    double score = 0.0;
-    int matched = 0;
-
-    // Seçili aktiviteler bonus — eğer mekan seçilen aktivite tipindeyse +1
-    for (final activity in selectedActivities) {
-      final lower = activity.toLowerCase();
-      for (final entry in _activityToTypes.entries) {
-        if (lower.contains(entry.key)) {
-          // Aktiviteye karşılık gelen type'lardan herhangi biri mekanla eşleşirse bonus
-          if (entry.value.any((t) => place.types.contains(t))) {
-            score += 1.0;
-            matched++;
-          }
-          break;
-        }
-      }
-    }
-
-    // Her kişilik tipi için ağırlıklı skor
-    void addProfileScore(PersonalityProfile profile) {
-      for (final entry in profile.scores.entries) {
-        final typeWeight = entry.value; // kişilik tipine verilen ağırlık
-        final pla
+      for (final place in
