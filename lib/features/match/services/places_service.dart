@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:http/http.dart' as http;
 import 'package:meetit/core/constants/app_config.dart';
@@ -343,7 +344,10 @@ class PlacesService {
       final ratingScore = _qualityScore(place);
       // %60 kişilik uyumu + %40 kalite (rating + yorum sayısı)
       final total = personalityScore * 0.6 + ratingScore * 0.4;
-      return (place, total);
+      // Az miktarda rastgelelik ekle (±3 puan civarı) — kalitesi birbirine
+      // çok yakın mekanlar her aramada birebir aynı sırada gelmesin.
+      final jitter = (_rng.nextDouble() - 0.5) * 0.06;
+      return (place, total + jitter);
     }).toList()
       ..sort((a, b) => b.$2.compareTo(a.$2));
 
@@ -354,22 +358,32 @@ class PlacesService {
     return finalList;
   }
 
+  static final math.Random _rng = math.Random();
+
   // ── Kalite skoru: rating + yorum sayısı ───────────────────────────────────
   //
-  // "Mümkünse çok yorum ve yüksek puan olan yeri seç" isteğine göre:
-  // Sadece ortalama puana (rating) bakmak yanıltıcı olabilir — 2 yorumla
-  // 5.0 puan alan bir yer, 800 yorumla 4.6 puan alan bir yerden daha
-  // güvenilir görünmemeli. Bayes ortalaması (IMDB tarzı) kullanılır:
-  // az yorumu olan mekanlar genel ortalamaya (C) doğru çekilir, çok
-  // yorumu olan mekanlar kendi puanına daha çok güvenilir.
+  // "Mümkünse çok yorum ve yüksek puan olan yeri seç, az yorumlu yüksek
+  // puanlı bir yer çok yorumlu bir yerin önüne geçmemeli" isteğine göre:
+  // Puan (rating) ve yorum sayısı (güven) eşit ağırlıkta ayrı ayrı
+  // normalize edilip birleştirilir. Yorum sayısı logaritmik ölçekte
+  // değerlendirilir (10 yorumdan 100'e çıkış, 1000'den 10000'e çıkıştan
+  // daha büyük bir fark yaratır) ve 10.000 yorumda tavan yapar.
+  //
+  // Örnek: 40 yorum + 4.5 puan  → ratingNorm=0.90, reviewNorm≈0.40 → 0.65
+  //        23.000 yorum + 4.2 puan → ratingNorm=0.84, reviewNorm=1.00 → 0.92
+  // İkinci mekan haklı olarak öne çıkar.
   static double _qualityScore(PlaceResult place) {
     final v = (place.userRatingsTotal ?? 0).toDouble();
     final r = place.rating ?? 3.5;
-    const m = 25.0; // "güvenilir" sayılmak için referans yorum sayısı
-    const c = 3.8; // genel ortalama beklenen puan
 
-    final bayesianRating = (v / (v + m)) * r + (m / (v + m)) * c;
-    return (bayesianRating / 5.0).clamp(0.0, 1.0);
+    final ratingNorm = (r / 5.0).clamp(0.0, 1.0);
+
+    const reviewCeiling = 10000.0;
+    final reviewNorm = v <= 0
+        ? 0.0
+        : (math.log(v + 1) / math.log(reviewCeiling)).clamp(0.0, 1.0);
+
+    return (ratingNorm * 0.5 + reviewNorm * 0.5).clamp(0.0, 1.0);
   }
 
   // ── Kişilik uyum skoru hesapla ────────────────────────────────────────────
@@ -517,20 +531,4 @@ class PlacesService {
     final userTypes = _personalityTypes[userProfile.dominantType] ?? [];
     final friendTypes = _personalityTypes[friendProfile.dominantType] ?? [];
 
-    // İki kişinin ortak tipleri önce (her ikisine de uygun)
-    final common = userTypes.toSet().intersection(friendTypes.toSet());
-    types.addAll(common);
-    types.addAll(userTypes);
-    types.addAll(friendTypes);
-
-    // Secondary tipler — daha geniş havuz
-    if (userProfile.secondaryType != null) {
-      types.addAll(_personalityTypes[userProfile.secondaryType!] ?? []);
-    }
-    if (friendProfile.secondaryType != null) {
-      types.addAll(_personalityTypes[friendProfile.secondaryType!] ?? []);
-    }
-
-    return types.take(5).toList();
-  }
-}
+    
