@@ -288,6 +288,7 @@
     "activity_sports": "Sports",
     "activity_culture": "Culture/Museum",
     "activity_bar": "Bar",
+    "activity_entertainment": "Entertainment",
     "price_all": "All",
     "price_cheap": "Budget",
     "price_mid": "Mid-range",
@@ -433,6 +434,4 @@
     "calm_soul_desc": "You prefer peaceful and quiet environments. Deep conversations and meaningful moments matter to you.",
     "adventurer_desc": "You want to experience everything. Unusual activities and exploration make you happy.",
     "intellectual_desc": "Culture, art and knowledge are important to you. Deep discussions and inspiring venues attract you.",
-    "foodie_desc": "Food is an experience for you. You seek quality flavors and special venues."
-  }
-}
+    "foodie_desc": "Food is an experience for you. You s

@@ -288,6 +288,7 @@
     "activity_sports": "Spor",
     "activity_culture": "Kültür/Müze",
     "activity_bar": "Bar",
+    "activity_entertainment": "Eğlence",
     "price_all": "Tümü",
     "price_cheap": "Ucuz",
     "price_mid": "Orta",
@@ -433,6 +434,4 @@
     "calm_soul_desc": "Huzurlu ve sessiz ortamları tercih edersin. Derin sohbetler ve anlamlı anlar senin için değerli.",
     "adventurer_desc": "Her deneyimi yaşamak istersin. Sıradışı aktiviteler ve keşifler seni mutlu eder.",
     "intellectual_desc": "Kültür, sanat ve bilgi senin için önemli. Derinlikli konuşmalar ve ilham verici mekanlar seni çekiyor.",
-    "foodie_desc": "Yemek senin için bir deneyim. Kaliteli lezzetler ve özel mekanlar arayışındasın."
-  }
-}
+    "foodie_desc": "Yemek senin için bir deneyim. Kaliteli lezzetler ve

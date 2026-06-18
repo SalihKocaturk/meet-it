@@ -914,6 +914,7 @@ class _ActivityGrid extends ConsumerWidget {
     ('Spor', 'match.activity_sports', Icons.fitness_center_outlined),
     ('Kültür/Müze', 'match.activity_culture', Icons.museum_outlined),
     ('Bar', 'match.activity_bar', Icons.local_bar_outlined),
+    ('Eğlence', 'match.activity_entertainment', Icons.celebration_outlined),
   ];
 
   @override
@@ -1911,11 +1912,3 @@ class _VenueCard extends ConsumerWidget {
                     ],
                   ),
                 ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
