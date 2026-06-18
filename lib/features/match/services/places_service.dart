@@ -130,7 +130,11 @@ class PlacesService {
     // NOT: 'stadium' kasıtlı çıkarıldı — stadyum izleyici/etkinlik mekanıdır,
     // birlikte spor YAPILACAK bir yer değil. "Spor" aktivitesi seçildiğinde
     // futbol stadyumu önermek anlamsız (sadece statik veri görüntüleniyor).
-    'spor':     {'gym', 'bowling_alley', 'amusement_park'},
+    // NOT: 'amusement_park' de buradan çıkarıldı — aquapark/lunapark
+    // egzersiz değil, dinlence/eğlence amaçlıdır. Google Places'te aquapark
+    // için ayrı bir type olmadığından (legacy API'de en yakın karşılığı
+    // 'amusement_park'), bu type sadece 'eğlence' kategorisinde tutuluyor.
+    'spor':     {'gym', 'bowling_alley'},
     'sinema':   {'movie_theater'},
     'eğlence':  {'amusement_park', 'bowling_alley', 'movie_theater'},
     'alışveriş':{'shopping_mall', 'department_store'},
@@ -266,8 +270,9 @@ class PlacesService {
     // Park / doğa
     'park':     ['park', 'campground', 'natural_feature'],
     'doğa':     ['park', 'campground', 'natural_feature'],
-    // Spor — 'stadium' kasıtlı çıkarıldı, bkz. _activityRequiredTypes notu.
-    'spor':     ['gym', 'bowling_alley', 'amusement_park'],
+    // Spor — 'stadium' ve 'amusement_park' kasıtlı çıkarıldı, bkz.
+    // _activityRequiredTypes notu (ikisi de egzersiz değil).
+    'spor':     ['gym', 'bowling_alley'],
     // Sinema / eğlence
     'sinema':   ['movie_theater'],
     'eğlence':  ['amusement_park', 'bowling_alley', 'movie_theater'],
@@ -514,10 +519,4 @@ class PlacesService {
       print('[PlacesService] fetch error: $e');
       return [];
     }
-  }
-
-  // ── Type Çözümleme ─────────────────────────────────────────────────────────
-
-  static List<String> _resolveTypes({
-    required PersonalityProfile userProfile,
-    required PersonalityProfile friendProfile,
+ 
