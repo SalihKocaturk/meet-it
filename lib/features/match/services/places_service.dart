@@ -127,7 +127,10 @@ class PlacesService {
     'galeri':   {'art_gallery', 'museum'},
     'park':     {'park', 'campground', 'natural_feature'},
     'doğa':     {'park', 'campground', 'natural_feature'},
-    'spor':     {'gym', 'stadium', 'bowling_alley', 'amusement_park'},
+    // NOT: 'stadium' kasıtlı çıkarıldı — stadyum izleyici/etkinlik mekanıdır,
+    // birlikte spor YAPILACAK bir yer değil. "Spor" aktivitesi seçildiğinde
+    // futbol stadyumu önermek anlamsız (sadece statik veri görüntüleniyor).
+    'spor':     {'gym', 'bowling_alley', 'amusement_park'},
     'sinema':   {'movie_theater'},
     'eğlence':  {'amusement_park', 'bowling_alley', 'movie_theater'},
     'alışveriş':{'shopping_mall', 'department_store'},
@@ -189,7 +192,7 @@ class PlacesService {
   static const Map<PersonalityType, List<String>> _personalityTypes = {
     PersonalityType.sosyalKelebek: ['bar', 'night_club', 'restaurant', 'meal_takeaway'],
     PersonalityType.sakinRuh:      ['cafe', 'park', 'library', 'bakery'],
-    PersonalityType.maceraperest:  ['gym', 'park', 'bowling_alley', 'amusement_park', 'stadium'],
+    PersonalityType.maceraperest:  ['gym', 'park', 'bowling_alley', 'amusement_park'],
     PersonalityType.entelektuel:   ['museum', 'art_gallery', 'library', 'movie_theater', 'tourist_attraction'],
     PersonalityType.gurme:         ['restaurant', 'meal_takeaway', 'bakery', 'cafe'],
   };
@@ -263,8 +266,8 @@ class PlacesService {
     // Park / doğa
     'park':     ['park', 'campground', 'natural_feature'],
     'doğa':     ['park', 'campground', 'natural_feature'],
-    // Spor
-    'spor':     ['gym', 'stadium', 'bowling_alley', 'amusement_park'],
+    // Spor — 'stadium' kasıtlı çıkarıldı, bkz. _activityRequiredTypes notu.
+    'spor':     ['gym', 'bowling_alley', 'amusement_park'],
     // Sinema / eğlence
     'sinema':   ['movie_theater'],
     'eğlence':  ['amusement_park', 'bowling_alley', 'movie_theater'],
@@ -518,8 +521,3 @@ class PlacesService {
   static List<String> _resolveTypes({
     required PersonalityProfile userProfile,
     required PersonalityProfile friendProfile,
-    required List<String> selectedActivities,
-  }) {
-    // ── MOD 1: Aktivite seçilmişse SADECE o tipler ───────────────────────────
-    // Kullanıcı ne seçtiyse onu göster, kişilik karıştırma.
-    // _activityToTypes bir 
