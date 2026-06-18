@@ -1,0 +1,22 @@
+tree 5155ab6319978a4a32a9b29b28124c671bc5a7c1
+parent 64546731f887627048ae66bd96c28c073efc32d5
+author salih <hafifsaglam61@gmail.com> 1781455624 +0000
+committer salih <hafifsaglam61@gmail.com> 1781455624 +0000
+
+feat(quiz): balanced 10-question personality quiz
+
+Problem: entelektuel appeared in only 1/7 questions (max score 14%),
+         gurme appeared in 6/7 questions (max score 86%) — skewed results.
+
+Fix: expanded to 10 questions, each personality type appears in exactly
+     8 out of 10 questions (40 slots / 5 types = 8 each — perfectly balanced).
+
+New questions added:
+  Q3: weekend preference (entelektuel replaces sakinRuh)
+  Q4: venue criteria (entelektuel replaces maceraperest)
+  Q5: self-description (entelektuel added, sosyalKelebek removed)
+  Q6: stress relief (entelektuel replaces gurme)
+  Q7: vacation (entelektuel replaces sakinRuh)
+  Q8: film choice (new — sosyal/sakin/entel/gurme)
+  Q9: new city (new — sakin/entel/macer/gurme)
+  Q10: dinner plans (new — sosyal/sakin/macer/gurme)

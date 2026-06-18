@@ -307,4 +307,230 @@ class PlacesService {
       final batch = await _fetchNearby(
           lat: lat, lng: lng, type: type, priceLevel: priceLevel);
 
-      for (final place in
+      for (final place in batch) {
+        if (!seen.contains(place.placeId)) {
+          seen.add(place.placeId);
+          results.add(place);
+        }
+      }
+    }
+
+    if (results.isEmpty) return [];
+
+    // ── Adım 1: Kesinlikle istemediğimiz type'ları çıkar ─────────────────
+    final excludeFiltered = _filterExcluded(
+      results,
+      searchingForLodging: searchingForLodging,
+    );
+
+    // ── Adım 2: Aktivite seçilmişse zorunlu type whitelist uygula ─────────
+    // Örn: "Restoran" seçildiyse sonuç restaurant/meal_takeaway/meal_delivery
+    // type'larından birini MUTLAKA taşımalı. Bu sayede stadyum, giyim
+    // mağazası, optik gibi false-positive'lar elenir.
+    final filtered = _filterByRequiredTypes(excludeFiltered, selectedActivities);
+
+    // ignore: avoid_print
+    print('🔍 PlacesService: raw=${results.length} '
+        'excl=${excludeFiltered.length} req=${filtered.length}');
+
+    if (filtered.isEmpty) return [];
+
+    // ── Kişilik + rating kombinasyon skoru ─────────────────────────────────
+    final scored = filtered.map((place) {
+      final personalityScore = _personalityMatch(
+        place, userProfile, friendProfile, selectedActivities,
+      );
+      final ratingScore = _qualityScore(place);
+      // %60 kişilik uyumu + %40 kalite (rating + yorum sayısı)
+      final total = personalityScore * 0.6 + ratingScore * 0.4;
+      return (place, total);
+    }).toList()
+      ..sort((a, b) => b.$2.compareTo(a.$2));
+
+    // Maksimum 20 mekan döner (sayfalama için)
+    final finalList = scored.take(20).map((e) => e.$1).toList();
+    // ignore: avoid_print
+    print('🔍 PlacesService final: ${finalList.length} mekan');
+    return finalList;
+  }
+
+  // ── Kalite skoru: rating + yorum sayısı ───────────────────────────────────
+  //
+  // "Mümkünse çok yorum ve yüksek puan olan yeri seç" isteğine göre:
+  // Sadece ortalama puana (rating) bakmak yanıltıcı olabilir — 2 yorumla
+  // 5.0 puan alan bir yer, 800 yorumla 4.6 puan alan bir yerden daha
+  // güvenilir görünmemeli. Bayes ortalaması (IMDB tarzı) kullanılır:
+  // az yorumu olan mekanlar genel ortalamaya (C) doğru çekilir, çok
+  // yorumu olan mekanlar kendi puanına daha çok güvenilir.
+  static double _qualityScore(PlaceResult place) {
+    final v = (place.userRatingsTotal ?? 0).toDouble();
+    final r = place.rating ?? 3.5;
+    const m = 25.0; // "güvenilir" sayılmak için referans yorum sayısı
+    const c = 3.8; // genel ortalama beklenen puan
+
+    final bayesianRating = (v / (v + m)) * r + (m / (v + m)) * c;
+    return (bayesianRating / 5.0).clamp(0.0, 1.0);
+  }
+
+  // ── Kişilik uyum skoru hesapla ────────────────────────────────────────────
+
+  /// Bir mekanın iki kişilik profiline ne kadar uyduğunu 0.0–1.0 arası döner.
+  static double _personalityMatch(
+    PlaceResult place,
+    PersonalityProfile userProfile,
+    PersonalityProfile friendProfile,
+    List<String> selectedActivities,
+  ) {
+    double score = 0.0;
+    int matched = 0;
+
+    // Seçili aktiviteler bonus — eğer mekan seçilen aktivite tipindeyse +1
+    for (final activity in selectedActivities) {
+      final lower = activity.toLowerCase();
+      for (final entry in _activityToTypes.entries) {
+        if (lower.contains(entry.key)) {
+          // Aktiviteye karşılık gelen type'lardan herhangi biri mekanla eşleşirse bonus
+          if (entry.value.any((t) => place.types.contains(t))) {
+            score += 1.0;
+            matched++;
+          }
+          break;
+        }
+      }
+    }
+
+    // Her kişilik tipi için ağırlıklı skor
+    void addProfileScore(PersonalityProfile profile) {
+      for (final entry in profile.scores.entries) {
+        final typeWeight = entry.value; // kişilik tipine verilen ağırlık
+        final placeScores = _personalityScores[entry.key] ?? {};
+        for (final placeType in place.types) {
+          if (placeScores.containsKey(placeType)) {
+            score += placeScores[placeType]! * typeWeight;
+            matched++;
+          }
+        }
+      }
+    }
+
+    addProfileScore(userProfile);
+    addProfileScore(friendProfile);
+
+    if (matched == 0) return 0.3; // eşleşme yoksa düşük ama sıfır değil
+    return (score / matched).clamp(0.0, 1.0);
+  }
+
+  // ── Places Nearby Search HTTP ─────────────────────────────────────────────
+
+  static Future<List<PlaceResult>> _fetchNearby({
+    required double lat,
+    required double lng,
+    required String type,
+    int? priceLevel,
+  }) async {
+    final params = <String, String>{
+      'location': '$lat,$lng',
+      'radius': '${AppConfig.defaultSearchRadius}',
+      'type': type,
+      'language': 'tr',
+      'key': AppConfig.googleMapsApiKey,
+    };
+    if (priceLevel != null) {
+      params['minprice'] = '$priceLevel';
+      params['maxprice'] = '$priceLevel';
+    }
+
+    final uri = Uri.parse(AppConfig.placesNearbyUrl)
+        .replace(queryParameters: params);
+
+    try {
+      final response =
+          await http.get(uri).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode != 200) return [];
+
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final status = body['status'] as String?;
+
+      // ignore: avoid_print
+      print('[PlacesService] type=$type status=$status');
+
+      if (status == 'REQUEST_DENIED') {
+        final msg = body['error_message'] ?? 'API key sorunu veya Maps/Places API etkin değil';
+        // ignore: avoid_print
+        print('[PlacesService] ❌ REQUEST_DENIED: $msg');
+        return [];
+      }
+      if (status == 'OVER_QUERY_LIMIT') {
+        // ignore: avoid_print
+        print('[PlacesService] ❌ OVER_QUERY_LIMIT: Günlük kota dolmuş');
+        return [];
+      }
+      if (status != 'OK' && status != 'ZERO_RESULTS') {
+        // ignore: avoid_print
+        print('[PlacesService] ⚠️ status=$status body=${response.body}');
+        return [];
+      }
+
+      final rawResults = body['results'] as List<dynamic>? ?? [];
+      // API'dan gelen tüm sonuçları al (max 20)
+      return rawResults
+          .map((r) => PlaceResult.fromJson(r as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      // ignore: avoid_print
+      print('[PlacesService] fetch error: $e');
+      return [];
+    }
+  }
+
+  // ── Type Çözümleme ─────────────────────────────────────────────────────────
+
+  static List<String> _resolveTypes({
+    required PersonalityProfile userProfile,
+    required PersonalityProfile friendProfile,
+    required List<String> selectedActivities,
+  }) {
+    // ── MOD 1: Aktivite seçilmişse SADECE o tipler ───────────────────────────
+    // Kullanıcı ne seçtiyse onu göster, kişilik karıştırma.
+    // _activityToTypes bir aktivite için birden fazla type döndürür:
+    //   "restoran" → ['restaurant', 'food', 'meal_takeaway', 'meal_delivery']
+    // Bu sayede kebapçı, dönerci vb. de kapsama girer.
+    if (selectedActivities.isNotEmpty) {
+      final types = <String>{};
+      for (final activity in selectedActivities) {
+        final lower = activity.toLowerCase();
+        for (final entry in _activityToTypes.entries) {
+          if (lower.contains(entry.key)) {
+            types.addAll(entry.value); // tüm type'ları ekle
+            break;
+          }
+        }
+      }
+      // Eşleşen type yoksa (tanımsız aktivite) kişiliğe geri dön
+      if (types.isNotEmpty) return types.toList();
+    }
+
+    // ── MOD 2: Aktivite seçilmemişse SADECE kişiliğe göre ────────────────────
+    final types = <String>{};
+
+    final userTypes = _personalityTypes[userProfile.dominantType] ?? [];
+    final friendTypes = _personalityTypes[friendProfile.dominantType] ?? [];
+
+    // İki kişinin ortak tipleri önce (her ikisine de uygun)
+    final common = userTypes.toSet().intersection(friendTypes.toSet());
+    types.addAll(common);
+    types.addAll(userTypes);
+    types.addAll(friendTypes);
+
+    // Secondary tipler — daha geniş havuz
+    if (userProfile.secondaryType != null) {
+      types.addAll(_personalityTypes[userProfile.secondaryType!] ?? []);
+    }
+    if (friendProfile.secondaryType != null) {
+      types.addAll(_personalityTypes[friendProfile.secondaryType!] ?? []);
+    }
+
+    return types.take(5).toList();
+  }
+}

@@ -294,6 +294,7 @@
     "price_expensive": "Expensive",
     "price_luxury": "Luxury",
     "select_friend_hint": "* Select a friend first",
+    "solo_hint": "If you don't pick a friend, we'll suggest venues near you on your own.",
     "personality_type_label": "Your Personality: {name}",
     "personality_customized": "Venue suggestions personalized to your profile.",
     "venue_count": "{count} venues • Page {page}/{total}",
@@ -430,4 +431,8 @@
     "foodie": "Foodie",
     "social_butterfly_desc": "You love lively atmospheres and connect easily with new people. Your energy is contagious!",
     "calm_soul_desc": "You prefer peaceful and quiet environments. Deep conversations and meaningful moments matter to you.",
-    "adventu
+    "adventurer_desc": "You want to experience everything. Unusual activities and exploration make you happy.",
+    "intellectual_desc": "Culture, art and knowledge are important to you. Deep discussions and inspiring venues attract you.",
+    "foodie_desc": "Food is an experience for you. You seek quality flavors and special venues."
+  }
+}

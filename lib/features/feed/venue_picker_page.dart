@@ -813,4 +813,13 @@ class _NearbyPlace {
   _NearbyPlace({
     required this.placeId,
     required this.name,
-    required this.a
+    required this.address,
+    required this.lat,
+    required this.lng,
+    this.rating,
+    this.photoUrl,
+    this.types = const [],
+    this.priceLevel,
+    this.distanceM = 0,
+  });
+}

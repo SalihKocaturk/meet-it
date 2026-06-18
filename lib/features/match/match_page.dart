@@ -216,7 +216,9 @@ class MatchPage extends ConsumerWidget {
                           final selectedFriend = ref.watch(
                             selectedFriendProvider,
                           );
-                          final isEnabled = selectedFriend != null;
+                          // Arkadaş seçilmese de tek başına mekan arama
+                          // yapılabilsin — buton her zaman aktif.
+                          const isEnabled = true;
 
                           return Column(
                             children: [
@@ -236,12 +238,13 @@ class MatchPage extends ConsumerWidget {
                                               PersonalityProfile.mock(
                                                 PersonalityType.sosyalKelebek,
                                               );
+                                          // Arkadaş seçilmediyse kendi
+                                          // profili kullanılır (tek başına
+                                          // buluşma modu).
                                           final friendProfile =
                                               selectedFriend
-                                                  .personalityProfile ??
-                                              PersonalityProfile.mock(
-                                                PersonalityType.sosyalKelebek,
-                                              );
+                                                  ?.personalityProfile ??
+                                              userProfile;
                                           final priceLevel = ref.read(
                                             selectedPriceLevelProvider,
                                           );
@@ -257,7 +260,7 @@ class MatchPage extends ConsumerWidget {
                                                 friendProfile: friendProfile,
                                                 selectedActivities: activities
                                                     .toList(),
-                                                friendUid: selectedFriend.uid,
+                                                friendUid: selectedFriend?.uid,
                                                 priceLevel: priceLevel,
                                                 userLat: userLoc?.lat,
                                                 userLng: userLoc?.lng,
@@ -298,16 +301,17 @@ class MatchPage extends ConsumerWidget {
                                   ),
                                 ),
                               ),
-                              if (!isEnabled)
+                              if (selectedFriend == null)
                                 Padding(
                                   padding: EdgeInsets.only(top: 8),
                                   child: Text(
-                                    'match.select_friend_hint'.tr(),
+                                    'match.solo_hint'.tr(),
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: context.colors.hint,
                                       fontStyle: FontStyle.italic,
                                     ),
+                                    textAlign: TextAlign.center,
                                   ),
                                 ),
                             ],
@@ -1242,6 +1246,45 @@ class _VenueResultsView extends ConsumerWidget {
             ),
           )
         else ...[
+          // ── Mesafe uyarısı (orta nokta hesaplanamadıysa) ──────────────────
+          if (searchState.distanceWarning != null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFA000).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFFFFA000).withOpacity(0.4),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        size: 18,
+                        color: Color(0xFFFFA000),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          searchState.distanceWarning!,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: context.colors.textPrimary,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
           // ── Orta nokta mekanları (üstte, özel bölüm) ──────────────────────
           if (searchState.hasMidpoint && searchState.midpointVenues.isNotEmpty)
             SliverToBoxAdapter(
@@ -1798,4 +1841,81 @@ class _VenueCard extends ConsumerWidget {
                                       color: isSaved
                                           ? context.colors.primary
                                           : context.colors.textSecondary,
-           
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Gitmeye Başla butonu
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => _openInMaps(ref),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              decoration: BoxDecoration(
+                                color: context.colors.primary,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.navigation_outlined,
+                                    size: 15,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    'match.navigate'.tr(),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+
+                // Açık mı?
+                if (place.isOpenNow) ...[
+                  SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF3FB950),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        'match.now_open'.tr(),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: context.colors.success,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

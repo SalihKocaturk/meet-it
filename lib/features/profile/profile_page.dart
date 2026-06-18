@@ -584,4 +584,97 @@ class _VenueTile extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      p
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: context.colors.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        place.primaryTypeLabel,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: context.colors.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    if (place.rating != null) ...[
+                      const SizedBox(width: 6),
+                      const Icon(Icons.star_rounded,
+                          size: 12, color: Color(0xFFFFB800)),
+                      const SizedBox(width: 2),
+                      Text(
+                        place.ratingText,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: context.colors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          trailing,
+        ],
+      ),
+    );
+  }
+}
+
+class _PlaceholderBox extends StatelessWidget {
+  final PlaceResult place;
+  const _PlaceholderBox(this.place);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        color: context.colors.primary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Center(
+        child: Text(
+          place.primaryTypeLabel.isNotEmpty
+              ? place.primaryTypeLabel[0]
+              : '📍',
+          style: const TextStyle(fontSize: 20),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyTab extends StatelessWidget {
+  final IconData icon;
+  final String message;
+
+  const _EmptyTab({required this.icon, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 48, color: context.colors.hint),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            style: TextStyle(
+              fontSize: 14,
+              color: context.colors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -25,6 +25,10 @@ class VenueSearchState {
   final double? searchLng;
   final bool hasMidpoint; // iki kullanıcının konumu kullanıldı mı?
 
+  /// Mesafe çok uzak olduğu için orta nokta hesaplanamadığında
+  /// kullanıcıya gösterilecek uyarı (sonuçları engellemez).
+  final String? distanceWarning;
+
   const VenueSearchState({
     this.midpointVenues = const [],
     this.allVenues = const [],
@@ -34,6 +38,7 @@ class VenueSearchState {
     this.searchLat,
     this.searchLng,
     this.hasMidpoint = false,
+    this.distanceWarning,
   });
 
   List<PlaceResult> get venues {
@@ -57,8 +62,10 @@ class VenueSearchState {
     double? searchLat,
     double? searchLng,
     bool? hasMidpoint,
+    String? distanceWarning,
     bool clearError = false,
     bool clearAll = false,
+    bool clearDistanceWarning = false,
   }) {
     return VenueSearchState(
       midpointVenues:
@@ -70,6 +77,9 @@ class VenueSearchState {
       searchLat: searchLat ?? this.searchLat,
       searchLng: searchLng ?? this.searchLng,
       hasMidpoint: hasMidpoint ?? this.hasMidpoint,
+      distanceWarning: clearDistanceWarning
+          ? null
+          : (distanceWarning ?? this.distanceWarning),
     );
   }
 }
@@ -89,7 +99,12 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
     double? userLat,
     double? userLng,
   }) async {
-    state = state.copyWith(isLoading: true, clearError: true, clearAll: true);
+    state = state.copyWith(
+      isLoading: true,
+      clearError: true,
+      clearAll: true,
+      clearDistanceWarning: true,
+    );
 
     // ── Kullanıcı konumu ───────────────────────────────────────────────────
     double myLat;
@@ -125,13 +140,32 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
     bool usingMidpoint = false;
     double searchLat = myLat;
     double searchLng = myLng;
+    String? distanceWarning;
 
-    if (friendLat != null && friendLng != null) {
-      final dist = _haversineKm(myLat, myLng, friendLat, friendLng);
-      if (dist < 200) {
-        searchLat = (myLat + friendLat) / 2;
-        searchLng = (myLng + friendLng) / 2;
-        usingMidpoint = true;
+    const maxDistanceKm = 200.0;
+
+    if (friendUid != null) {
+      if (friendLat != null && friendLng != null) {
+        final dist = _haversineKm(myLat, myLng, friendLat, friendLng);
+        if (dist < maxDistanceKm) {
+          searchLat = (myLat + friendLat) / 2;
+          searchLng = (myLng + friendLng) / 2;
+          usingMidpoint = true;
+        } else {
+          // İki kişi arasındaki mesafe çok uzun — ortak bir mekan
+          // bulmak gerçekçi değil. Kullanıcıyı uyar, kendi konumuna
+          // göre aramaya devam et.
+          distanceWarning =
+              'İkiniz arasındaki mesafe çok uzun (${dist.round()} km). '
+              'Ortak bir mekan önerilemiyor, bunun yerine kendi '
+              'konumuna yakın mekanlar gösteriliyor.';
+        }
+      } else {
+        // Arkadaşın konum bilgisi yok — orta nokta hesaplanamıyor.
+        distanceWarning =
+            'Arkadaşının konum bilgisi bulunamadığı için ortak bir '
+            'buluşma noktası hesaplanamadı. Kendi konumuna yakın '
+            'mekanlar gösteriliyor.';
       }
     }
 
@@ -139,6 +173,7 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
       searchLat: searchLat,
       searchLng: searchLng,
       hasMidpoint: usingMidpoint,
+      distanceWarning: distanceWarning,
     );
 
     // ── Places API ────────────────────────────────────────────────────────

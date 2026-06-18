@@ -294,6 +294,7 @@
     "price_expensive": "Pahalı",
     "price_luxury": "Lüks",
     "select_friend_hint": "* Önce bir arkadaş seç",
+    "solo_hint": "Arkadaş seçmezsen tek başına yakınındaki mekanlar önerilir.",
     "personality_type_label": "Senin Kişilik Tipin: {name}",
     "personality_customized": "Mekan önerileri bu tipe göre kişiselleştirildi.",
     "venue_count": "{count} mekan • Sayfa {page}/{total}",
@@ -429,4 +430,9 @@
     "adventurer": "Maceraperest",
     "foodie": "Gurme",
     "social_butterfly_desc": "Canlı atmosferleri seven, yeni insanlarla kolayca kaynaşan birisin. Enerjin bulaşıcı!",
-    "calm_soul_desc": "Huzurlu ve sessiz ortamları tercih edersin. Derin sohbetler ve anlamlı anlar senin için değerli
+    "calm_soul_desc": "Huzurlu ve sessiz ortamları tercih edersin. Derin sohbetler ve anlamlı anlar senin için değerli.",
+    "adventurer_desc": "Her deneyimi yaşamak istersin. Sıradışı aktiviteler ve keşifler seni mutlu eder.",
+    "intellectual_desc": "Kültür, sanat ve bilgi senin için önemli. Derinlikli konuşmalar ve ilham verici mekanlar seni çekiyor.",
+    "foodie_desc": "Yemek senin için bir deneyim. Kaliteli lezzetler ve özel mekanlar arayışındasın."
+  }
+}
