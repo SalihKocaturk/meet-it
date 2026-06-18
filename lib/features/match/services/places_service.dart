@@ -389,14 +389,25 @@ class PlacesService {
   // ── Kişilik uyum skoru hesapla ────────────────────────────────────────────
 
   /// Bir mekanın iki kişilik profiline ne kadar uyduğunu 0.0–1.0 arası döner.
+  ///
+  /// NOT (eski hata): Önceki sürüm, eşleşen her (kişilik tipi, mekan type'ı)
+  /// çiftini "matched" sayacına ekleyip toplamı bu sayaca bölüyordu. Bu,
+  /// birden çok kişilik tipine hitap eden mekanları (örn. kafe — sakin ruh,
+  /// gurme, entelektüel tiplerinin hepsinde geçiyor) cezalandırıyordu: çok
+  /// eşleşme = düşük ortalama. Sonuçta, kullanıcının sadece zayıf bir ikincil
+  /// eğilimiyle (örn. %15 maceraperest) eşleşen TEK bir mekan type'ı (gym),
+  /// kafe gibi gerçekten baskın tipe uygun bir mekanla yapay olarak aynı
+  /// seviyeye gelebiliyordu. Düzeltme: her profil için ağırlıklı toplam
+  /// (skor × kişilik-tipi-ağırlığı) hesapla, sayıya bölme — ağırlıklar zaten
+  /// 0-1 aralığında olduğu için sonuç doğal olarak sınırlı kalır ve baskın
+  /// tipin gerçek üstünlüğü korunur.
   static double _personalityMatch(
     PlaceResult place,
     PersonalityProfile userProfile,
     PersonalityProfile friendProfile,
     List<String> selectedActivities,
   ) {
-    double score = 0.0;
-    int matched = 0;
+    double activityBonus = 0.0;
 
     // Seçili aktiviteler bonus — eğer mekan seçilen aktivite tipindeyse +1
     for (final activity in selectedActivities) {
@@ -405,33 +416,37 @@ class PlacesService {
         if (lower.contains(entry.key)) {
           // Aktiviteye karşılık gelen type'lardan herhangi biri mekanla eşleşirse bonus
           if (entry.value.any((t) => place.types.contains(t))) {
-            score += 1.0;
-            matched++;
+            activityBonus += 1.0;
           }
           break;
         }
       }
     }
 
-    // Her kişilik tipi için ağırlıklı skor
-    void addProfileScore(PersonalityProfile profile) {
+    // Bir profil için ağırlıklı kişilik uyum skoru: her kişilik tipinin
+    // ağırlığı × o tipin bu mekan type'larına verdiği toplam skor.
+    double profileScore(PersonalityProfile profile) {
+      double s = 0.0;
       for (final entry in profile.scores.entries) {
-        final typeWeight = entry.value; // kişilik tipine verilen ağırlık
+        final typeWeight = entry.value;
+        if (typeWeight <= 0) continue;
         final placeScores = _personalityScores[entry.key] ?? {};
         for (final placeType in place.types) {
-          if (placeScores.containsKey(placeType)) {
-            score += placeScores[placeType]! * typeWeight;
-            matched++;
-          }
+          final v = placeScores[placeType];
+          if (v != null) s += v * typeWeight;
         }
       }
+      return s;
     }
 
-    addProfileScore(userProfile);
-    addProfileScore(friendProfile);
+    final combined =
+        (profileScore(userProfile) + profileScore(friendProfile)) / 2;
 
-    if (matched == 0) return 0.3; // eşleşme yoksa düşük ama sıfır değil
-    return (score / matched).clamp(0.0, 1.0);
+    if (combined <= 0 && activityBonus <= 0) {
+      return 0.3; // eşleşme yoksa düşük ama sıfır değil
+    }
+
+    return (combined + activityBonus).clamp(0.0, 1.0);
   }
 
   // ── Places Nearby Search HTTP ─────────────────────────────────────────────
@@ -507,28 +522,4 @@ class PlacesService {
   }) {
     // ── MOD 1: Aktivite seçilmişse SADECE o tipler ───────────────────────────
     // Kullanıcı ne seçtiyse onu göster, kişilik karıştırma.
-    // _activityToTypes bir aktivite için birden fazla type döndürür:
-    //   "restoran" → ['restaurant', 'food', 'meal_takeaway', 'meal_delivery']
-    // Bu sayede kebapçı, dönerci vb. de kapsama girer.
-    if (selectedActivities.isNotEmpty) {
-      final types = <String>{};
-      for (final activity in selectedActivities) {
-        final lower = activity.toLowerCase();
-        for (final entry in _activityToTypes.entries) {
-          if (lower.contains(entry.key)) {
-            types.addAll(entry.value); // tüm type'ları ekle
-            break;
-          }
-        }
-      }
-      // Eşleşen type yoksa (tanımsız aktivite) kişiliğe geri dön
-      if (types.isNotEmpty) return types.toList();
-    }
-
-    // ── MOD 2: Aktivite seçilmemişse SADECE kişiliğe göre ────────────────────
-    final types = <String>{};
-
-    final userTypes = _personalityTypes[userProfile.dominantType] ?? [];
-    final friendTypes = _personalityTypes[friendProfile.dominantType] ?? [];
-
-    
+    // _activityToTypes bir 
