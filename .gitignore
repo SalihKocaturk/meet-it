@@ -74,3 +74,4 @@ meetit/coverage/
 # macOS
 __MACOSX/
 Thumbs.db
+.git-rewrite/
