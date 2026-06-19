@@ -588,24 +588,42 @@ class _LocationField extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userLoc = ref.watch(userLocationProvider);
+    final currentUser = ref.watch(currentUserProvider);
     final displayText = userLoc?.text ?? defaultHint;
     final hasCoords = userLoc?.hasCoords ?? false;
 
-    return GestureDetector(
-      onTap: () async {
-        final result = await Navigator.of(context).push<UserLocation>(
-          MaterialPageRoute(
-            builder: (_) => MapLocationPickerPage(
-              initial: userLoc?.hasCoords == true
-                  ? LatLng(userLoc!.lat!, userLoc.lng!)
-                  : null,
-            ),
+    // Konum DB'den (UserModel.lat/lng) geldiği için kullanıcı her seferinde
+    // yeniden konum girmek zorunda değil — burada zaten kayıtlı konumu
+    // gösteriyoruz. İsterse alttaki "Yeni Konum Seç" ile değiştirebilir.
+    Future<void> pickLocation() async {
+      final result = await Navigator.of(context).push<UserLocation>(
+        MaterialPageRoute(
+          builder: (_) => MapLocationPickerPage(
+            initial: userLoc?.hasCoords == true
+                ? LatLng(userLoc!.lat!, userLoc.lng!)
+                : null,
           ),
-        );
-        if (result != null) {
-          ref.read(userLocationProvider.notifier).state = result;
-        }
-      },
+        ),
+      );
+      if (result == null) return;
+
+      // Anında UI geri bildirimi
+      ref.read(userLocationProvider.notifier).state = result;
+
+      // DB'ye kaydet — bir dahaki sefere konum servisine veya yeniden
+      // girişe gerek kalmasın, arkadaşlarımız da benim konumumu DB'den
+      // güvenilir şekilde okuyabilsin.
+      if (result.hasCoords) {
+        await ref.read(authProvider.notifier).updateLocation(
+              result.lat!,
+              result.lng!,
+              address: result.text,
+            );
+      }
+    }
+
+    return GestureDetector(
+      onTap: pickLocation,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
@@ -617,27 +635,59 @@ class _LocationField extends ConsumerWidget {
                 : context.colors.border,
           ),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              hasCoords ? Icons.location_on : Icons.my_location,
-              color: context.colors.primary,
-              size: 20,
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                displayText,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: hasCoords
-                      ? context.colors.textPrimary
-                      : context.colors.textSecondary,
+            Row(
+              children: [
+                if (hasCoords)
+                  CircularAvatar(
+                    name: currentUser?.name,
+                    photoUrl: currentUser?.photoUrl,
+                    radius: 12,
+                  )
+                else
+                  Icon(
+                    Icons.my_location,
+                    color: context.colors.primary,
+                    size: 20,
+                  ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    displayText,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: hasCoords
+                          ? context.colors.textPrimary
+                          : context.colors.textSecondary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                overflow: TextOverflow.ellipsis,
-              ),
+                if (!hasCoords)
+                  Icon(
+                    Icons.edit_outlined,
+                    size: 16,
+                    color: context.colors.hint,
+                  ),
+              ],
             ),
-            Icon(Icons.edit_outlined, size: 16, color: context.colors.hint),
+            if (hasCoords) ...[
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: pickLocation,
+                child: Text(
+                  'match.change_location'.tr(),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: context.colors.primary,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1834,49 +1884,4 @@ class _VenueCard extends ConsumerWidget {
                       ),
                       child: Text(
                         place.primaryTypeLabel,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: context.colors.primary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(width: 8),
-
-                    // Rating
-                    if (place.rating != null) ...[
-                      const Icon(
-                        Icons.star_rounded,
-                        size: 14,
-                        color: Color(0xFFFFB800),
-                      ),
-                      SizedBox(width: 2),
-                      Text(
-                        place.ratingText,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: context.colors.textPrimary,
-                        ),
-                      ),
-                      if (place.userRatingsTotal != null)
-                        Text(
-                          ' (${place.userRatingsTotal})',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: context.colors.textSecondary,
-                          ),
-                        ),
-                    ],
-
-                    // Fiyat etiketi
-                    if (place.priceLabelText != null) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF4CAF50).withOpac
+    

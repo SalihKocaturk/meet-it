@@ -298,31 +298,40 @@ class AuthNotifier extends Notifier<AuthState> {
     state = state.copyWith(user: updatedUser);
   }
 
+  /// Kullanıcının haritadan seçtiği konumu hem state'e hem Firestore'a yaz.
+  ///
+  /// Bu, arkadaşların buluşma mekanı ararken konumumu her zaman DB'den
+  /// güvenilir bir şekilde okuyabilmesini sağlar — anlık konum servisinin
+  /// açık olmasına veya her seferinde yeniden konum girilmesine gerek
+  /// kalmaz. `address` verilirse kullanıcıya gösterilen metin konum
+  /// (örn. "Kadıköy, İstanbul") de güncellenir.
+  Future<void> updateLocation(double lat, double lng, {String? address}) async {
+    final user = state.user;
+    if (user == null) return;
+
+    final updatedUser = user.copyWith(
+      lat: lat,
+      lng: lng,
+      location: address ?? user.location,
+    );
+    await _saveSession(updatedUser);
+
+    // Firestore'a kaydet
+    try {
+      await _firestore.collection('users').doc(user.uid).update({
+        'lat': lat,
+        'lng': lng,
+        if (address != null) 'location': address,
+      });
+    } catch (_) {
+      // Firestore hatası session'ı etkilemesin
+    }
+
+    state = state.copyWith(user: updatedUser);
+  }
+
   // ── Çıkış ────────────────────────────────────────────────────────────────
 
   Future<void> signOut() async {
     await _auth.signOut();
-    await _googleSignIn.signOut();
-    await _clearSession();
-    // Quiz state'ini sıfırla — bir sonraki kullanıcıda temiz başlasın
-    ref.invalidate(quizProvider);
-    state = const AuthState();
-  }
-
-  void clearError() => state = state.copyWith(clearError: true);
-
-  // ── Hata Mesajları ────────────────────────────────────────────────────────
-
-  String _authError(String code) {
-    switch (code) {
-      case 'user-not-found':       return 'auth.error_user_not_found';
-      case 'wrong-password':       return 'auth.error_wrong_password';
-      case 'email-already-in-use': return 'auth.error_email_in_use';
-      case 'weak-password':        return 'auth.error_weak_password';
-      case 'invalid-email':        return 'auth.error_invalid_email';
-      case 'too-many-requests':    return 'auth.error_too_many_requests';
-      case 'network-request-failed': return 'auth.error_no_network';
-      default:                     return 'auth.error_generic';
-    }
-  }
-}
+    await _googleSignIn.sig

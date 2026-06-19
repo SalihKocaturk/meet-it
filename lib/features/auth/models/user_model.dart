@@ -11,6 +11,14 @@ class UserModel {
   final DateTime createdAt;
   final PersonalityProfile? personalityProfile;
 
+  /// Kullanıcının son bilinen GPS/harita üzerinden seçtiği konum
+  /// koordinatları. Firestore'a kaydedilir ki arkadaşlar buluşma
+  /// mekanı ararken bu kullanıcının konumunu her zaman güvenilir bir
+  /// şekilde okuyabilsin — anlık konum servisine veya her seferinde
+  /// yeniden konum girilmesine ihtiyaç kalmasın.
+  final double? lat;
+  final double? lng;
+
   const UserModel({
     required this.uid,
     required this.name,
@@ -21,6 +29,8 @@ class UserModel {
     this.photoUrl,
     required this.createdAt,
     this.personalityProfile,
+    this.lat,
+    this.lng,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -40,6 +50,8 @@ class UserModel {
               map['personalityProfile'] as Map<String, dynamic>,
             )
           : null,
+      lat: (map['lat'] as num?)?.toDouble(),
+      lng: (map['lng'] as num?)?.toDouble(),
     );
   }
 
@@ -55,32 +67,14 @@ class UserModel {
       'createdAt': createdAt.millisecondsSinceEpoch,
       if (personalityProfile != null)
         'personalityProfile': personalityProfile!.toMap(),
+      if (lat != null) 'lat': lat,
+      if (lng != null) 'lng': lng,
     };
   }
+
+  bool get hasCoords => lat != null && lng != null;
 
   UserModel copyWith({
     String? uid,
     String? name,
-    String? email,
-    String? location,
-    int? age,
-    String? gender,
-    String? photoUrl,
-    DateTime? createdAt,
-    PersonalityProfile? personalityProfile,
-    bool clearProfile = false,
-  }) {
-    return UserModel(
-      uid: uid ?? this.uid,
-      name: name ?? this.name,
-      email: email ?? this.email,
-      location: location ?? this.location,
-      age: age ?? this.age,
-      gender: gender ?? this.gender,
-      photoUrl: photoUrl ?? this.photoUrl,
-      createdAt: createdAt ?? this.createdAt,
-      personalityProfile:
-          clearProfile ? null : (personalityProfile ?? this.personalityProfile),
-    );
-  }
-}
+    String?

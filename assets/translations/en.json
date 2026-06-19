@@ -299,7 +299,8 @@
     "map_you": "You",
     "map_friend": "Your friend",
     "map_no_location": "Can't show this on the map because location data is missing.",
-    "map_venue_of": "{current} / {total} venues"
+    "map_venue_of": "{current} / {total} venues",
+    "change_location": "Pick New Location"
   },
   "profile": {
     "title": "Profile",
@@ -421,4 +422,4 @@
     "foodie": "Foodie",
     "social_butterfly_desc": "You love lively atmospheres and connect easily with new people. Your energy is contagious!",
     "calm_soul_desc": "You prefer peaceful and quiet environments. Deep conversations and meaningful moments matter to you.",
-    "adventurer_desc": "You want to experience everything
+    "adventur

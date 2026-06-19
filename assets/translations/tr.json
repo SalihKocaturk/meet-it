@@ -299,7 +299,8 @@
     "map_you": "Sen",
     "map_friend": "Arkadaşın",
     "map_no_location": "Konum bilgisi bulunamadığı için haritada gösterilemiyor.",
-    "map_venue_of": "{current} / {total} mekan"
+    "map_venue_of": "{current} / {total} mekan",
+    "change_location": "Yeni Konum Seç"
   },
   "profile": {
     "title": "Profil",
@@ -421,4 +422,4 @@
     "foodie": "Gurme",
     "social_butterfly_desc": "Canlı atmosferleri seven, yeni insanlarla kolayca kaynaşan birisin. Enerjin bulaşıcı!",
     "calm_soul_desc": "Huzurlu ve sessiz ortamları tercih edersin. Derin sohbetler ve anlamlı anlar senin için değerli.",
-    "adventurer_desc": "Her deneyimi yaşamak istersin. Sıradışı
+    "adventurer_desc": "He

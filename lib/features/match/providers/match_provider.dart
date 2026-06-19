@@ -23,8 +23,24 @@ class UserLocation {
   bool get hasCoords => lat != null && lng != null;
 }
 
-final userLocationProvider =
-    StateProvider<UserLocation?>((ref) => null);
+// Konum DB'den (UserModel.lat/lng) geliyorsa başlangıç değeri olarak
+// otomatik doldurulur — kullanıcı uygulamayı her açtığında yeniden
+// konum girmek veya konum servisini açık tutmak zorunda kalmasın.
+// `currentUserProvider` değiştiğinde (örn. konum DB'ye yazıldıktan
+// sonra) bu da otomatik senkronize olur.
+final userLocationProvider = StateProvider<UserLocation?>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user?.hasCoords ?? false) {
+    return UserLocation(
+      text: (user!.location != null && user.location!.trim().isNotEmpty)
+          ? user.location!
+          : '${user.lat!.toStringAsFixed(4)}, ${user.lng!.toStringAsFixed(4)}',
+      lat: user.lat,
+      lng: user.lng,
+    );
+  }
+  return null;
+});
 
 // ── Fiyat seviyesi filtresi ────────────────────────────────────────────────────
 // null = tümü, 0 = ücretsiz, 1 = ucuz, 2 = orta, 3 = pahalı, 4 = çok pahalı
@@ -89,31 +105,4 @@ final compatibilityScoreProvider = Provider.autoDispose<int>((ref) {
   // Fallback: tek bir dominant tipi varsa eski mantık
   if (userProfile != null) {
     final key = _compatKey(
-      userProfile.dominantType,
-      friendProfile?.dominantType ?? PersonalityType.sosyalKelebek,
-    );
-    return _legacyScore(key);
-  }
-
-  return 70;
-});
-
-/// Simetrik karşılaştırma key'i
-String _compatKey(PersonalityType a, PersonalityType b) {
-  final parts = [a.name, b.name]..sort();
-  return '${parts[0]}_${parts[1]}';
-}
-
-/// Eski tip bazlı uyumluluk (fallback)
-int _legacyScore(String key) {
-  const highCompatKeys = {
-    'gurme_sosyalKelebek',
-    'maceraperest_sosyalKelebek',
-    'entelektuel_sakinRuh',
-    'entelektuel_gurme',
-    'maceraperest_sakinRuh',
-  };
-  if (key.split('_').first == key.split('_').last) return 95;
-  if (highCompatKeys.contains(key)) return 85;
-  return 70;
-}
+      userProfile.domina
