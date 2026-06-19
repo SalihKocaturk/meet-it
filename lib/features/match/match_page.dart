@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/constants/map_styles.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/feed/create_post_page.dart';
@@ -748,8 +749,17 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
           // ── Harita ───────────────────────────────────────────────────────
           GoogleMap(
             initialCameraPosition: CameraPosition(target: _center, zoom: 14),
+            // Uygulama teması koyu ise haritayı da koyu stille aç.
+            style: Theme.of(context).brightness == Brightness.dark
+                ? darkMapStyle
+                : null,
             onMapCreated: (ctrl) {
               _mapController = ctrl;
+              ctrl.setMapStyle(
+                Theme.of(context).brightness == Brightness.dark
+                    ? darkMapStyle
+                    : null,
+              );
               _fetchAddress(_center);
             },
             onCameraMove: _onCameraMove,
@@ -1869,14 +1879,4 @@ class _VenueCard extends ConsumerWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF4CAF50).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: Text(
-                          place.priceLabelText!,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF4CAF50),
-                          ),
-    
+                          color: const Color(0xFF4CAF50).withOpac

@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/constants/map_styles.dart';
+import 'package:meetit/core/providers/theme_provider.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
@@ -115,7 +117,7 @@ class _AttemptMeetPageState extends ConsumerState<AttemptMeetPage> {
         name: currentUser?.name ?? 'match.map_you'.tr(),
         photoUrl: currentUser?.photoUrl,
         borderColor: const Color(0xFF6C5CE7),
-        size: 130,
+        size: 64,
       );
     }
 
@@ -128,7 +130,7 @@ class _AttemptMeetPageState extends ConsumerState<AttemptMeetPage> {
         name: selectedFriend?.name ?? 'match.map_friend'.tr(),
         photoUrl: selectedFriend?.photoUrl,
         borderColor: const Color(0xFFE17055),
-        size: 110,
+        size: 56,
       );
     }
 
@@ -224,6 +226,15 @@ class _AttemptMeetPageState extends ConsumerState<AttemptMeetPage> {
   /// rasterize eder. Fotoğraf varsa indirip daire içine kırpar, yoksa
   /// `CircularAvatar` widget'ındaki ile aynı mantıkla baş harfli, renkli
   /// bir daire çizer.
+  ///
+  /// ÖNEMLİ: `BitmapDescriptor.bytes(...)` cihazın piksel oranını
+  /// (devicePixelRatio) otomatik dikkate almaz — bu yüzden `imagePixelRatio`
+  /// belirtilmezse pin, özellikle yüksek çözünürlüklü (Retina/yüksek DPI)
+  /// ekranlarda gerçek boyutunun kat kat büyüğü görünür. Burada bitmap'i
+  /// `size * devicePixelRatio` piksel olarak (keskin görünüm için) çiziyoruz
+  /// ama `imagePixelRatio` parametresiyle haritaya "bu görsel `size` mantıksal
+  /// piksel genişliğinde gösterilsin" bilgisini veriyoruz; böylece pin ekranda
+  /// her cihazda aynı, doğru fiziksel boyutta görünür.
   Future<BitmapDescriptor> _renderAvatarBitmap({
     required String? photoUrl,
     required String name,
@@ -231,10 +242,15 @@ class _AttemptMeetPageState extends ConsumerState<AttemptMeetPage> {
     required Color borderColor,
   }) async {
     try {
+      final dpr = ui.PlatformDispatcher.instance.views.first.devicePixelRatio;
+      final renderSize = size * dpr;
       final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, size, size));
-      final radius = size / 2;
-      const borderWidth = 5.0;
+      final canvas = Canvas(
+        recorder,
+        Rect.fromLTWH(0, 0, renderSize, renderSize),
+      );
+      final radius = renderSize / 2;
+      final borderWidth = 5.0 * dpr;
 
       // Dış renkli halka + beyaz ayraç
       canvas.drawCircle(
@@ -248,7 +264,7 @@ class _AttemptMeetPageState extends ConsumerState<AttemptMeetPage> {
         Paint()..color = Colors.white,
       );
 
-      final innerRadius = radius - borderWidth - 3;
+      final innerRadius = radius - borderWidth - (3 * dpr);
       ui.Image? avatarImage;
 
       if (photoUrl != null && photoUrl.isNotEmpty) {
@@ -314,9 +330,15 @@ class _AttemptMeetPageState extends ConsumerState<AttemptMeetPage> {
       }
 
       final picture = recorder.endRecording();
-      final img = await picture.toImage(size.round(), size.round());
+      final img = await picture.toImage(
+        renderSize.round(),
+        renderSize.round(),
+      );
       final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
-      return BitmapDescriptor.bytes(bytes!.buffer.asUint8List());
+      return BitmapDescriptor.bytes(
+        bytes!.buffer.asUint8List(),
+        imagePixelRatio: dpr,
+      );
     } catch (_) {
       return BitmapDescriptor.defaultMarker;
     }
@@ -355,6 +377,7 @@ class _AttemptMeetPageState extends ConsumerState<AttemptMeetPage> {
     final initialTarget = _venues.isNotEmpty
         ? LatLng(_venues.first.lat, _venues.first.lng)
         : const LatLng(41.0082, 28.9784); // İstanbul varsayılan
+    final isDark = ref.watch(themeModeProvider) == ThemeMode.dark;
 
     return Scaffold(
       body: Stack(
@@ -364,8 +387,14 @@ class _AttemptMeetPageState extends ConsumerState<AttemptMeetPage> {
               target: initialTarget,
               zoom: 14,
             ),
+            // Uygulama teması koyu ise haritayı da koyu stille aç.
+            style: isDark ? darkMapStyle : null,
             onMapCreated: (ctrl) {
               _mapController = ctrl;
+              // `style` parametresi ilk render'da uygulanır; ama tema
+              // çalışma zamanında değişirse (didUpdateWidget yok) burada
+              // da set ediyoruz ki tutarlı kalsın.
+              ctrl.setMapStyle(isDark ? darkMapStyle : null);
               if (_venues.isNotEmpty) {
                 Future.delayed(const Duration(milliseconds: 200), () {
                   _focusOn(_venues.first);
@@ -739,48 +768,4 @@ class _VenueBottomBar extends ConsumerWidget {
                             color: isSaved
                                 ? context.colors.primary
                                 : context.colors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: GestureDetector(
-                  onTap: onOpenMaps,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 9),
-                    decoration: BoxDecoration(
-                      color: context.colors.primary,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.directions,
-                          size: 16,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'match.navigate'.tr(),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+ 
