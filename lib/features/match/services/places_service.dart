@@ -9,10 +9,28 @@ import 'package:meetit/features/personality/models/personality_model.dart';
 /// Google Places Nearby Search API wrapper.
 ///
 /// İki kişinin kişilik profiline ve seçili aktivitelere göre mekan arar.
-/// Sonuçları kişilik uyumuna + rating'e göre sıralar, sayfalama için
-/// tüm havuzu döner (max 20 mekan).
+/// Sonuçları kişilik uyumuna + rating'e göre ağırlıklandırıp, kalite
+/// havuzu içinden AĞIRLIKLI RASTGELE seçim yapar. Bu sayede:
+///   - Aynı kişi aynı aramayı 3 kez yapınca hep aynı ilk sonuçlar çıkmaz
+///     (ama düşük kaliteli/garip yerler asla öne çıkmaz — havuz zaten
+///     kalite + isim filtresinden geçmiş yerlerden oluşur).
+///   - Sonuç sayısı sayfalama için 10 ile sınırlandırılır (5'lik
+///     sayfalarla 2 sayfa).
+///   - Aynı tür mekanlardan (pizza, burger, kebap vb.) birden fazlası
+///     final listede yan yana/aynı anda çıkmaz — çeşitlilik korunur.
 class PlacesService {
   const PlacesService._();
+
+  /// Sayfalama için döndürülecek maksimum mekan sayısı.
+  /// `venue_search_notifier.dart`'taki `_pageSize` (5) ile birlikte
+  /// tam 2 sayfa oluşturur.
+  static const int _maxResultCount = 10;
+
+  /// Bir mekanın gösterilebilmesi için sahip olması gereken minimum
+  /// yorum (review) sayısı. 0 veya 1 yorumlu yerler genelde yanlış
+  /// kategorize edilmiş ya da hiç işlemeyen/kapanmış yerler oluyor —
+  /// bu yüzden gösterilmiyor.
+  static const int _minReviewCount = 5;
 
   // ── Hiçbir zaman gösterilmeyecek type'lar ────────────────────────────────
   //
@@ -184,6 +202,137 @@ class PlacesService {
     }).toList();
   }
 
+  // ── Şüpheli / garip isim filtresi ─────────────────────────────────────────
+  //
+  // Google Places type'ı "restaurant" dese de, bazen isminden anlaşılan
+  // tamamen alakasız bir iş yeri (eczane, market, oto tamirci, emlakçı vb.)
+  // sonuç olarak dönebiliyor. Type filtresi bunu her zaman yakalayamıyor,
+  // çünkü Google bazı yerlere birden fazla/yanlış type atayabiliyor.
+  // Bu yüzden isimde geçen anahtar kelimelere göre ek bir güvenlik filtresi.
+  static const List<String> _suspiciousNameKeywords = [
+    'eczane', 'ecza ', 'market', 'süpermarket', 'şarküteri', 'bakkal',
+    'oto ', 'otomotiv', 'tamir', 'yedek parça', 'lastikçi', 'lastik ',
+    'emlak', 'inşaat', 'mobilya', 'nakliyat', 'taşımacılık',
+    'avukat', 'hukuk bürosu', 'noter', 'muhasebe', 'mali müşavir',
+    'doktor', 'klinik', 'hastane', 'diş hekimi', 'eczacı', 'veteriner',
+    'banka', 'şube', 'sigorta', 'finans',
+    'kuran kursu', 'dini ',
+    'anaokulu', 'kreş', 'dershane', 'etüt merkezi',
+    'kuaför', 'berber',
+    'tekstil', 'toptan ', 'perakende',
+  ];
+  // NOT: 'güzellik merkezi' / 'spa' bilerek listede YOK — 'spa' aktivitesi
+  // seçildiğinde beauty_salon type'ı kasıtlı olarak whitelist'te (bkz.
+  // _activityRequiredTypes), bu yüzden isim filtresi gerçek spa sonuçlarını
+  // elemesin diye buraya eklenmedi.
+
+  static bool _hasSuspiciousName(String name) {
+    final lower = name.toLowerCase().trim();
+    // Çok kısa / boş isimler de "garip" sayılır (genelde veri kalitesi düşük).
+    if (lower.length < 2) return true;
+    for (final kw in _suspiciousNameKeywords) {
+      if (lower.contains(kw)) return true;
+    }
+    return false;
+  }
+
+  /// İsmi şüpheli/garip görünen mekanları eler.
+  static List<PlaceResult> _filterSuspiciousNames(List<PlaceResult> places) {
+    return places.where((p) => !_hasSuspiciousName(p.name)).toList();
+  }
+
+  /// Yorum sayısı `_minReviewCount`'tan az olan (veya yorumu hiç olmayan)
+  /// mekanları eler. Az yorumlu yerler genelde güvenilir bir kalite
+  /// sinyali vermiyor (yanlış kategorize edilmiş, terk edilmiş, vb. olabilir).
+  static List<PlaceResult> _filterMinimumReviews(List<PlaceResult> places) {
+    return places
+        .where((p) => (p.userRatingsTotal ?? 0) >= _minReviewCount)
+        .toList();
+  }
+
+  // ── İsim bazlı çeşitlilik grupları ────────────────────────────────────────
+  //
+  // "2 pizzacı veya 2 burgerci aynı anda çıkmasın" isteği için: final
+  // listeye eklerken aynı gruptan zaten bir mekan varsa o mekanı atla
+  // (havuzda yeterli çeşit yoksa son aşamada gerekirse tekrar eklenir).
+  static const Map<String, List<String>> _nameDiversityGroups = {
+    'pizza': ['pizza'],
+    'burger': ['burger', 'hamburger'],
+    'kebap': ['kebap', 'kebab'],
+    'döner': ['döner', 'dürüm'],
+    'sushi_japon': ['sushi', 'japon'],
+    'tatlı': ['tatlı', 'baklava', 'pastane', 'pasta '],
+    'kahve': ['kahve', 'coffee'],
+    'çay': ['çay bahçesi', 'çaycı'],
+    'balık': ['balık', 'deniz ürün'],
+    'pide_lahmacun': ['pide', 'lahmacun'],
+    'tavuk': ['tavuk', 'piliç'],
+    'steak_et': ['steak', 'biftek', 'et lokanta', 'ocakbaşı'],
+    'çin_uzakdoğu': ['çin ', 'noodle', 'wok'],
+    'meksika': ['meksika', 'taco', 'burrito'],
+  };
+
+  /// Mekan isminden çeşitlilik grubunu çıkarır; eşleşme yoksa null
+  /// (gruplanamayan mekanlar çeşitlilik kısıtına girmez).
+  static String? _diversityGroupOf(String name) {
+    final lower = name.toLowerCase();
+    for (final entry in _nameDiversityGroups.entries) {
+      for (final kw in entry.value) {
+        if (lower.contains(kw)) return entry.key;
+      }
+    }
+    return null;
+  }
+
+  // ── Ağırlıklı rastgele seçim (Efraimidis–Spirakis) ────────────────────────
+  //
+  // Basit "skora göre sırala + ilk N'i al" yöntemi, aynı kullanıcı/arkadaş
+  // çifti her arama yaptığında BİREBİR AYNI ilk sonuçları üretir (skorlar
+  // sabit olduğu için). Bunun yerine: her mekana ağırlığıyla orantılı
+  // rastgele bir "key" üret, en yüksek key'e sahip N mekanı seç. Yüksek
+  // skorlu mekanlar yine çok daha sık öne çıkar (rastgele değil, ağırlıklı),
+  // ama %100 deterministik olmadığından arama tekrarında çeşitlilik sağlar.
+  // Aynı zamanda çeşitlilik grubu kısıtını da burada uyguluyoruz.
+  static List<PlaceResult> _weightedDiverseSample(
+    List<(PlaceResult, double)> scoredPlaces,
+    int count,
+  ) {
+    final withKeys = scoredPlaces.map((entry) {
+      final weight = entry.$2.clamp(0.05, double.infinity);
+      final u = _rng.nextDouble().clamp(0.0001, 0.9999);
+      final key = math.pow(u, 1 / weight).toDouble();
+      return (entry.$1, key);
+    }).toList()
+      ..sort((a, b) => b.$2.compareTo(a.$2)); // büyük key = öncelikli
+
+    final result = <PlaceResult>[];
+    final usedGroups = <String>{};
+    final skipped = <PlaceResult>[];
+
+    for (final entry in withKeys) {
+      if (result.length >= count) break;
+      final place = entry.$1;
+      final group = _diversityGroupOf(place.name);
+      if (group != null && usedGroups.contains(group)) {
+        skipped.add(place); // çeşitlilik için bu turda atla
+        continue;
+      }
+      result.add(place);
+      if (group != null) usedGroups.add(group);
+    }
+
+    // Çeşitlilik kısıtı yüzünden yeterli sonuç bulunamadıysa (havuz küçükse)
+    // atlanan mekanlarla (en yüksek key sırasıyla) tamamla.
+    if (result.length < count) {
+      for (final place in skipped) {
+        if (result.length >= count) break;
+        result.add(place);
+      }
+    }
+
+    return result;
+  }
+
   // ── Kişilik tipi → Places API type eşlemesi ───────────────────────────────
   //
   // Google Places'te yemek yerleri çok farklı type'lara dağılır:
@@ -287,7 +436,7 @@ class PlacesService {
   // ── Ana Arama Metodu ───────────────────────────────────────────────────────
 
   /// Yakındaki mekanları çeker, kişilik + rating skoruna göre sıralar.
-  /// Sayfalama için tüm havuzu (max 20) döner.
+  /// Sayfalama için en fazla [_maxResultCount] (10) mekan döner.
   static Future<List<PlaceResult>> searchVenues({
     required double lat,
     required double lng,
@@ -338,29 +487,35 @@ class PlacesService {
     // mağazası, optik gibi false-positive'lar elenir.
     final filtered = _filterByRequiredTypes(excludeFiltered, selectedActivities);
 
+    // ── Adım 3: Garip/şüpheli isimli mekanları ele ────────────────────────
+    final nameFiltered = _filterSuspiciousNames(filtered);
+
+    // ── Adım 4: Yorum sayısı çok az olan (güvenilmez) mekanları ele ───────
+    final reviewFiltered = _filterMinimumReviews(nameFiltered);
+
     // ignore: avoid_print
     print('🔍 PlacesService: raw=${results.length} '
-        'excl=${excludeFiltered.length} req=${filtered.length}');
+        'excl=${excludeFiltered.length} req=${filtered.length} '
+        'name=${nameFiltered.length} review=${reviewFiltered.length}');
 
-    if (filtered.isEmpty) return [];
+    if (reviewFiltered.isEmpty) return [];
 
     // ── Kişilik + rating kombinasyon skoru ─────────────────────────────────
-    final scored = filtered.map((place) {
+    final scored = reviewFiltered.map((place) {
       final personalityScore = _personalityMatch(
         place, userProfile, friendProfile, selectedActivities,
       );
       final ratingScore = _qualityScore(place);
       // %60 kişilik uyumu + %40 kalite (rating + yorum sayısı)
       final total = personalityScore * 0.6 + ratingScore * 0.4;
-      // Az miktarda rastgelelik ekle (±3 puan civarı) — kalitesi birbirine
-      // çok yakın mekanlar her aramada birebir aynı sırada gelmesin.
-      final jitter = (_rng.nextDouble() - 0.5) * 0.06;
-      return (place, total + jitter);
-    }).toList()
-      ..sort((a, b) => b.$2.compareTo(a.$2));
+      return (place, total);
+    }).toList();
 
-    // Maksimum 20 mekan döner (sayfalama için)
-    final finalList = scored.take(20).map((e) => e.$1).toList();
+    // Ağırlıklı rastgele seçim + çeşitlilik kısıtı uygulayarak nihai
+    // listeyi oluştur. Kalite havuzu (nameFiltered + skor) sabit kalsa da,
+    // her aramada öne çıkan mekanlar biraz farklılaşır.
+    final finalList = _weightedDiverseSample(scored, _maxResultCount);
+
     // ignore: avoid_print
     print('🔍 PlacesService final: ${finalList.length} mekan');
     return finalList;
