@@ -710,6 +710,11 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
   GoogleMapController? _mapController;
   LatLng _center = const LatLng(41.0082, 28.9784); // İstanbul varsayılan
   String? _address;
+
+  /// Sadece ilçe/il (örn. "Kadıköy, İstanbul") — açık adres yerine bu
+  /// kaydedilir/gösterilir. Profilde tam açık konum göstermek gereksiz ve
+  /// gizlilik açısından da fazla detaylı; ilçe/il bilgisi yeterli.
+  String? _shortAddress;
   bool _isLoading = false;
   bool _isConfirming = false;
 
@@ -760,13 +765,49 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
       if ((body['status'] as String?) == 'OK') {
         final results = body['results'] as List;
         if (results.isNotEmpty) {
-          setState(
-            () => _address = results.first['formatted_address'] as String?,
-          );
+          final first = results.first as Map<String, dynamic>;
+          final components = (first['address_components'] as List?) ?? [];
+          setState(() {
+            _address = first['formatted_address'] as String?;
+            _shortAddress = _extractDistrictProvince(components);
+          });
         }
       }
     } catch (_) {}
     if (mounted) setState(() => _isLoading = false);
+  }
+
+  /// Google Geocoding `address_components`'tan "İlçe, İl" formatında
+  /// kısa bir konum metni çıkarır (örn. "Kadıköy, İstanbul"). Açık adres
+  /// (sokak/numara) bilgisini bilerek dışarıda bırakır.
+  String? _extractDistrictProvince(List components) {
+    String? district;
+    String? province;
+
+    for (final c in components) {
+      final map = c as Map<String, dynamic>;
+      final types = (map['types'] as List?)?.cast<String>() ?? [];
+      final name = map['long_name'] as String?;
+      if (name == null) continue;
+
+      if (types.contains('administrative_area_level_2')) {
+        district ??= name;
+      } else if (types.contains('locality') && district == null) {
+        // Bazı bölgelerde ilçe 'administrative_area_level_2' değil
+        // 'locality' olarak geliyor — yedek olarak kullan.
+        district = name;
+      }
+      if (types.contains('administrative_area_level_1')) {
+        province = name;
+      }
+    }
+
+    if (district != null && province != null) {
+      // Aynı isim tekrar etmesin (örn. büyükşehir merkez ilçesi == il adı).
+      if (district == province) return province;
+      return '$district, $province';
+    }
+    return province ?? district;
   }
 
   void _onCameraMove(CameraPosition pos) {
@@ -779,7 +820,11 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
 
   Future<void> _confirm() async {
     setState(() => _isConfirming = true);
+    // Profilde/diğer kullanıcılarda açık adres yerine sadece ilçe/il
+    // gösteriliyor — gizlilik açısından daha uygun ve gösterim için
+    // zaten yeterli bilgi.
     final address =
+        _shortAddress ??
         _address ??
         '${_center.latitude.toStringAsFixed(4)}, ${_center.longitude.toStringAsFixed(4)}';
     Navigator.of(context).pop(
@@ -1835,53 +1880,4 @@ class _VenueCard extends ConsumerWidget {
                             fontSize: rank <= 3 ? 14 : 12,
                             fontWeight: FontWeight.bold,
                           ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            place.name,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: context.colors.textPrimary,
-                            ),
-                          ),
-                          if (place.vicinity != null)
-                            Text(
-                              place.vicinity!,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: context.colors.textSecondary,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: 10),
-
-                // Alt satır: tip etiketi + puan + durum + harita butonu
-                Row(
-                  children: [
-                    // Tip etiketi
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: context.colors.primary.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        place.primaryTypeLabel,
-    
+                   
