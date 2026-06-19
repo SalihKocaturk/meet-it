@@ -409,8 +409,14 @@ class _AttemptMeetPageState extends ConsumerState<AttemptMeetPage> {
                 });
               }
             },
+            // SADECE şu an alt çubukta gösterilen (seçili) mekanın pini
+            // çıkar — tüm mekanları aynı anda göstermek kalabalık ve
+            // kafa karıştırıcı oluyordu. Sırada ilerlerken (ok tuşları)
+            // her adımda haritada da tek bir pin görünür.
             markers: {
-              ..._venueMarkers.values,
+              if (_venues.isNotEmpty &&
+                  _venueMarkers[_venues[_selectedIndex].placeId] != null)
+                _venueMarkers[_venues[_selectedIndex].placeId]!,
               if (_meMarker != null) _meMarker!,
               if (_friendMarker != null) _friendMarker!,
             },
@@ -494,17 +500,47 @@ class _AttemptMeetPageState extends ConsumerState<AttemptMeetPage> {
               bottom: 0,
               child: SafeArea(
                 top: false,
-                child: _VenueBottomBar(
-                  place: _venues[_selectedIndex],
-                  index: _selectedIndex,
-                  total: _venues.length,
-                  onPrev: _selectedIndex > 0
-                      ? () => _selectVenue(_selectedIndex - 1)
-                      : null,
-                  onNext: _selectedIndex < _venues.length - 1
-                      ? () => _selectVenue(_selectedIndex + 1)
-                      : null,
-                  onOpenMaps: () => _openInMaps(_venues[_selectedIndex]),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // Kullanıcı haritayı yakınlaştırıp/uzaklaştırıp pini
+                    // gözden kaybetmiş olsa bile, bu butonla seçili
+                    // mekanın pinine her zaman geri dönülebilir.
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12, bottom: 10),
+                      child: GestureDetector(
+                        onTap: () => _focusOn(_venues[_selectedIndex]),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: context.colors.card,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.12),
+                                blurRadius: 6,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Icons.center_focus_strong),
+                        ),
+                      ),
+                    ),
+                    _VenueBottomBar(
+                      place: _venues[_selectedIndex],
+                      index: _selectedIndex,
+                      total: _venues.length,
+                      onPrev: _selectedIndex > 0
+                          ? () => _selectVenue(_selectedIndex - 1)
+                          : null,
+                      onNext: _selectedIndex < _venues.length - 1
+                          ? () => _selectVenue(_selectedIndex + 1)
+                          : null,
+                      onOpenMaps: () => _openInMaps(_venues[_selectedIndex]),
+                    ),
+                  ],
                 ),
               ),
             )
@@ -714,51 +750,4 @@ class _VenueBottomBar extends ConsumerWidget {
                                 place.ratingText,
                                 style: TextStyle(
                                   fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: context.colors.textPrimary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        if (place.priceLabelText != null)
-                          Text(
-                            place.priceLabelText!,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF4CAF50),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () =>
-                      ref.read(savedVenuesProvider.notifier).toggle(place),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 9),
-                    decoration: BoxDecoration(
-                      color: isSaved
-                          ? context.colors.primary.withOpacity(0.12)
-                          : context.colors.scaffold,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isSaved
-                            ? context.colors.primary
-                            : context.colors.border,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          isSaved ? I
+ 
