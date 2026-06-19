@@ -1912,3 +1912,11 @@ class _VenueCard extends ConsumerWidget {
                     ],
                   ),
                 ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -1,6 +1,5 @@
 {
   "app_name": "MeetIt",
-
   "common": {
     "ok": "OK",
     "cancel": "Cancel",
@@ -26,14 +25,12 @@
     "user": "User",
     "continue": "Continue"
   },
-
   "nav": {
     "feed": "Feed",
     "friends": "Friends",
     "meetup": "Meetup",
     "profile": "Profile"
   },
-
   "auth": {
     "email": "Email",
     "email_hint": "example@email.com",
@@ -85,7 +82,6 @@
     "error_no_network": "No internet connection.",
     "error_generic": "An error occurred. Please try again."
   },
-
   "validation": {
     "missing_field": "Missing Field",
     "fill_required": "Please fill in the required fields.",
@@ -93,7 +89,6 @@
     "must_be_18": "You must be 18 or older.",
     "email_empty": "Email and password fields cannot be empty."
   },
-
   "feed": {
     "title": "MeetIt Feed",
     "subtitle": "Discover meetups",
@@ -116,7 +111,7 @@
     "rating_2": "It's OK",
     "rating_3": "Good",
     "rating_4": "Very good",
-    "rating_5": "Excellent! 🎉",
+    "rating_5": "Excellent!",
     "new_post": "New Post",
     "add_photo": "Add Photo",
     "select_venue": "Select Venue",
@@ -139,7 +134,6 @@
     "together": "Together with",
     "like_count": "{count} likes"
   },
-
   "venue": {
     "picker_title": "Select Venue",
     "get_location": "Get My Location",
@@ -164,7 +158,6 @@
     "permission_error": "Location permission required. You can select from the map.",
     "load_error": "Could not get location. You can select from the map."
   },
-
   "venue_rating": {
     "title": "Rate",
     "your_rating": "Your Rating",
@@ -179,7 +172,6 @@
     "select_rating": "Select rating",
     "no_friends": "Your friends list is empty."
   },
-
   "friends": {
     "title": "Friends",
     "search_hint": "Find Friend",
@@ -223,7 +215,6 @@
     "invite_friends": "Invite Your Friends",
     "my_code": "My Code"
   },
-
   "friend_code": {
     "title": "Add Friend with Code",
     "my_code": "Your Friend Code",
@@ -242,7 +233,6 @@
     "search_error": "An error occurred during search.",
     "add": "Add"
   },
-
   "match": {
     "title": "Find a Meetup Spot",
     "subtitle": "Venue suggestions tailored to your and your friend's personality.",
@@ -305,7 +295,6 @@
     "personality_selected": "Curated by personality analysis",
     "add_friend_hint": "Add a friend from the Friends tab first"
   },
-
   "profile": {
     "title": "Profile",
     "posts": "Posts",
@@ -340,7 +329,6 @@
     "stat_friends": "Friends",
     "stat_likes": "Likes"
   },
-
   "settings": {
     "title": "Settings",
     "section_account": "ACCOUNT",
@@ -364,7 +352,6 @@
     "dark_mode": "Dark Mode",
     "light_mode": "Light Mode"
   },
-
   "edit_profile": {
     "title": "Edit Profile",
     "section_personal": "PERSONAL INFO",
@@ -378,7 +365,6 @@
     "change_photo": "Change Photo",
     "photo_selected": "Photo Selected ✓"
   },
-
   "change_password": {
     "title": "Change Password",
     "strong_password_info": "A strong password should contain uppercase letters, numbers, and special characters.",
@@ -396,7 +382,6 @@
     "wrong_password": "Your current password is incorrect.",
     "update_failed": "Password update failed:"
   },
-
   "quiz": {
     "title": "Personality Test",
     "subtitle": "We'll find the right places for you",
@@ -411,7 +396,6 @@
     "retake_test": "Retake Test",
     "finish_quiz": "Finish Test"
   },
-
   "map_picker": {
     "title": "Select Location",
     "confirm": "Use This Location",
@@ -419,7 +403,6 @@
     "drag_hint": "Drag the pin to set your location",
     "location_error": "Could not get location"
   },
-
   "personality": {
     "explorer": "Explorer",
     "social": "Social",
@@ -434,4 +417,6 @@
     "calm_soul_desc": "You prefer peaceful and quiet environments. Deep conversations and meaningful moments matter to you.",
     "adventurer_desc": "You want to experience everything. Unusual activities and exploration make you happy.",
     "intellectual_desc": "Culture, art and knowledge are important to you. Deep discussions and inspiring venues attract you.",
-    "foodie_desc": "Food is an experience for you. You s
+    "foodie_desc": "Food is an experience for you. You seek quality flavors and special venues."
+  }
+}

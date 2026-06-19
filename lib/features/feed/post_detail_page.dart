@@ -2,7 +2,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
@@ -127,7 +126,10 @@ class PostDetailPage extends ConsumerWidget {
                             color: Colors.red,
                           ),
                           SizedBox(width: 10),
-                          Text('common.delete'.tr(), style: TextStyle(color: Colors.red)),
+                          Text(
+                            'common.delete'.tr(),
+                            style: TextStyle(color: Colors.red),
+                          ),
                         ],
                       ),
                     ),
@@ -247,7 +249,9 @@ class PostDetailPage extends ConsumerWidget {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
                     child: Text(
-                      'feed.like_count'.tr(namedArgs: {'count': '${currentPost.likeCount}'}),
+                      'feed.like_count'.tr(
+                        namedArgs: {'count': '${currentPost.likeCount}'},
+                      ),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -272,15 +276,6 @@ class PostDetailPage extends ConsumerWidget {
                             color: i < currentPost.rating!
                                 ? const Color(0xFFFFB800)
                                 : context.colors.hint,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _ratingLabel(currentPost.rating!),
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFFFFB800),
                           ),
                         ),
                       ],
@@ -539,7 +534,10 @@ class PostDetailPage extends ConsumerWidget {
                   ),
                   Text(
                     'feed.edit_post'.tr(),
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -627,12 +625,13 @@ class PostDetailPage extends ConsumerWidget {
                         elevation: 0,
                       ),
                       child: Text(
-                          'common.save'.tr(),
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700),
+                        'common.save'.tr(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
                         ),
+                      ),
                     ),
                   ),
                 ],
@@ -647,7 +646,8 @@ class PostDetailPage extends ConsumerWidget {
   Future<void> _openMaps(PostModel p) async {
     if (p.venueLat == null || p.venueLng == null) return;
     final uri = Uri.parse(
-        'https://www.google.com/maps/search/?api=1&query=${p.venueLat},${p.venueLng}');
+      'https://www.google.com/maps/search/?api=1&query=${p.venueLat},${p.venueLng}',
+    );
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
@@ -662,17 +662,8 @@ class PostDetailPage extends ConsumerWidget {
     return '${dt.day}/${dt.month}/${dt.year}';
   }
 
-  String _fullDate(BuildContext context, DateTime dt) =>
-      DateFormat('d MMMM yyyy', Localizations.localeOf(context).toLanguageTag()).format(dt);
-
-  String _ratingLabel(int r) {
-    switch (r) {
-      case 1: return 'feed.rating_1'.tr();
-      case 2: return 'feed.rating_2'.tr();
-      case 3: return 'feed.rating_3'.tr();
-      case 4: return 'feed.rating_4'.tr();
-      case 5: return 'feed.rating_5'.tr();
-      default: return '';
-    }
-  }
+  String _fullDate(BuildContext context, DateTime dt) => DateFormat(
+    'd MMMM yyyy',
+    Localizations.localeOf(context).toLanguageTag(),
+  ).format(dt);
 }

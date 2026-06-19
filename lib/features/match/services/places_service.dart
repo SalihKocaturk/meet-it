@@ -519,4 +519,72 @@ class PlacesService {
       print('[PlacesService] fetch error: $e');
       return [];
     }
- 
+  }
+
+  // ── Type Çözümleme ─────────────────────────────────────────────────────────
+
+  static List<String> _resolveTypes({
+    required PersonalityProfile userProfile,
+    required PersonalityProfile friendProfile,
+    required List<String> selectedActivities,
+  }) {
+    // ── MOD 1: Aktivite seçilmişse SADECE o tipler ───────────────────────────
+    // Kullanıcı ne seçtiyse onu göster, kişilik karıştırma.
+    // _activityToTypes bir aktivite için birden fazla type döndürür:
+    //   "restoran" → ['restaurant', 'food', 'meal_takeaway', 'meal_delivery']
+    // Bu sayede kebapçı, dönerci vb. de kapsama girer.
+    if (selectedActivities.isNotEmpty) {
+      final types = <String>{};
+      for (final activity in selectedActivities) {
+        final lower = activity.toLowerCase();
+        for (final entry in _activityToTypes.entries) {
+          if (lower.contains(entry.key)) {
+            types.addAll(entry.value); // tüm type'ları ekle
+            break;
+          }
+        }
+      }
+      // Eşleşen type yoksa (tanımsız aktivite) kişiliğe geri dön
+      if (types.isNotEmpty) return types.toList();
+    }
+
+    // ── MOD 2: Aktivite seçilmemişse SADECE kişiliğe göre ────────────────────
+    final types = <String>{};
+
+    final userTypes = _personalityTypes[userProfile.dominantType] ?? [];
+    final friendTypes = _personalityTypes[friendProfile.dominantType] ?? [];
+
+    // İki kişinin ortak tipleri önce (her ikisine de uygun)
+    final common = userTypes.toSet().intersection(friendTypes.toSet());
+    types.addAll(common);
+    types.addAll(userTypes);
+    types.addAll(friendTypes);
+
+    // Secondary tipler — daha geniş havuz.
+    //
+    // NOT: `secondaryType` getter'ı %10 gibi düşük bir eşikte bile ikincil
+    // tip döndürüyor (UI'da "ikincil eğilim" göstermek için makul bir eşik).
+    // Ama burada, arama havuzuna YENİ bir mekan kategorisi eklemek için bu
+    // çok düşük: "sakin ruh" kullanıcının %12 gibi zayıf bir "maceraperest"
+    // eğilimi olması, sonuçlara spor salonu/stadyum sokulmasına yol açıyordu
+    // (dominant tipin 4 type'ı + bu 1 ekstra type = take(5) ile tam sınırda
+    // kalıyor ve dominant tipin kendi mekanlarıyla aynı kefeye giriyordu).
+    // Bu yüzden burada daha sıkı, yerel bir eşik kullanıyoruz: ikincil eğilim
+    // gerçekten belirgin değilse (≥ %25) arama havuzuna katılmasın.
+    const secondaryPoolThreshold = 0.25;
+
+    void addSecondaryPool(PersonalityProfile profile) {
+      final ranked = profile.rankedTypes;
+      if (ranked.length < 2) return;
+      final second = ranked[1];
+      if (second.value >= secondaryPoolThreshold) {
+        types.addAll(_personalityTypes[second.key] ?? []);
+      }
+    }
+
+    addSecondaryPool(userProfile);
+    addSecondaryPool(friendProfile);
+
+    return types.take(5).toList();
+  }
+}

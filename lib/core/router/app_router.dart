@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:meetit/features/auth/forgot_password_page.dart';
@@ -16,14 +17,47 @@ import 'app_routes.dart';
 
 /// GoRouter instance'ı sağlayan provider.
 /// main.dart içinde `ref.watch(appRouterProvider)` ile kullanılır.
+///
+/// NOT: Burada KASITLI OLARAK `ref.watch(authProvider)` KULLANILMIYOR.
+/// Önceden bu provider `authProvider`'ı watch ediyordu; bu da authProvider'ın
+/// state'i HER değiştiğinde (sadece login/logout'ta değil, edit_profile'daki
+/// gibi sadece `name`/`photoUrl` gibi alanlar güncellendiğinde de) bu
+/// provider'ın yeniden çalışıp YEPYENİ bir GoRouter (ve dolayısıyla yeni bir
+/// Navigator) oluşturmasına sebep oluyordu. Bu da, mesela Edit Profile'da
+/// "Kaydet" sonrası açık olan başarı dialog'u (QuickAlert) tam o anda eski
+/// Navigator'a referans tutarken sayfa pop edilmeye çalışıldığında hataya
+/// (deactivated widget / nothing to pop) yol açıyordu.
+///
+/// Çözüm: GoRouter'ı bir kez oluştur, `refreshListenable` ile SADECE
+/// routing'i gerçekten etkileyen alanlar (isSessionLoading, isAuthenticated,
+/// hasPersonality) değiştiğinde haberdar ol. Diğer profil güncellemeleri
+/// router'ı hiç etkilemesin.
 final appRouterProvider = Provider<GoRouter>((ref) {
-  // Auth state değişimlerini dinle → router'ı yenile
-  final authState = ref.watch(authProvider);
+  final refreshNotifier = _RouterRefreshNotifier();
+
+  // authProvider'ı sadece DİNLE (watch değil) — routing'i etkileyen 3 alan
+  // değişmediği sürece refreshNotifier'ı tetiklemiyoruz.
+  (bool, bool, bool)? lastKey;
+  ref.listen(authProvider, (previous, next) {
+    final key = (
+      next.isSessionLoading,
+      next.isAuthenticated,
+      next.hasPersonality,
+    );
+    if (lastKey != null && lastKey == key) return;
+    lastKey = key;
+    refreshNotifier.ping();
+  }, fireImmediately: true);
+
+  ref.onDispose(refreshNotifier.dispose);
 
   return GoRouter(
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: false,
+    refreshListenable: refreshNotifier,
     redirect: (context, state) {
+      // En güncel auth state'i her redirect çağrısında taze okuyoruz.
+      final authState = ref.read(authProvider);
       final isSessionLoading = authState.isSessionLoading;
       final isAuthenticated = authState.isAuthenticated;
       final hasPersonality = authState.hasPersonality;
@@ -112,3 +146,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+/// GoRouter'a `refreshListenable` olarak verilen basit yardımcı sınıf.
+/// Sadece `ping()` çağrıldığında dinleyicilere haber verir; herhangi bir
+/// değer taşımaz, sadece "redirect'i tekrar değerlendir" sinyali üretir.
+class _RouterRefreshNotifier extends ChangeNotifier {
+  void ping() => notifyListeners();
+}

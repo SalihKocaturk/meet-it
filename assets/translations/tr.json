@@ -1,6 +1,5 @@
 {
   "app_name": "MeetIt",
-
   "common": {
     "ok": "Tamam",
     "cancel": "İptal",
@@ -26,14 +25,12 @@
     "user": "Kullanıcı",
     "continue": "Devam Et"
   },
-
   "nav": {
     "feed": "Feed",
     "friends": "Arkadaşlar",
     "meetup": "Buluşma",
     "profile": "Profil"
   },
-
   "auth": {
     "email": "Email",
     "email_hint": "ornek@email.com",
@@ -85,7 +82,6 @@
     "error_no_network": "İnternet bağlantısı yok.",
     "error_generic": "Bir hata oluştu. Lütfen tekrar deneyin."
   },
-
   "validation": {
     "missing_field": "Eksik Alan",
     "fill_required": "Lütfen zorunlu alanları doldurun.",
@@ -93,7 +89,6 @@
     "must_be_18": "18 yaşından büyük olmalısınız.",
     "email_empty": "Email ve şifre alanları boş bırakılamaz."
   },
-
   "feed": {
     "title": "MeetIt Feed",
     "subtitle": "Buluşmaları keşfet",
@@ -116,7 +111,7 @@
     "rating_2": "İdare eder",
     "rating_3": "İyiydi",
     "rating_4": "Çok güzeldi",
-    "rating_5": "Mükemmeldi! 🎉",
+    "rating_5": "Mükemmeldi!",
     "new_post": "Yeni Gönderi",
     "add_photo": "Fotoğraf Ekle",
     "select_venue": "Mekan Seç",
@@ -139,7 +134,6 @@
     "together": "Birlikte",
     "like_count": "{count} beğeni"
   },
-
   "venue": {
     "picker_title": "Mekan Seç",
     "get_location": "Konumumu Al",
@@ -164,7 +158,6 @@
     "permission_error": "Konum izni gerekli. Haritadan manuel seçebilirsin.",
     "load_error": "Konum alınamadı. Haritadan seçebilirsin."
   },
-
   "venue_rating": {
     "title": "Değerlendir",
     "your_rating": "Puanın",
@@ -179,7 +172,6 @@
     "select_rating": "Puan seç",
     "no_friends": "Arkadaş listeniz boş."
   },
-
   "friends": {
     "title": "Arkadaşlar",
     "search_hint": "Arkadaş Bul",
@@ -223,7 +215,6 @@
     "invite_friends": "Arkadaşlarını Davet Et",
     "my_code": "Kodum"
   },
-
   "friend_code": {
     "title": "Kodla Arkadaş Ekle",
     "my_code": "Arkadaş Kodun",
@@ -242,7 +233,6 @@
     "search_error": "Arama sırasında bir hata oluştu.",
     "add": "Ekle"
   },
-
   "match": {
     "title": "Buluşma Yeri Bul",
     "subtitle": "Arkadaşın ve senin kişiliğine göre özel mekan önerileri.",
@@ -305,7 +295,6 @@
     "personality_selected": "Kişilik analizine göre seçildi",
     "add_friend_hint": "Önce Arkadaşlar sekmesinden arkadaş ekle"
   },
-
   "profile": {
     "title": "Profil",
     "posts": "Gönderi",
@@ -340,7 +329,6 @@
     "stat_friends": "Arkadaş",
     "stat_likes": "Beğeni"
   },
-
   "settings": {
     "title": "Ayarlar",
     "section_account": "HESAP",
@@ -364,7 +352,6 @@
     "dark_mode": "Koyu Tema",
     "light_mode": "Açık Tema"
   },
-
   "edit_profile": {
     "title": "Profili Düzenle",
     "section_personal": "KİŞİSEL BİLGİLER",
@@ -378,7 +365,6 @@
     "change_photo": "Fotoğraf Değiştir",
     "photo_selected": "Fotoğraf Seçildi ✓"
   },
-
   "change_password": {
     "title": "Şifre Değiştir",
     "strong_password_info": "Güçlü bir şifre büyük harf, rakam ve özel karakter içermelidir.",
@@ -396,7 +382,6 @@
     "wrong_password": "Mevcut şifren yanlış.",
     "update_failed": "Şifre güncellenemedi:"
   },
-
   "quiz": {
     "title": "Kişilik Testi",
     "subtitle": "Sana uygun mekanları bulacağız",
@@ -411,7 +396,6 @@
     "retake_test": "Testi Tekrar Al",
     "finish_quiz": "Testi Bitir"
   },
-
   "map_picker": {
     "title": "Konum Seç",
     "confirm": "Bu Konumu Kullan",
@@ -419,7 +403,6 @@
     "drag_hint": "Pini sürükleyerek konumu ayarlayın",
     "location_error": "Konum alınamadı"
   },
-
   "personality": {
     "explorer": "Kaşif",
     "social": "Sosyal",
@@ -434,4 +417,6 @@
     "calm_soul_desc": "Huzurlu ve sessiz ortamları tercih edersin. Derin sohbetler ve anlamlı anlar senin için değerli.",
     "adventurer_desc": "Her deneyimi yaşamak istersin. Sıradışı aktiviteler ve keşifler seni mutlu eder.",
     "intellectual_desc": "Kültür, sanat ve bilgi senin için önemli. Derinlikli konuşmalar ve ilham verici mekanlar seni çekiyor.",
-    "foodie_desc": "Yemek senin için bir deneyim. Kaliteli lezzetler ve
+    "foodie_desc": "Yemek senin için bir deneyim. Kaliteli lezzetler ve özel mekanlar arayışındasın."
+  }
+}

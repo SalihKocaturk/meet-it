@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,10 +11,9 @@ import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/feed/models/post_model.dart';
 import 'package:meetit/features/feed/providers/feed_provider.dart';
+import 'package:meetit/features/feed/venue_picker_page.dart';
 import 'package:meetit/features/friends/models/user_friend_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
-import 'package:meetit/features/feed/venue_picker_page.dart';
-import 'package:easy_localization/easy_localization.dart';
 import 'package:quickalert/quickalert.dart';
 
 class CreatePostPage extends ConsumerStatefulWidget {
@@ -95,9 +95,9 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
   Future<String?> _uploadPhoto(String uid) async {
     if (_photo == null) return null;
     try {
-      final ref = FirebaseStorage.instance
-          .ref()
-          .child('post_photos/$uid/${DateTime.now().millisecondsSinceEpoch}.jpg');
+      final ref = FirebaseStorage.instance.ref().child(
+        'post_photos/$uid/${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
       await ref.putFile(_photo!);
       return await ref.getDownloadURL();
     } catch (_) {
@@ -177,11 +177,14 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
           icon: Icon(Icons.close, color: context.colors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('feed.share_meetup'.tr(),
-            style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: context.colors.textPrimary)),
+        title: Text(
+          'feed.share_meetup'.tr(),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: context.colors.textPrimary,
+          ),
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -192,12 +195,18 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: context.colors.primary))
-                  : Text('feed.post'.tr(),
+                        strokeWidth: 2,
+                        color: context.colors.primary,
+                      ),
+                    )
+                  : Text(
+                      'feed.post'.tr(),
                       style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: context.colors.primary)),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: context.colors.primary,
+                      ),
+                    ),
             ),
           ),
         ],
@@ -211,13 +220,19 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
             Row(
               children: [
                 CircularAvatar(
-                    name: user?.name ?? '', photoUrl: user?.photoUrl, radius: 22),
+                  name: user?.name ?? '',
+                  photoUrl: user?.photoUrl,
+                  radius: 22,
+                ),
                 SizedBox(width: 10),
-                Text(user?.name ?? '',
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: context.colors.textPrimary)),
+                Text(
+                  user?.name ?? '',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: context.colors.textPrimary,
+                  ),
+                ),
               ],
             ),
 
@@ -229,7 +244,10 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
             GestureDetector(
               onTap: _pickVenueFromMap,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   color: context.colors.card,
                   borderRadius: BorderRadius.circular(12),
@@ -261,8 +279,11 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    Icon(Icons.chevron_right,
-                        size: 18, color: context.colors.hint),
+                    Icon(
+                      Icons.chevron_right,
+                      size: 18,
+                      color: context.colors.hint,
+                    ),
                   ],
                 ),
               ),
@@ -274,21 +295,27 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
             _Label('feed.with_friend_label'.tr()),
             SizedBox(height: 8),
             if (connections.isEmpty)
-              Text('friends.no_friends'.tr(),
-                  style: TextStyle(fontSize: 13, color: context.colors.textSecondary))
+              Text(
+                'friends.no_friends'.tr(),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: context.colors.textSecondary,
+                ),
+              )
             else
               SizedBox(
                 height: 80,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: connections.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 10),
+                  separatorBuilder: (_, _) => const SizedBox(width: 10),
                   itemBuilder: (_, i) {
                     final f = connections[i];
                     final isSelected = _selectedFriend?.uid == f.uid;
                     return GestureDetector(
-                      onTap: () => setState(() =>
-                          _selectedFriend = isSelected ? null : f),
+                      onTap: () => setState(
+                        () => _selectedFriend = isSelected ? null : f,
+                      ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -298,24 +325,30 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
                               shape: BoxShape.circle,
                               border: isSelected
                                   ? Border.all(
-                                      color: context.colors.primary, width: 2.5)
+                                      color: context.colors.primary,
+                                      width: 2.5,
+                                    )
                                   : null,
                             ),
                             child: CircularAvatar(
-                                name: f.name,
-                                photoUrl: f.photoUrl,
-                                radius: 26),
+                              name: f.name,
+                              photoUrl: f.photoUrl,
+                              radius: 26,
+                            ),
                           ),
                           SizedBox(height: 4),
-                          Text(f.name.split(' ').first,
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  color: isSelected
-                                      ? context.colors.primary
-                                      : context.colors.textSecondary,
-                                  fontWeight: isSelected
-                                      ? FontWeight.w600
-                                      : FontWeight.w400)),
+                          Text(
+                            f.name.split(' ').first,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isSelected
+                                  ? context.colors.primary
+                                  : context.colors.textSecondary,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                            ),
+                          ),
                         ],
                       ),
                     );
@@ -333,8 +366,8 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
                 ...List.generate(5, (i) {
                   final star = i + 1;
                   return GestureDetector(
-                    onTap: () => setState(
-                        () => _rating = _rating == star ? 0 : star),
+                    onTap: () =>
+                        setState(() => _rating = _rating == star ? 0 : star),
                     child: Padding(
                       padding: const EdgeInsets.only(right: 6),
                       child: AnimatedSwitcher(
@@ -353,16 +386,6 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
                     ),
                   );
                 }),
-                if (_rating > 0) ...[
-                  const SizedBox(width: 4),
-                  Text(
-                    _ratingLabel(_rating),
-                    style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFFFFB800)),
-                  ),
-                ],
               ],
             ),
 
@@ -390,10 +413,12 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: Image.file(_photo!,
-                              height: 200,
-                              width: double.infinity,
-                              fit: BoxFit.cover),
+                          child: Image.file(
+                            _photo!,
+                            height: 200,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                         Positioned(
                           top: 8,
@@ -403,76 +428,93 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
                             child: Container(
                               padding: const EdgeInsets.all(4),
                               decoration: const BoxDecoration(
-                                  color: Colors.black54,
-                                  shape: BoxShape.circle),
-                              child: const Icon(Icons.close,
-                                  color: Colors.white, size: 18),
+                                color: Colors.black54,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.close,
+                                color: Colors.white,
+                                size: 18,
+                              ),
                             ),
                           ),
                         ),
                       ],
                     )
                   : _venuePhotoUrl != null
-                      ? Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: CachedNetworkImage(
-                                imageUrl: _venuePhotoUrl!,
-                                height: 160,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            Positioned.fill(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.35),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.add_a_photo_outlined,
-                                          color: Colors.white, size: 32),
-                                      SizedBox(height: 6),
-                                      Text('feed.add_own_photo'.tr(),
-                                          style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w600)),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      : Container(
-                          height: 120,
-                          decoration: BoxDecoration(
-                            color: context.colors.card,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                                color: context.colors.border,
-                                style: BorderStyle.solid),
+                  ? Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: CachedNetworkImage(
+                            imageUrl: _venuePhotoUrl!,
+                            height: 160,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
                           ),
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.add_photo_alternate_outlined,
-                                    size: 36, color: context.colors.hint),
-                                SizedBox(height: 6),
-                                Text('feed.select_photo'.tr(),
+                        ),
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.35),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.add_a_photo_outlined,
+                                    color: Colors.white,
+                                    size: 32,
+                                  ),
+                                  SizedBox(height: 6),
+                                  Text(
+                                    'feed.add_own_photo'.tr(),
                                     style: TextStyle(
-                                        fontSize: 13,
-                                        color: context.colors.textSecondary)),
-                              ],
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
+                      ],
+                    )
+                  : Container(
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: context.colors.card,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: context.colors.border,
+                          style: BorderStyle.solid,
+                        ),
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.add_photo_alternate_outlined,
+                              size: 36,
+                              color: context.colors.hint,
+                            ),
+                            SizedBox(height: 6),
+                            Text(
+                              'feed.select_photo'.tr(),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: context.colors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
             ),
 
             const SizedBox(height: 32),
@@ -482,34 +524,32 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
     );
   }
 
-  String _ratingLabel(int r) {
-    switch (r) {
-      case 1: return 'feed.rating_1'.tr();
-      case 2: return 'feed.rating_2'.tr();
-      case 3: return 'feed.rating_3'.tr();
-      case 4: return 'feed.rating_4'.tr();
-      case 5: return 'feed.rating_5'.tr();
-      default: return '';
-    }
-  }
-
-  InputDecoration _inputDeco(BuildContext context, {required String hint, IconData? icon}) {
+  InputDecoration _inputDeco(
+    BuildContext context, {
+    required String hint,
+    IconData? icon,
+  }) {
     return InputDecoration(
       hintText: hint,
       hintStyle: TextStyle(color: context.colors.hint, fontSize: 14),
-      prefixIcon: icon != null ? Icon(icon, color: context.colors.hint, size: 20) : null,
+      prefixIcon: icon != null
+          ? Icon(icon, color: context.colors.hint, size: 20)
+          : null,
       filled: true,
       fillColor: context.colors.card,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: context.colors.border)),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: context.colors.border),
+      ),
       enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: context.colors.border)),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: context.colors.border),
+      ),
       focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: context.colors.primary, width: 1.5)),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: context.colors.primary, width: 1.5),
+      ),
     );
   }
 }
@@ -519,9 +559,12 @@ class _Label extends StatelessWidget {
   const _Label(this.text);
 
   @override
-  Widget build(BuildContext context) => Text(text,
-      style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: context.colors.textSecondary));
+  Widget build(BuildContext context) => Text(
+    text,
+    style: TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      color: context.colors.textSecondary,
+    ),
+  );
 }
