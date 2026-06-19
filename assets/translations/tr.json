@@ -293,7 +293,13 @@
     "you": "Sen",
     "midpoint_badge": "Ortanıza En Yakın",
     "personality_selected": "Kişilik analizine göre seçildi",
-    "add_friend_hint": "Önce Arkadaşlar sekmesinden arkadaş ekle"
+    "add_friend_hint": "Önce Arkadaşlar sekmesinden arkadaş ekle",
+    "see_on_map": "Haritada Göster",
+    "map_loading_venues": "Mekanlar haritaya hazırlanıyor...",
+    "map_you": "Sen",
+    "map_friend": "Arkadaşın",
+    "map_no_location": "Konum bilgisi bulunamadığı için haritada gösterilemiyor.",
+    "map_venue_of": "{current} / {total} mekan"
   },
   "profile": {
     "title": "Profil",
@@ -415,8 +421,4 @@
     "foodie": "Gurme",
     "social_butterfly_desc": "Canlı atmosferleri seven, yeni insanlarla kolayca kaynaşan birisin. Enerjin bulaşıcı!",
     "calm_soul_desc": "Huzurlu ve sessiz ortamları tercih edersin. Derin sohbetler ve anlamlı anlar senin için değerli.",
-    "adventurer_desc": "Her deneyimi yaşamak istersin. Sıradışı aktiviteler ve keşifler seni mutlu eder.",
-    "intellectual_desc": "Kültür, sanat ve bilgi senin için önemli. Derinlikli konuşmalar ve ilham verici mekanlar seni çekiyor.",
-    "foodie_desc": "Yemek senin için bir deneyim. Kaliteli lezzetler ve özel mekanlar arayışındasın."
-  }
-}
+    "adventurer_desc": "Her deneyimi yaşamak istersin. Sıradışı

@@ -293,7 +293,13 @@
     "you": "You",
     "midpoint_badge": "Nearest to You Both",
     "personality_selected": "Curated by personality analysis",
-    "add_friend_hint": "Add a friend from the Friends tab first"
+    "add_friend_hint": "Add a friend from the Friends tab first",
+    "see_on_map": "Show on Map",
+    "map_loading_venues": "Preparing venues on the map...",
+    "map_you": "You",
+    "map_friend": "Your friend",
+    "map_no_location": "Can't show this on the map because location data is missing.",
+    "map_venue_of": "{current} / {total} venues"
   },
   "profile": {
     "title": "Profile",
@@ -415,8 +421,4 @@
     "foodie": "Foodie",
     "social_butterfly_desc": "You love lively atmospheres and connect easily with new people. Your energy is contagious!",
     "calm_soul_desc": "You prefer peaceful and quiet environments. Deep conversations and meaningful moments matter to you.",
-    "adventurer_desc": "You want to experience everything. Unusual activities and exploration make you happy.",
-    "intellectual_desc": "Culture, art and knowledge are important to you. Deep discussions and inspiring venues attract you.",
-    "foodie_desc": "Food is an experience for you. You seek quality flavors and special venues."
-  }
-}
+    "adventurer_desc": "You want to experience everything

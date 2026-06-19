@@ -18,6 +18,7 @@ import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/match/providers/venue_search_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/match/providers/saved_venues_provider.dart';
+import 'package:meetit/features/match/attempt_meet_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class MatchPage extends ConsumerWidget {
@@ -216,6 +217,11 @@ class MatchPage extends ConsumerWidget {
                           final selectedFriend = ref.watch(
                             selectedFriendProvider,
                           );
+                          // "Haritada Göster" butonu için arama durumu —
+                          // arama sürerken bu buton da spinner gösterir.
+                          final isMapSearchLoading = ref.watch(
+                            venueSearchProvider.select((s) => s.isLoading),
+                          );
                           // Arkadaş seçilmese de tek başına mekan arama
                           // yapılabilsin — buton her zaman aktif.
                           const isEnabled = true;
@@ -314,6 +320,121 @@ class MatchPage extends ConsumerWidget {
                                     textAlign: TextAlign.center,
                                   ),
                                 ),
+
+                              // ── Haritada Göster butonu ───────────────────
+                              //
+                              // Mevcut liste tabanlı "Mekan Önerilerini Gör"
+                              // akışına dokunmadan, aynı arama mantığını
+                              // çalıştırıp sonucu harita üzerinde pinlerle
+                              // gösteren AYRI bir görünüme (AttemptMeetPage)
+                              // geçiş yapar. Eski akış bozulmasın diye bu
+                              // bilerek tamamen ek/yeni bir buton.
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  onPressed: isMapSearchLoading
+                                      ? null
+                                      : () async {
+                                          final currentUser = ref.read(
+                                            currentUserProvider,
+                                          );
+                                          final activities = ref.read(
+                                            selectedActivitiesProvider,
+                                          );
+                                          final userProfile =
+                                              currentUser?.personalityProfile ??
+                                              PersonalityProfile.mock(
+                                                PersonalityType.sosyalKelebek,
+                                              );
+                                          final friendProfile =
+                                              selectedFriend
+                                                  ?.personalityProfile ??
+                                              userProfile;
+                                          final priceLevel = ref.read(
+                                            selectedPriceLevelProvider,
+                                          );
+                                          final userLoc = ref.read(
+                                            userLocationProvider,
+                                          );
+
+                                          await ref
+                                              .read(
+                                                venueSearchProvider.notifier,
+                                              )
+                                              .searchVenues(
+                                                userProfile: userProfile,
+                                                friendProfile: friendProfile,
+                                                selectedActivities: activities
+                                                    .toList(),
+                                                friendUid: selectedFriend?.uid,
+                                                priceLevel: priceLevel,
+                                                userLat: userLoc?.lat,
+                                                userLng: userLoc?.lng,
+                                              );
+
+                                          if (!context.mounted) return;
+
+                                          final result = ref.read(
+                                            venueSearchProvider,
+                                          );
+                                          if (!result.hasResults) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  result.errorMessage ??
+                                                      'match.no_venues_found'
+                                                          .tr(),
+                                                ),
+                                              ),
+                                            );
+                                            return;
+                                          }
+
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const AttemptMeetPage(),
+                                            ),
+                                          );
+                                        },
+                                  icon: isMapSearchLoading
+                                      ? SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: context.colors.primary,
+                                          ),
+                                        )
+                                      : Icon(
+                                          Icons.map_outlined,
+                                          color: context.colors.primary,
+                                        ),
+                                  label: Text(
+                                    'match.see_on_map'.tr(),
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: context.colors.primary,
+                                    ),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    side: BorderSide(
+                                      color: context.colors.primary
+                                          .withOpacity(0.5),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 13,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ],
                           );
                         },
@@ -1758,165 +1879,4 @@ class _VenueCard extends ConsumerWidget {
                             fontWeight: FontWeight.w600,
                             color: Color(0xFF4CAF50),
                           ),
-                        ),
-                      ),
-                    ],
-
-                    const Spacer(),
-
-                    // Haritada Gör (küçük link)
-                    GestureDetector(
-                      onTap: () async {
-                        final uri = Uri.parse(place.googleMapsUrl);
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
-                        }
-                      },
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.open_in_new, size: 13, color: context.colors.hint),
-                          SizedBox(width: 3),
-                          Text(
-                            'match.open_maps'.tr(),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: context.colors.hint,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                // ── Kaydet + Gitmeye Başla ───────────────────────────────────
-                const SizedBox(height: 10),
-                Consumer(
-                  builder: (ctx, ref, _) {
-                    final isSaved = ref.watch(savedVenuesProvider
-                        .select((list) => list.any((p) => p.placeId == place.placeId)));
-                    return Row(
-                      children: [
-                        // Kaydet butonu
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => ref
-                                .read(savedVenuesProvider.notifier)
-                                .toggle(place),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(vertical: 9),
-                              decoration: BoxDecoration(
-                                color: isSaved
-                                    ? context.colors.primary.withOpacity(0.12)
-                                    : context.colors.card,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: isSaved
-                                      ? context.colors.primary
-                                      : context.colors.border,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    isSaved
-                                        ? Icons.bookmark
-                                        : Icons.bookmark_border_outlined,
-                                    size: 15,
-                                    color: isSaved
-                                        ? context.colors.primary
-                                        : context.colors.textSecondary,
-                                  ),
-                                  SizedBox(width: 5),
-                                  Text(
-                                    isSaved
-                                        ? 'match.saved'.tr()
-                                        : 'match.save'.tr(),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: isSaved
-                                          ? context.colors.primary
-                                          : context.colors.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Gitmeye Başla butonu
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => _openInMaps(ref),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 9),
-                              decoration: BoxDecoration(
-                                color: context.colors.primary,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.navigation_outlined,
-                                    size: 15,
-                                    color: Colors.white,
-                                  ),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    'match.navigate'.tr(),
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-
-                // Açık mı?
-                if (place.isOpenNow) ...[
-                  SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF3FB950),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        'match.now_open'.tr(),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: context.colors.success,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+    
