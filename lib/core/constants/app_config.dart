@@ -20,9 +20,7 @@ class AppConfig {
   static const String placesPhotoUrl =
       'https://maps.googleapis.com/maps/api/place/photo';
 
-  /// Varsayılan arama yarıçapı (metre)
+  /// Varsayılan arama yarıçapı (metre) — tek başına arama modunda kullanılır.
   static const int defaultSearchRadius = 10000;
 
-  /// Döndürülecek maksimum mekan sayısı
-  static const int maxVenueResults = 5;
-}
+  /// İki kullanıcı arasında (orta nokt

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:meetit/core/constants/app_config.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/services/places_service.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
@@ -203,14 +204,32 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
 
     // ── Places API ────────────────────────────────────────────────────────
     try {
-      final results = await PlacesService.searchVenues(
-        lat: searchLat,
-        lng: searchLng,
-        userProfile: userProfile,
-        friendProfile: friendProfile,
-        selectedActivities: selectedActivities,
-        priceLevel: priceLevel,
-      );
+      List<PlaceResult> results;
+
+      if (usingMidpoint) {
+        // İki kullanıcı arasında arama: önce DAR bir çapta sadece kaliteli
+        // (4.0+ puan) mekanlara bak — böylece ikisinin GERÇEKTEN arasında
+        // bir yer bulunur, uzak bir mahalledeki rastgele bir mekan değil.
+        // Yeterli sonuç çıkmazsa çapı kademeli büyüt; en son adımda puan
+        // şartını da kaldır ki hiçbir zaman boş dönülmesin.
+        results = await _searchMidpointWithExpandingRadius(
+          searchLat: searchLat,
+          searchLng: searchLng,
+          userProfile: userProfile,
+          friendProfile: friendProfile,
+          selectedActivities: selectedActivities,
+          priceLevel: priceLevel,
+        );
+      } else {
+        results = await PlacesService.searchVenues(
+          lat: searchLat,
+          lng: searchLng,
+          userProfile: userProfile,
+          friendProfile: friendProfile,
+          selectedActivities: selectedActivities,
+          priceLevel: priceLevel,
+        );
+      }
 
       if (results.isEmpty) {
         state = state.copyWith(
@@ -253,41 +272,8 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
     }
   }
 
-  void nextPage() {
-    if (state.hasNextPage) {
-      state = state.copyWith(currentPage: state.currentPage + 1);
-    }
-  }
-
-  void prevPage() {
-    if (state.hasPrevPage) {
-      state = state.copyWith(currentPage: state.currentPage - 1);
-    }
-  }
-
-  void reset() => state = const VenueSearchState();
-
-  double _haversineKm(double lat1, double lon1, double lat2, double lon2) {
-    const r = 6371.0;
-    final dLat = _deg2rad(lat2 - lat1);
-    final dLon = _deg2rad(lon2 - lon1);
-    final a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(_deg2rad(lat1)) *
-            cos(_deg2rad(lat2)) *
-            sin(dLon / 2) *
-            sin(dLon / 2);
-    return r * 2 * atan2(sqrt(a), sqrt(1 - a));
-  }
-
-  double _deg2rad(double deg) => deg * pi / 180;
-
-  Future<Position?> _getLocation() async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      state = state.copyWith(
-          isLoading: false,
-          errorMessage: 'Konum servisi kapalı. Lütfen açın.');
-      return null;
-    }
-
-    var permission = await Geolocator.c
+  /// İki kullanıcının orta noktasında, dar çaptan başlayıp kademeli
+  /// büyüyen bir aramayla mekan bulur.
+  ///
+  /// Mantık: ilk adımlarda hem dar bir yarıçap (örn. 2.5km) hem de yüksek
+  /// puan şartı (4.0+) uygulanır — bu

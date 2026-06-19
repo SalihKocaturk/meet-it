@@ -250,6 +250,16 @@ class PlacesService {
         .toList();
   }
 
+  /// Verilirse, puanı [minRating]'ten az olan mekanları eler. Orta nokta
+  /// aramasında dar çapta sadece kaliteli yerleri göstermek için kullanılır.
+  static List<PlaceResult> _filterMinimumRating(
+    List<PlaceResult> places,
+    double? minRating,
+  ) {
+    if (minRating == null) return places;
+    return places.where((p) => (p.rating ?? 0) >= minRating).toList();
+  }
+
   // ── İsim bazlı çeşitlilik grupları ────────────────────────────────────────
   //
   // "2 pizzacı veya 2 burgerci aynı anda çıkmasın" isteği için: final
@@ -444,6 +454,8 @@ class PlacesService {
     required PersonalityProfile friendProfile,
     required List<String> selectedActivities,
     int? priceLevel,
+    int? radius,
+    double? minRating,
   }) async {
     final types = _resolveTypes(
       userProfile: userProfile,
@@ -454,8 +466,11 @@ class PlacesService {
     // Kullanıcı otel mi arıyor? (lodging filtresi bypass edilsin mi?)
     final searchingForLodging = types.contains('lodging');
 
+    final searchRadius = radius ?? AppConfig.defaultSearchRadius;
+
     // ignore: avoid_print
-    print('🔍 PlacesService types: $types  lodgingSearch=$searchingForLodging');
+    print('🔍 PlacesService types: $types  lodgingSearch=$searchingForLodging '
+        'radius=$searchRadius minRating=$minRating');
 
     final seen = <String>{};
     final results = <PlaceResult>[];
@@ -463,7 +478,7 @@ class PlacesService {
     // Her type için fetch et — daha fazla sonuç için limit'i yükselt
     for (final type in types) {
       final batch = await _fetchNearby(
-          lat: lat, lng: lng, type: type, priceLevel: priceLevel);
+          lat: lat, lng: lng, type: type, priceLevel: priceLevel, radius: searchRadius);
 
       for (final place in batch) {
         if (!seen.contains(place.placeId)) {
@@ -493,15 +508,20 @@ class PlacesService {
     // ── Adım 4: Yorum sayısı çok az olan (güvenilmez) mekanları ele ───────
     final reviewFiltered = _filterMinimumReviews(nameFiltered);
 
+    // ── Adım 5: (varsa) minimum puan şartı — orta nokta dar çap aramasında
+    // sadece kaliteli (4.0+) yerleri göster.
+    final ratingFiltered = _filterMinimumRating(reviewFiltered, minRating);
+
     // ignore: avoid_print
     print('🔍 PlacesService: raw=${results.length} '
         'excl=${excludeFiltered.length} req=${filtered.length} '
-        'name=${nameFiltered.length} review=${reviewFiltered.length}');
+        'name=${nameFiltered.length} review=${reviewFiltered.length} '
+        'rating=${ratingFiltered.length}');
 
-    if (reviewFiltered.isEmpty) return [];
+    if (ratingFiltered.isEmpty) return [];
 
     // ── Kişilik + rating kombinasyon skoru ─────────────────────────────────
-    final scored = reviewFiltered.map((place) {
+    final scored = ratingFiltered.map((place) {
       final personalityScore = _personalityMatch(
         place, userProfile, friendProfile, selectedActivities,
       );
@@ -619,10 +639,11 @@ class PlacesService {
     required double lng,
     required String type,
     int? priceLevel,
+    int? radius,
   }) async {
     final params = <String, String>{
       'location': '$lat,$lng',
-      'radius': '${AppConfig.defaultSearchRadius}',
+      'radius': '${radius ?? AppConfig.defaultSearchRadius}',
       'type': type,
       'language': 'tr',
       'key': AppConfig.googleMapsApiKey,
@@ -720,24 +741,4 @@ class PlacesService {
     // NOT: `secondaryType` getter'ı %10 gibi düşük bir eşikte bile ikincil
     // tip döndürüyor (UI'da "ikincil eğilim" göstermek için makul bir eşik).
     // Ama burada, arama havuzuna YENİ bir mekan kategorisi eklemek için bu
-    // çok düşük: "sakin ruh" kullanıcının %12 gibi zayıf bir "maceraperest"
-    // eğilimi olması, sonuçlara spor salonu/stadyum sokulmasına yol açıyordu
-    // (dominant tipin 4 type'ı + bu 1 ekstra type = take(5) ile tam sınırda
-    // kalıyor ve dominant tipin kendi mekanlarıyla aynı kefeye giriyordu).
-    // Bu yüzden burada daha sıkı, yerel bir eşik kullanıyoruz: ikincil eğilim
-    // gerçekten belirgin değilse (≥ %25) arama havuzuna katılmasın.
-    const secondaryPoolThreshold = 0.25;
-
-    void addSecondaryPool(PersonalityProfile profile) {
-      final ranked = profile.rankedTypes;
-      if (ranked.length < 2) return;
-      final second = ranked[1];
-      if (second.value >= secondaryPoolThreshold) {
-        types.addAll(_personalityTypes[second.key] ?? []);
-      }
-    }
-
-    addSecondaryPool(userProfile);
-    addSecondaryPool(friendProfile);
-
-    re
+    // çok düşük: "sakin ruh" kullanıcının %1
