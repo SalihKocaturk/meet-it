@@ -27,10 +27,10 @@ class PlacesService {
   static const int _maxResultCount = 10;
 
   /// Bir mekanın gösterilebilmesi için sahip olması gereken minimum
-  /// yorum (review) sayısı. 0 veya 1 yorumlu yerler genelde yanlış
-  /// kategorize edilmiş ya da hiç işlemeyen/kapanmış yerler oluyor —
-  /// bu yüzden gösterilmiyor.
-  static const int _minReviewCount = 5;
+  /// yorum (review) sayısı. Az yorumlu yerler genelde yanlış
+  /// kategorize edilmiş, hiç işlemeyen/kapanmış ya da güvenilir bir
+  /// kalite sinyali vermeyen yerler oluyor — bu yüzden gösterilmiyor.
+  static const int _minReviewCount = 20;
 
   // ── Hiçbir zaman gösterilmeyecek type'lar ────────────────────────────────
   //
@@ -740,6 +740,4 @@ class PlacesService {
     addSecondaryPool(userProfile);
     addSecondaryPool(friendProfile);
 
-    return types.take(5).toList();
-  }
-}
+    re

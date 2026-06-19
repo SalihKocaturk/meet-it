@@ -29,6 +29,15 @@ class VenueSearchState {
   /// kullanıcıya gösterilecek uyarı (sonuçları engellemez).
   final String? distanceWarning;
 
+  /// Aramada gerçekten kullanılan HAM konumlar (orta nokta DEĞİL).
+  /// `searchLat`/`searchLng` orta noktaya hesaplandığında kendi/arkadaşın
+  /// gerçek konumunu kaybetmiş oluyordu — haritada her iki kişinin de
+  /// kendi pin'ini doğru yerde göstermek için bunlar ayrıca saklanıyor.
+  final double? myLat;
+  final double? myLng;
+  final double? friendLat;
+  final double? friendLng;
+
   const VenueSearchState({
     this.midpointVenues = const [],
     this.allVenues = const [],
@@ -39,6 +48,10 @@ class VenueSearchState {
     this.searchLng,
     this.hasMidpoint = false,
     this.distanceWarning,
+    this.myLat,
+    this.myLng,
+    this.friendLat,
+    this.friendLng,
   });
 
   List<PlaceResult> get venues {
@@ -63,6 +76,10 @@ class VenueSearchState {
     double? searchLng,
     bool? hasMidpoint,
     String? distanceWarning,
+    double? myLat,
+    double? myLng,
+    double? friendLat,
+    double? friendLng,
     bool clearError = false,
     bool clearAll = false,
     bool clearDistanceWarning = false,
@@ -80,6 +97,10 @@ class VenueSearchState {
       distanceWarning: clearDistanceWarning
           ? null
           : (distanceWarning ?? this.distanceWarning),
+      myLat: myLat ?? this.myLat,
+      myLng: myLng ?? this.myLng,
+      friendLat: friendLat ?? this.friendLat,
+      friendLng: friendLng ?? this.friendLng,
     );
   }
 }
@@ -174,6 +195,10 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
       searchLng: searchLng,
       hasMidpoint: usingMidpoint,
       distanceWarning: distanceWarning,
+      myLat: myLat,
+      myLng: myLng,
+      friendLat: friendLat,
+      friendLng: friendLng,
     );
 
     // ── Places API ────────────────────────────────────────────────────────
@@ -265,31 +290,4 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
       return null;
     }
 
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        state = state.copyWith(
-            isLoading: false, errorMessage: 'Konum izni verilmedi.');
-        return null;
-      }
-    }
-    if (permission == LocationPermission.deniedForever) {
-      state = state.copyWith(
-          isLoading: false,
-          errorMessage: 'Konum izni kalıcı reddedildi.');
-      return null;
-    }
-
-    try {
-      return await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 10),
-        ),
-      );
-    } catch (_) {
-      return await Geolocator.getLastKnownPosition();
-    }
-  }
-}
+    var permission = await Geolocator.c

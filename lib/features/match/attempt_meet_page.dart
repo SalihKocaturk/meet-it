@@ -71,21 +71,29 @@ class _AttemptMeetPageState extends ConsumerState<AttemptMeetPage> {
     final userLoc = ref.read(userLocationProvider);
 
     // ── Kendi konumum ───────────────────────────────────────────────────
-    double? myLat = userLoc?.lat;
-    double? myLng = userLoc?.lng;
-    if (myLat == null || myLng == null) {
-      // Kullanıcı manuel konum girmediyse, arama sırasında kullanılan
-      // (GPS'ten gelen) noktayı kullan — ama bu nokta orta nokta DEĞİLSE.
-      if (!state.hasMidpoint) {
-        myLat = state.searchLat;
-        myLng = state.searchLng;
-      }
+    //
+    // ÖNEMLİ: `state.searchLat`/`searchLng` orta nokta hesaplandığında
+    // (hasMidpoint == true) kendi gerçek konumum DEĞİL, ikimizin arasındaki
+    // orta noktadır — bu yüzden kendi pinim için asla onu kullanmıyoruz.
+    // Notifier, arama sırasında gerçekten kullanılan ham konumu
+    // `state.myLat`/`myLng` içinde sakladığı için önce onu deniyoruz;
+    // sonra manuel girilmiş konumu (`userLocationProvider`).
+    double? myLat = state.myLat ?? userLoc?.lat;
+    double? myLng = state.myLng ?? userLoc?.lng;
+    if ((myLat == null || myLng == null) && !state.hasMidpoint) {
+      // Orta nokta hesaplanmadıysa (tek başına arama) searchLat/Lng zaten
+      // kendi konumumdur.
+      myLat = state.searchLat;
+      myLng = state.searchLng;
     }
 
     // ── Arkadaşımın konumu ──────────────────────────────────────────────
-    double? friendLat = selectedFriend?.lat;
-    double? friendLng = selectedFriend?.lng;
-    if (selectedFriend != null) {
+    // Notifier arama sırasında arkadaşın konumunu zaten Firestore'dan
+    // çekip `state.friendLat`/`friendLng` içinde saklıyor — önce onu
+    // kullanıyoruz, sadece eksikse aşağıda tekrar Firestore'a soruyoruz.
+    double? friendLat = state.friendLat ?? selectedFriend?.lat;
+    double? friendLng = state.friendLng ?? selectedFriend?.lng;
+    if ((friendLat == null || friendLng == null) && selectedFriend != null) {
       try {
         final doc = await FirebaseFirestore.instance
             .collection('users')
@@ -117,7 +125,7 @@ class _AttemptMeetPageState extends ConsumerState<AttemptMeetPage> {
         name: currentUser?.name ?? 'match.map_you'.tr(),
         photoUrl: currentUser?.photoUrl,
         borderColor: const Color(0xFF6C5CE7),
-        size: 64,
+        size: 54,
       );
     }
 
@@ -130,7 +138,7 @@ class _AttemptMeetPageState extends ConsumerState<AttemptMeetPage> {
         name: selectedFriend?.name ?? 'match.map_friend'.tr(),
         photoUrl: selectedFriend?.photoUrl,
         borderColor: const Color(0xFFE17055),
-        size: 56,
+        size: 48,
       );
     }
 
@@ -753,19 +761,4 @@ class _VenueBottomBar extends ConsumerWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          isSaved ? Icons.bookmark : Icons.bookmark_border,
-                          size: 16,
-                          color: isSaved
-                              ? context.colors.primary
-                              : context.colors.textSecondary,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          isSaved ? 'match.saved'.tr() : 'match.save'.tr(),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isSaved
-                                ? context.colors.primary
-                                : context.colors.textSecondary,
- 
+                          isSaved ? I
