@@ -77,4 +77,30 @@ class UserModel {
   UserModel copyWith({
     String? uid,
     String? name,
-    String?
+    String? email,
+    String? location,
+    int? age,
+    String? gender,
+    String? photoUrl,
+    DateTime? createdAt,
+    PersonalityProfile? personalityProfile,
+    bool clearProfile = false,
+    double? lat,
+    double? lng,
+  }) {
+    return UserModel(
+      uid: uid ?? this.uid,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      location: location ?? this.location,
+      age: age ?? this.age,
+      gender: gender ?? this.gender,
+      photoUrl: photoUrl ?? this.photoUrl,
+      createdAt: createdAt ?? this.createdAt,
+      personalityProfile:
+          clearProfile ? null : (personalityProfile ?? this.personalityProfile),
+      lat: lat ?? this.lat,
+      lng: lng ?? this.lng,
+    );
+  }
+}

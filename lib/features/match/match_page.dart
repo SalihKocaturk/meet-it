@@ -11,7 +11,6 @@ import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/constants/map_styles.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
-import 'package:meetit/features/feed/create_post_page.dart';
 import 'package:meetit/features/friends/models/user_friend_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/match/models/place_result.dart';
@@ -1880,4 +1879,270 @@ class _VenueCard extends ConsumerWidget {
                             fontSize: rank <= 3 ? 14 : 12,
                             fontWeight: FontWeight.bold,
                           ),
-                   
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            place.name,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: context.colors.textPrimary,
+                            ),
+                          ),
+                          if (place.vicinity != null)
+                            Text(
+                              place.vicinity!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: context.colors.textSecondary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: 10),
+
+                // Alt satır: tip etiketi + puan + durum + harita butonu
+                Row(
+                  children: [
+                    // Tip etiketi
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: context.colors.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        place.primaryTypeLabel,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: context.colors.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    // Rating
+                    if (place.rating != null) ...[
+                      const Icon(
+                        Icons.star_rounded,
+                        size: 14,
+                        color: Color(0xFFFFB800),
+                      ),
+                      SizedBox(width: 2),
+                      Text(
+                        place.ratingText,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: context.colors.textPrimary,
+                        ),
+                      ),
+                      if (place.userRatingsTotal != null)
+                        Text(
+                          ' (${place.userRatingsTotal})',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: context.colors.textSecondary,
+                          ),
+                        ),
+                    ],
+
+                    // Fiyat etiketi
+                    if (place.priceLabelText != null) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4CAF50).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: Text(
+                          place.priceLabelText!,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF4CAF50),
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    const Spacer(),
+
+                    // Haritada Gör (küçük link)
+                    GestureDetector(
+                      onTap: () async {
+                        final uri = Uri.parse(place.googleMapsUrl);
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        }
+                      },
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.open_in_new, size: 13, color: context.colors.hint),
+                          SizedBox(width: 3),
+                          Text(
+                            'match.open_maps'.tr(),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: context.colors.hint,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                // ── Kaydet + Gitmeye Başla ───────────────────────────────────
+                const SizedBox(height: 10),
+                Consumer(
+                  builder: (ctx, ref, _) {
+                    final isSaved = ref.watch(savedVenuesProvider
+                        .select((list) => list.any((p) => p.placeId == place.placeId)));
+                    return Row(
+                      children: [
+                        // Kaydet butonu
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => ref
+                                .read(savedVenuesProvider.notifier)
+                                .toggle(place),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              decoration: BoxDecoration(
+                                color: isSaved
+                                    ? context.colors.primary.withOpacity(0.12)
+                                    : context.colors.card,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isSaved
+                                      ? context.colors.primary
+                                      : context.colors.border,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    isSaved
+                                        ? Icons.bookmark
+                                        : Icons.bookmark_border_outlined,
+                                    size: 15,
+                                    color: isSaved
+                                        ? context.colors.primary
+                                        : context.colors.textSecondary,
+                                  ),
+                                  SizedBox(width: 5),
+                                  Text(
+                                    isSaved
+                                        ? 'match.saved'.tr()
+                                        : 'match.save'.tr(),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: isSaved
+                                          ? context.colors.primary
+                                          : context.colors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Gitmeye Başla butonu
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => _openInMaps(ref),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              decoration: BoxDecoration(
+                                color: context.colors.primary,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.navigation_outlined,
+                                    size: 15,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    'match.navigate'.tr(),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+
+                // Açık mı?
+                if (place.isOpenNow) ...[
+                  SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF3FB950),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        'match.now_open'.tr(),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: context.colors.success,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+                                                             

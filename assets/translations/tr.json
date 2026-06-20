@@ -26,7 +26,7 @@
     "continue": "Devam Et"
   },
   "nav": {
-    "feed": "Feed",
+    "home": "Ana Sayfa",
     "friends": "Arkadaşlar",
     "meetup": "Buluşma",
     "profile": "Profil"
@@ -89,50 +89,11 @@
     "must_be_18": "18 yaşından büyük olmalısınız.",
     "email_empty": "Email ve şifre alanları boş bırakılamaz."
   },
-  "feed": {
-    "title": "MeetIt Feed",
-    "subtitle": "Buluşmaları keşfet",
-    "share_btn": "Paylaş",
-    "no_posts": "Henüz paylaşım yok",
-    "be_first": "İlk buluşmayı sen paylaş!",
-    "share_meetup": "Buluşmayı Paylaş",
-    "delete_post": "Postu Sil",
-    "delete_post_confirm": "Bu paylaşım silinsin mi?",
-    "edit_post": "Gönderiyi Düzenle",
-    "rating_label": "Değerlendirme",
-    "description": "Açıklama",
-    "what_happened": "Ne yaşadınız?",
-    "likes": "beğeni",
+  "time": {
     "just_now": "az önce",
     "min_ago": "dk önce",
     "hr_ago": "sa önce",
-    "days_ago": "gün önce",
-    "rating_1": "Berbattı",
-    "rating_2": "İdare eder",
-    "rating_3": "İyiydi",
-    "rating_4": "Çok güzeldi",
-    "rating_5": "Mükemmeldi!",
-    "new_post": "Yeni Gönderi",
-    "add_photo": "Fotoğraf Ekle",
-    "select_venue": "Mekan Seç",
-    "select_venue_hint": "Mekan seçmek için dokunun",
-    "write_caption": "Bir şeyler yaz... (opsiyonel)",
-    "with_friend": "Arkadaşla (opsiyonel)",
-    "post": "Paylaş",
-    "venue_required": "Lütfen bir mekan seçin.",
-    "post_shared": "Paylaşıldı!",
-    "post_shared_desc": "Paylaşımın feed'e eklendi.",
-    "select_venue_label": "Buluşulan Mekan *",
-    "with_friend_label": "Birlikte Buluştuğun Kişi",
-    "rate_venue_optional": "Bu mekanı değerlendir (opsiyonel)",
-    "caption_label_optional": "Ne yaşadınız? (opsiyonel)",
-    "caption_hint": "Harika bir akşamdı...",
-    "add_own_photo": "Kendi fotoğrafını ekle",
-    "select_photo": "Fotoğraf seç",
-    "select_venue_map": "Haritadan mekan seç",
-    "view_on_map": "Haritada gör →",
-    "together": "Birlikte",
-    "like_count": "{count} beğeni"
+    "days_ago": "gün önce"
   },
   "venue": {
     "picker_title": "Mekan Seç",
@@ -320,21 +281,22 @@
     "no_pending": "Bekleyen istek yok.",
     "meet_btn": "Buluş",
     "section_activity": "Hareketler",
-    "saved_posts": "Kaydedilenler",
-    "liked_posts": "Beğenilenler",
     "notifications": "Bildirimler",
-    "empty_saved": "Henüz kaydettiğin gönderi yok.",
-    "empty_liked": "Henüz beğendiğin gönderi yok.",
     "search_hint": "Mekan, kişi veya gönderi ara...",
     "no_search_result": "\"{query}\" için sonuç bulunamadı.",
     "saved_venues": "Kaydedilen",
     "navigated_venues": "Tarifi Alınan",
     "no_saved_venues": "Henüz kaydedilen mekan yok.",
     "no_navigated_venues": "Henüz tarif alınan mekan yok.",
-    "share": "Feedde Paylaş",
-    "stat_posts": "Gönderi",
+    "add_review": "Yorum Ekle",
+    "stat_posts": "Yorum",
     "stat_friends": "Arkadaş",
-    "stat_likes": "Beğeni"
+    "stat_likes": "Beğeni",
+    "no_reviews": "Henüz yorum yok",
+    "no_reviews_desc": "İlk yorumunu eklemek için gittiğin bir mekanı seç!",
+    "saved_reviews": "Kaydedilenler",
+    "liked_reviews": "Beğenilenler",
+    "empty_liked_reviews": "Henüz beğendiğin yorum yok."
   },
   "settings": {
     "title": "Ayarlar",
@@ -410,6 +372,35 @@
     "drag_hint": "Pini sürükleyerek konumu ayarlayın",
     "location_error": "Konum alınamadı"
   },
+  "home": {
+    "greeting": "Merhaba, {name}!",
+    "subtitle": "Arkadaşlarınla buluşmaya hazır mısın?",
+    "friends_section": "Arkadaşların",
+    "featured_section": "Öne Çıkan Mekanlar ve Yorumlar",
+    "no_friends_hint": "Henüz arkadaşın yok.",
+    "no_reviews_hint": "Henüz yorum yok. İlk yorumu sen ekle!"
+  },
+  "venue_detail": {
+    "title": "Mekan",
+    "reviews_section": "Yorumlar",
+    "no_reviews": "Bu mekana henüz yorum yapılmamış.",
+    "add_review": "Yorum Ekle",
+    "must_visit_first": "Bu mekana yorum atabilmek için önce gitmelisin.",
+    "rating_count": "{count} değerlendirme"
+  },
+  "review": {
+    "add_title": "Yorum Ekle",
+    "rating_label": "Puanın",
+    "comment_label": "Yorumun (opsiyonel)",
+    "comment_hint": "Deneyimini paylaş...",
+    "add_photo": "Fotoğraf Ekle (opsiyonel)",
+    "submit": "Paylaş",
+    "select_rating_warning": "Lütfen en az 1 yıldız seç.",
+    "review_added": "Yorum Eklendi!",
+    "review_added_desc": "Yorumun mekana eklendi.",
+    "delete_review": "Yorumu Sil",
+    "delete_review_confirm": "Bu yorum silinsin mi?"
+  },
   "personality": {
     "explorer": "Kaşif",
     "social": "Sosyal",
@@ -422,4 +413,8 @@
     "foodie": "Gurme",
     "social_butterfly_desc": "Canlı atmosferleri seven, yeni insanlarla kolayca kaynaşan birisin. Enerjin bulaşıcı!",
     "calm_soul_desc": "Huzurlu ve sessiz ortamları tercih edersin. Derin sohbetler ve anlamlı anlar senin için değerli.",
-    "adventurer_desc": "He
+    "adventurer_desc": "Her deneyimi yaşamak istersin. Sıradışı aktiviteler ve keşifler seni mutlu eder.",
+    "intellectual_desc": "Kültür, sanat ve bilgi senin için önemli. Derinlikli konuşmalar ve ilham verici mekanlar seni çekiyor.",
+    "foodie_desc": "Yemek senin için bir deneyim. Kaliteli lezzetler ve özel mekanlar arayışındasın."
+  }
+}

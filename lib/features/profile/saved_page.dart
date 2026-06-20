@@ -8,12 +8,12 @@ import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/providers/theme_provider.dart';
 import 'package:meetit/core/router/app_routes.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
-import 'package:meetit/features/feed/models/post_model.dart';
-import 'package:meetit/features/feed/post_detail_page.dart';
-import 'package:meetit/features/feed/providers/feed_provider.dart';
 import 'package:meetit/features/friends/friend_code_page.dart';
 import 'package:meetit/features/match/match_page.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
+import 'package:meetit/features/reviews/models/venue_review_model.dart';
+import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
+import 'package:meetit/features/reviews/venue_detail_page.dart';
 import 'package:meetit/core/widgets/langauge_switcher.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:quickalert/quickalert.dart';
@@ -63,21 +63,28 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
     final currentUid = currentUser?.uid ?? '';
-    final allPosts = ref.watch(feedProvider).posts;
     final isEmailUser = _isEmailUser();
 
-    final savedPosts = allPosts.where((p) => p.isSavedBy(currentUid)).toList();
-    final likedPosts = allPosts.where((p) => p.isLikedBy(currentUid)).toList();
+    // NOT: VenueReviewModel'de PostModel'deki savedBy alanına karşılık gelen
+    // bir "kaydedilen yorum" kavramı yok (sadece likedBy var). Bu yüzden
+    // "Kaydedilenler" bölümü kaldırıldı, sadece "Beğenilenler" bırakıldı —
+    // sayfayı bozmamak için en basit ve güvenli seçim bu (bkz. görev notları).
+    // Arama, kullanıcının kendi yazdığı yorumlar arasında yapılır.
+    final myReviewsAsync = ref.watch(myReviewsProvider(currentUid));
+    final allReviews = myReviewsAsync.value ?? const <VenueReviewModel>[];
+
+    final likedReviews =
+        allReviews.where((r) => r.isLikedBy(currentUid)).toList();
 
     final searchResults = _query.isEmpty
-        ? <PostModel>[]
-        : allPosts
+        ? <VenueReviewModel>[]
+        : allReviews
               .where(
-                (p) =>
-                    p.venueName.toLowerCase().contains(_query.toLowerCase()) ||
-                    (p.caption?.toLowerCase().contains(_query.toLowerCase()) ??
+                (r) =>
+                    r.venueName.toLowerCase().contains(_query.toLowerCase()) ||
+                    (r.comment?.toLowerCase().contains(_query.toLowerCase()) ??
                         false) ||
-                    p.authorName.toLowerCase().contains(_query.toLowerCase()),
+                    r.authorName.toLowerCase().contains(_query.toLowerCase()),
               )
               .toList();
 
@@ -171,35 +178,17 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                         _MenuSection(
                           items: [
                             _MenuItem(
-                              icon: Icons.bookmark_outline,
-                              title: 'profile.saved_posts'.tr(),
-                              badge: savedPosts.isNotEmpty
-                                  ? savedPosts.length
-                                  : null,
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => _PostListPage(
-                                    title: 'profile.saved_posts'.tr(),
-                                    posts: savedPosts,
-                                    emptyText: 'profile.empty_saved'.tr(),
-                                    isSaved: true,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            _MenuItem(
                               icon: Icons.favorite_border_rounded,
-                              title: 'profile.liked_posts'.tr(),
-                              badge: likedPosts.isNotEmpty
-                                  ? likedPosts.length
+                              title: 'profile.liked_reviews'.tr(),
+                              badge: likedReviews.isNotEmpty
+                                  ? likedReviews.length
                                   : null,
                               onTap: () => Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => _PostListPage(
-                                    title: 'profile.liked_posts'.tr(),
-                                    posts: likedPosts,
-                                    emptyText: 'profile.empty_liked'.tr(),
-                                    isSaved: false,
+                                  builder: (_) => _ReviewListPage(
+                                    title: 'profile.liked_reviews'.tr(),
+                                    reviews: likedReviews,
+                                    emptyText: 'profile.empty_liked_reviews'.tr(),
                                   ),
                                 ),
                               ),
@@ -468,9 +457,13 @@ class _MenuItem extends StatelessWidget {
 }
 
 // ── Arama Sonuçları ───────────────────────────────────────────────────────────
+//
+// PostModel/PostDetailPage kaldırıldı (eski Feed) — artık kullanıcının kendi
+// yorumları (VenueReviewModel) içinde arama yapılıyor, dokununca o yorumun
+// ait olduğu mekanın VenueDetailPage'i açılıyor.
 
 class _SearchResults extends StatelessWidget {
-  final List<PostModel> results;
+  final List<VenueReviewModel> results;
   final String query;
 
   const _SearchResults({required this.results, required this.query});
@@ -490,8 +483,8 @@ class _SearchResults extends StatelessWidget {
       itemCount: results.length,
       separatorBuilder: (_, _) => const Divider(height: 1),
       itemBuilder: (ctx, i) {
-        final p = results[i];
-        final img = p.postPhotoUrl ?? p.venuePhotoUrl;
+        final r = results[i];
+        final img = r.photoUrl ?? r.venuePhotoUrl;
         return ListTile(
           contentPadding: const EdgeInsets.symmetric(vertical: 6),
           leading: ClipRRect(
@@ -514,7 +507,7 @@ class _SearchResults extends StatelessWidget {
                   ),
           ),
           title: Text(
-            p.venueName,
+            r.venueName,
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
@@ -522,51 +515,58 @@ class _SearchResults extends StatelessWidget {
             ),
           ),
           subtitle: Text(
-            p.authorName,
+            r.comment ?? r.authorName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(fontSize: 12, color: context.colors.textSecondary),
           ),
-          trailing: p.rating != null
-              ? Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.star_rounded,
-                      size: 14,
-                      color: Color(0xFFFFB800),
-                    ),
-                    const SizedBox(width: 2),
-                    Text(
-                      '${p.rating}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                )
-              : null,
-          onTap: () => Navigator.of(
-            ctx,
-          ).push(MaterialPageRoute(builder: (_) => PostDetailPage(post: p))),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.star_rounded,
+                size: 14,
+                color: Color(0xFFFFB800),
+              ),
+              const SizedBox(width: 2),
+              Text(
+                '${r.rating}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          onTap: () => Navigator.of(ctx).push(
+            MaterialPageRoute(
+              builder: (_) => VenueDetailPage(
+                placeId: r.placeId,
+                venueName: r.venueName,
+                venueAddress: r.venueAddress,
+                venuePhotoUrl: r.venuePhotoUrl,
+                lat: r.lat,
+                lng: r.lng,
+              ),
+            ),
+          ),
         );
       },
     );
   }
 }
 
-// ── Post Liste Sayfası (Kaydedilenler / Beğenilenler) ─────────────────────────
+// ── Yorum Liste Sayfası (Beğenilenler) ─────────────────────────────────────────
 
-class _PostListPage extends StatelessWidget {
+class _ReviewListPage extends StatelessWidget {
   final String title;
-  final List<PostModel> posts;
+  final List<VenueReviewModel> reviews;
   final String emptyText;
-  final bool isSaved;
 
-  const _PostListPage({
+  const _ReviewListPage({
     required this.title,
-    required this.posts,
+    required this.reviews,
     required this.emptyText,
-    this.isSaved = true,
   });
 
   @override
@@ -593,15 +593,13 @@ class _PostListPage extends StatelessWidget {
           ),
         ),
       ),
-      body: posts.isEmpty
+      body: reviews.isEmpty
           ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    isSaved
-                        ? Icons.bookmark_border_rounded
-                        : Icons.favorite_border_rounded,
+                    Icons.favorite_border_rounded,
                     size: 56,
                     color: context.colors.hint,
                   ),
@@ -623,14 +621,21 @@ class _PostListPage extends StatelessWidget {
                 crossAxisSpacing: 2,
                 mainAxisSpacing: 2,
               ),
-              itemCount: posts.length,
+              itemCount: reviews.length,
               itemBuilder: (context, i) {
-                final post = posts[i];
-                final imgUrl = post.postPhotoUrl ?? post.venuePhotoUrl;
+                final review = reviews[i];
+                final imgUrl = review.photoUrl ?? review.venuePhotoUrl;
                 return GestureDetector(
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => PostDetailPage(post: post),
+                      builder: (_) => VenueDetailPage(
+                        placeId: review.placeId,
+                        venueName: review.venueName,
+                        venueAddress: review.venueAddress,
+                        venuePhotoUrl: review.venuePhotoUrl,
+                        lat: review.lat,
+                        lng: review.lng,
+                      ),
                     ),
                   ),
                   child: imgUrl != null
@@ -640,9 +645,9 @@ class _PostListPage extends StatelessWidget {
                           placeholder: (_, _) =>
                               Container(color: context.colors.border),
                           errorWidget: (_, _, _) =>
-                              _GridPlaceholder(post: post),
+                              _GridPlaceholder(review: review),
                         )
-                      : _GridPlaceholder(post: post),
+                      : _GridPlaceholder(review: review),
                 );
               },
             ),
@@ -651,30 +656,9 @@ class _PostListPage extends StatelessWidget {
 }
 
 class _GridPlaceholder extends StatelessWidget {
-  final PostModel post;
-  const _GridPlaceholder({required this.post});
+  final VenueReviewModel review;
+  const _GridPlaceholder({required this.review});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: context.colors.primary.withOpacity(0.08),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.location_on, color: context.colors.primary, size: 22),
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(
-              post.venueName,
-              style: TextStyle(fontSize: 9, color: context.colors.primary),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+ 

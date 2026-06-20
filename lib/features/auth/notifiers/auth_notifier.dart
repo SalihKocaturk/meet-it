@@ -334,4 +334,27 @@ class AuthNotifier extends Notifier<AuthState> {
 
   Future<void> signOut() async {
     await _auth.signOut();
-    await _googleSignIn.sig
+    await _googleSignIn.signOut();
+    await _clearSession();
+    // Quiz state'ini sıfırla — bir sonraki kullanıcıda temiz başlasın
+    ref.invalidate(quizProvider);
+    state = const AuthState();
+  }
+
+  void clearError() => state = state.copyWith(clearError: true);
+
+  // ── Hata Mesajları ────────────────────────────────────────────────────────
+
+  String _authError(String code) {
+    switch (code) {
+      case 'user-not-found':       return 'auth.error_user_not_found';
+      case 'wrong-password':       return 'auth.error_wrong_password';
+      case 'email-already-in-use': return 'auth.error_email_in_use';
+      case 'weak-password':        return 'auth.error_weak_password';
+      case 'invalid-email':        return 'auth.error_invalid_email';
+      case 'too-many-requests':    return 'auth.error_too_many_requests';
+      case 'network-request-failed': return 'auth.error_no_network';
+      default:                     return 'auth.error_generic';
+    }
+  }
+}

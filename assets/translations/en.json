@@ -26,7 +26,7 @@
     "continue": "Continue"
   },
   "nav": {
-    "feed": "Feed",
+    "home": "Home",
     "friends": "Friends",
     "meetup": "Meetup",
     "profile": "Profile"
@@ -89,50 +89,11 @@
     "must_be_18": "You must be 18 or older.",
     "email_empty": "Email and password fields cannot be empty."
   },
-  "feed": {
-    "title": "MeetIt Feed",
-    "subtitle": "Discover meetups",
-    "share_btn": "Share",
-    "no_posts": "No posts yet",
-    "be_first": "Be the first to share a meetup!",
-    "share_meetup": "Share Meetup",
-    "delete_post": "Delete Post",
-    "delete_post_confirm": "Delete this post?",
-    "edit_post": "Edit Post",
-    "rating_label": "Rating",
-    "description": "Description",
-    "what_happened": "What happened?",
-    "likes": "likes",
+  "time": {
     "just_now": "just now",
     "min_ago": "min ago",
     "hr_ago": "hr ago",
-    "days_ago": "days ago",
-    "rating_1": "Terrible",
-    "rating_2": "It's OK",
-    "rating_3": "Good",
-    "rating_4": "Very good",
-    "rating_5": "Excellent!",
-    "new_post": "New Post",
-    "add_photo": "Add Photo",
-    "select_venue": "Select Venue",
-    "select_venue_hint": "Tap to select a venue",
-    "write_caption": "Write something... (optional)",
-    "with_friend": "With a friend (optional)",
-    "post": "Post",
-    "venue_required": "Please select a venue.",
-    "post_shared": "Shared!",
-    "post_shared_desc": "Your post has been added to the feed.",
-    "select_venue_label": "Meetup Venue *",
-    "with_friend_label": "Person You Met With",
-    "rate_venue_optional": "Rate this venue (optional)",
-    "caption_label_optional": "What happened? (optional)",
-    "caption_hint": "It was a great evening...",
-    "add_own_photo": "Add your own photo",
-    "select_photo": "Select photo",
-    "select_venue_map": "Select venue from map",
-    "view_on_map": "View on map →",
-    "together": "Together with",
-    "like_count": "{count} likes"
+    "days_ago": "days ago"
   },
   "venue": {
     "picker_title": "Select Venue",
@@ -320,21 +281,22 @@
     "no_pending": "No pending requests.",
     "meet_btn": "Meet",
     "section_activity": "Activity",
-    "saved_posts": "Saved",
-    "liked_posts": "Liked",
     "notifications": "Notifications",
-    "empty_saved": "No saved posts yet.",
-    "empty_liked": "No liked posts yet.",
     "search_hint": "Search venues, people or posts...",
     "no_search_result": "No results for \"{query}\".",
     "saved_venues": "Saved",
     "navigated_venues": "Navigated",
     "no_saved_venues": "No saved venues yet.",
     "no_navigated_venues": "No navigated venues yet.",
-    "share": "Share to Feed",
-    "stat_posts": "Posts",
+    "add_review": "Add Review",
+    "stat_posts": "Reviews",
     "stat_friends": "Friends",
-    "stat_likes": "Likes"
+    "stat_likes": "Likes",
+    "no_reviews": "No reviews yet",
+    "no_reviews_desc": "Pick a venue you've visited to add your first review!",
+    "saved_reviews": "Saved",
+    "liked_reviews": "Liked",
+    "empty_liked_reviews": "No liked reviews yet."
   },
   "settings": {
     "title": "Settings",
@@ -410,6 +372,35 @@
     "drag_hint": "Drag the pin to set your location",
     "location_error": "Could not get location"
   },
+  "home": {
+    "greeting": "Hi, {name}!",
+    "subtitle": "Ready to meet up with your friends?",
+    "friends_section": "Your Friends",
+    "featured_section": "Featured Venues and Reviews",
+    "no_friends_hint": "You don't have any friends yet.",
+    "no_reviews_hint": "No reviews yet. Add the first one!"
+  },
+  "venue_detail": {
+    "title": "Venue",
+    "reviews_section": "Reviews",
+    "no_reviews": "No reviews for this venue yet.",
+    "add_review": "Add Review",
+    "must_visit_first": "You need to visit this venue before you can review it.",
+    "rating_count": "{count} reviews"
+  },
+  "review": {
+    "add_title": "Add Review",
+    "rating_label": "Your Rating",
+    "comment_label": "Your Comment (optional)",
+    "comment_hint": "Share your experience...",
+    "add_photo": "Add Photo (optional)",
+    "submit": "Submit",
+    "select_rating_warning": "Please select at least 1 star.",
+    "review_added": "Review Added!",
+    "review_added_desc": "Your review has been added to the venue.",
+    "delete_review": "Delete Review",
+    "delete_review_confirm": "Delete this review?"
+  },
   "personality": {
     "explorer": "Explorer",
     "social": "Social",
@@ -422,4 +413,8 @@
     "foodie": "Foodie",
     "social_butterfly_desc": "You love lively atmospheres and connect easily with new people. Your energy is contagious!",
     "calm_soul_desc": "You prefer peaceful and quiet environments. Deep conversations and meaningful moments matter to you.",
-    "adventur
+    "adventurer_desc": "You want to experience everything. Unusual activities and exploration make you happy.",
+    "intellectual_desc": "Culture, art and knowledge are important to you. Deep discussions and inspiring venues attract you.",
+    "foodie_desc": "Food is an experience for you. You seek quality flavors and special venues."
+  }
+}

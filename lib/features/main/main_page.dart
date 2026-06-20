@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
-import 'package:meetit/features/feed/feed_page.dart';
 import 'package:meetit/features/friends/friends_page.dart';
+import 'package:meetit/features/home/home_page.dart';
 import 'package:meetit/features/match/match_page.dart';
 import 'package:meetit/features/profile/profile_page.dart';
 
@@ -13,10 +13,13 @@ final mainTabIndexProvider = StateProvider<int>((ref) => 0);
 class MainPage extends ConsumerWidget {
   const MainPage({super.key});
 
+  // Sekme sırası: Ana Sayfa, Buluşma, Arkadaşlar, Profil
+  // (eski sıra: Feed, Arkadaşlar, Buluşma, Profil idi — Feed kaldırıldı,
+  // Buluşma ve Arkadaşlar yer değiştirdi)
   static const _pages = <Widget>[
-    FeedPage(),
-    FriendsPage(),
+    HomePage(),
     MatchPage(),
+    FriendsPage(),
     ProfilePage(),
   ];
 
@@ -61,29 +64,29 @@ class _MainBottomNavBar extends ConsumerWidget {
           height: 60,
           child: Row(
             children: [
-              // Feed
+              // Ana Sayfa
               _NavItem(
-                icon: Icons.dynamic_feed_outlined,
-                activeIcon: Icons.dynamic_feed,
-                label: 'nav.feed'.tr(),
+                icon: Icons.home_outlined,
+                activeIcon: Icons.home,
+                label: 'nav.home'.tr(),
                 isSelected: currentIndex == 0,
                 onTap: () =>
                     ref.read(mainTabIndexProvider.notifier).state = 0,
-              ),
-              // Arkadaşlar
-              _NavItem(
-                icon: Icons.people_outline,
-                activeIcon: Icons.people,
-                label: 'nav.friends'.tr(),
-                isSelected: currentIndex == 1,
-                onTap: () =>
-                    ref.read(mainTabIndexProvider.notifier).state = 1,
               ),
               // Buluşma
               _NavItem(
                 icon: Icons.location_on_outlined,
                 activeIcon: Icons.location_on,
                 label: 'nav.meetup'.tr(),
+                isSelected: currentIndex == 1,
+                onTap: () =>
+                    ref.read(mainTabIndexProvider.notifier).state = 1,
+              ),
+              // Arkadaşlar
+              _NavItem(
+                icon: Icons.people_outline,
+                activeIcon: Icons.people,
+                label: 'nav.friends'.tr(),
                 isSelected: currentIndex == 2,
                 onTap: () =>
                     ref.read(mainTabIndexProvider.notifier).state = 2,

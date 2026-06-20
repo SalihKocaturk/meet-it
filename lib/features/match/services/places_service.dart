@@ -741,4 +741,26 @@ class PlacesService {
     // NOT: `secondaryType` getter'ı %10 gibi düşük bir eşikte bile ikincil
     // tip döndürüyor (UI'da "ikincil eğilim" göstermek için makul bir eşik).
     // Ama burada, arama havuzuna YENİ bir mekan kategorisi eklemek için bu
-    // çok düşük: "sakin ruh" kullanıcının %1
+    // çok düşük: "sakin ruh" kullanıcının %12 gibi zayıf bir "maceraperest"
+    // eğilimi olması, sonuçlara spor salonu/stadyum sokulmasına yol açıyordu
+    // (dominant tipin 4 type'ı + bu 1 ekstra type = take(5) ile tam sınırda
+    // kalıyor ve dominant tipin kendi mekanlarıyla aynı kefeye giriyordu).
+    // Bu yüzden burada daha sıkı, yerel bir eşik kullanıyoruz: ikincil eğilim
+    // gerçekten belirgin değilse (≥ %25) arama havuzuna katılmasın.
+    const secondaryPoolThreshold = 0.25;
+
+    void addSecondaryPool(PersonalityProfile profile) {
+      final ranked = profile.rankedTypes;
+      if (ranked.length < 2) return;
+      final second = ranked[1];
+      if (second.value >= secondaryPoolThreshold) {
+        types.addAll(_personalityTypes[second.key] ?? []);
+      }
+    }
+
+    addSecondaryPool(userProfile);
+    addSecondaryPool(friendProfile);
+
+    return types.take(5).toList();
+  }
+}

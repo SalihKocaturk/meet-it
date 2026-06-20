@@ -525,7 +525,7 @@ class _InvitationTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final daysAgo = DateTime.now().difference(friend.addedAt).inDays;
-    final timeText = daysAgo == 0 ? 'friends.today'.tr() : '$daysAgo ${'feed.days_ago'.tr()}';
+    final timeText = daysAgo == 0 ? 'friends.today'.tr() : '$daysAgo ${'time.days_ago'.tr()}';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -740,8 +740,8 @@ class _ConnectionTile extends ConsumerWidget {
             onTap: () {
               // Arkadaşı match provider'da seç
               ref.read(selectedFriendUidProvider.notifier).state = friend.uid;
-              // Buluşma sekmesine geç (index 2)
-              ref.read(mainTabIndexProvider.notifier).state = 2;
+              // Buluşma sekmesine geç (yeni sıralamada index 1)
+              ref.read(mainTabIndexProvider.notifier).state = 1;
             },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

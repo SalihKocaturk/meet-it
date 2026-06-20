@@ -276,4 +276,110 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
   /// büyüyen bir aramayla mekan bulur.
   ///
   /// Mantık: ilk adımlarda hem dar bir yarıçap (örn. 2.5km) hem de yüksek
-  /// puan şartı (4.0+) uygulanır — bu
+  /// puan şartı (4.0+) uygulanır — bu, gerçekten ikisinin arasında ve
+  /// kaliteli bir yer bulma şansını artırır (geniş çapta arayıp uzak bir
+  /// mahalleden rastgele bir mekan döndürmek yerine). Yeterli sonuç
+  /// (`AppConfig.midpointMinResultsPerStep`) çıkmazsa bir sonraki adıma
+  /// (daha büyük çap) geçilir; son adımda puan şartı tamamen kaldırılır ki
+  /// hiçbir koşulda boş sonuç dönülmesin.
+  Future<List<PlaceResult>> _searchMidpointWithExpandingRadius({
+    required double searchLat,
+    required double searchLng,
+    required PersonalityProfile userProfile,
+    required PersonalityProfile friendProfile,
+    required List<String> selectedActivities,
+    int? priceLevel,
+  }) async {
+    final steps = AppConfig.midpointSearchRadiusSteps;
+    List<PlaceResult> best = [];
+
+    for (var i = 0; i < steps.length; i++) {
+      final isLastStep = i == steps.length - 1;
+      final results = await PlacesService.searchVenues(
+        lat: searchLat,
+        lng: searchLng,
+        userProfile: userProfile,
+        friendProfile: friendProfile,
+        selectedActivities: selectedActivities,
+        priceLevel: priceLevel,
+        radius: steps[i],
+        // Son adımda puan şartını kaldır — bir şey bulunsun, hiç olmasın.
+        minRating: isLastStep ? null : AppConfig.midpointMinRating,
+      );
+
+      if (results.length > best.length) best = results;
+
+      if (results.length >= AppConfig.midpointMinResultsPerStep) {
+        return results; // Bu çapta yeterince kaliteli mekan bulundu, dur.
+      }
+    }
+
+    // Hiçbir adım yeterli sayıda sonuç vermedi — en çok sonuç veren adımı kullan.
+    return best;
+  }
+
+  void nextPage() {
+    if (state.hasNextPage) {
+      state = state.copyWith(currentPage: state.currentPage + 1);
+    }
+  }
+
+  void prevPage() {
+    if (state.hasPrevPage) {
+      state = state.copyWith(currentPage: state.currentPage - 1);
+    }
+  }
+
+  void reset() => state = const VenueSearchState();
+
+  double _haversineKm(double lat1, double lon1, double lat2, double lon2) {
+    const r = 6371.0;
+    final dLat = _deg2rad(lat2 - lat1);
+    final dLon = _deg2rad(lon2 - lon1);
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(_deg2rad(lat1)) *
+            cos(_deg2rad(lat2)) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
+    return r * 2 * atan2(sqrt(a), sqrt(1 - a));
+  }
+
+  double _deg2rad(double deg) => deg * pi / 180;
+
+  Future<Position?> _getLocation() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Konum servisi kapalı. Lütfen açın.');
+      return null;
+    }
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        state = state.copyWith(
+            isLoading: false, errorMessage: 'Konum izni verilmedi.');
+        return null;
+      }
+    }
+    if (permission == LocationPermission.deniedForever) {
+      state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Konum izni kalıcı reddedildi.');
+      return null;
+    }
+
+    try {
+      return await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+    } catch (_) {
+      return await Geolocator.getLastKnownPosition();
+    }
+  }
+}

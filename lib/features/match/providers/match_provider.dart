@@ -105,4 +105,31 @@ final compatibilityScoreProvider = Provider.autoDispose<int>((ref) {
   // Fallback: tek bir dominant tipi varsa eski mantık
   if (userProfile != null) {
     final key = _compatKey(
-      userProfile.domina
+      userProfile.dominantType,
+      friendProfile?.dominantType ?? PersonalityType.sosyalKelebek,
+    );
+    return _legacyScore(key);
+  }
+
+  return 70;
+});
+
+/// Simetrik karşılaştırma key'i
+String _compatKey(PersonalityType a, PersonalityType b) {
+  final parts = [a.name, b.name]..sort();
+  return '${parts[0]}_${parts[1]}';
+}
+
+/// Eski tip bazlı uyumluluk (fallback)
+int _legacyScore(String key) {
+  const highCompatKeys = {
+    'gurme_sosyalKelebek',
+    'maceraperest_sosyalKelebek',
+    'entelektuel_sakinRuh',
+    'entelektuel_gurme',
+    'maceraperest_sakinRuh',
+  };
+  if (key.split('_').first == key.split('_').last) return 95;
+  if (highCompatKeys.contains(key)) return 85;
+  return 70;
+}

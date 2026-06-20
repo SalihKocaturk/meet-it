@@ -7,15 +7,14 @@ import 'package:meetit/core/router/app_routes.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/models/user_model.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
-import 'package:meetit/features/feed/models/post_model.dart';
-import 'package:meetit/features/feed/post_detail_page.dart';
-import 'package:meetit/features/feed/providers/feed_provider.dart';
-import 'package:meetit/features/feed/create_post_page.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/providers/saved_venues_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/profile/saved_page.dart';
+import 'package:meetit/features/reviews/models/venue_review_model.dart';
+import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
+import 'package:meetit/features/reviews/venue_detail_page.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 // Profil tab index
@@ -27,17 +26,15 @@ class ProfilePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
-    final feedState = ref.watch(feedProvider);
+    final myReviewsAsync = ref.watch(myReviewsProvider(user?.uid ?? ''));
     final tabIndex = ref.watch(profileTabProvider);
     final connections = ref.watch(connectionsProvider);
 
-    // Kendi postları
-    final myPosts = feedState.posts
-        .where((p) => p.authorUid == (user?.uid ?? ''))
-        .toList();
+    // Kendi yorumları — PostModel/feedProvider yerine VenueReviewModel/myReviewsProvider
+    final myReviews = myReviewsAsync.value ?? const <VenueReviewModel>[];
 
     // Toplam alınan beğeni
-    final totalLikes = myPosts.fold(0, (sum, p) => sum + p.likeCount);
+    final totalLikes = myReviews.fold(0, (sum, r) => sum + r.likeCount);
 
     final savedVenues     = ref.watch(savedVenuesProvider);
     final navigatedVenues = ref.watch(navigatedVenuesProvider);
@@ -49,7 +46,7 @@ class ProfilePage extends ConsumerWidget {
             SliverToBoxAdapter(
               child: _ProfileHeader(
                 user: user,
-                postsCount: myPosts.length,
+                postsCount: myReviews.length,
                 friendsCount: connections.length,
                 totalLikes: totalLikes,
               ),
@@ -64,7 +61,7 @@ class ProfilePage extends ConsumerWidget {
             ),
           ],
           body: switch (tabIndex) {
-            0 => _PostsGrid(posts: myPosts),
+            0 => _ReviewsGrid(reviews: myReviews),
             1 => _SavedVenuesList(venues: savedVenues),
             _ => _NavigatedVenuesList(venues: navigatedVenues),
           },
@@ -336,16 +333,19 @@ class _Tab extends StatelessWidget {
   }
 }
 
-// ── Posts Grid ────────────────────────────────────────────────────────────────
+// ── Yorumlar Grid ────────────────────────────────────────────────────────────
+//
+// Eski _PostsGrid'in yerine geçti: feedProvider/PostModel yerine
+// myReviewsProvider/VenueReviewModel kullanıyor. Görsel stil aynı kaldı.
 
-class _PostsGrid extends StatelessWidget {
-  final List<PostModel> posts;
+class _ReviewsGrid extends StatelessWidget {
+  final List<VenueReviewModel> reviews;
 
-  const _PostsGrid({required this.posts});
+  const _ReviewsGrid({required this.reviews});
 
   @override
   Widget build(BuildContext context) {
-    if (posts.isEmpty) {
+    if (reviews.isEmpty) {
       return Container(
         color: context.colors.card,
         child: Center(
@@ -359,7 +359,7 @@ class _PostsGrid extends StatelessWidget {
               ),
               SizedBox(height: 12),
               Text(
-                'profile.no_posts'.tr(),
+                'profile.no_reviews'.tr(),
                 style: TextStyle(fontSize: 14, color: context.colors.textSecondary),
               ),
             ],
@@ -375,31 +375,42 @@ class _PostsGrid extends StatelessWidget {
         crossAxisSpacing: 2,
         mainAxisSpacing: 2,
       ),
-      itemCount: posts.length,
+      itemCount: reviews.length,
       itemBuilder: (context, i) {
-        final post = posts[i];
-        final imgUrl = post.postPhotoUrl ?? post.venuePhotoUrl;
+        final review = reviews[i];
+        final imgUrl = review.photoUrl ?? review.venuePhotoUrl;
         return GestureDetector(
-          onTap: () => Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => PostDetailPage(post: post))),
+          // Hücreye dokununca bu mekanın tüm yorumlarını gösteren
+          // VenueDetailPage açılır (tek bir yorum değil).
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => VenueDetailPage(
+                placeId: review.placeId,
+                venueName: review.venueName,
+                venueAddress: review.venueAddress,
+                venuePhotoUrl: review.venuePhotoUrl,
+                lat: review.lat,
+                lng: review.lng,
+              ),
+            ),
+          ),
           child: imgUrl != null
               ? CachedNetworkImage(
                   imageUrl: imgUrl,
                   fit: BoxFit.cover,
                   placeholder: (_, _) => Container(color: context.colors.border),
-                  errorWidget: (_, _, _) => _PlaceholderTile(post: post),
+                  errorWidget: (_, _, _) => _ReviewPlaceholderTile(review: review),
                 )
-              : _PlaceholderTile(post: post),
+              : _ReviewPlaceholderTile(review: review),
         );
       },
     );
   }
 }
 
-class _PlaceholderTile extends StatelessWidget {
-  final PostModel post;
-  const _PlaceholderTile({required this.post});
+class _ReviewPlaceholderTile extends StatelessWidget {
+  final VenueReviewModel review;
+  const _ReviewPlaceholderTile({required this.review});
 
   @override
   Widget build(BuildContext context) {
@@ -413,7 +424,7 @@ class _PlaceholderTile extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
-              post.venueName,
+              review.venueName,
               style: TextStyle(fontSize: 9, color: context.colors.primary),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -482,18 +493,11 @@ class _NavigatedVenuesList extends ConsumerWidget {
         final place = venues[i];
         return _VenueTile(
           place: place,
+          // Eski "Feedde Paylaş" (CreatePostPage) butonu yerine "Yorum Ekle" —
+          // bu mekan zaten navigatedVenuesProvider'da olduğu için doğrudan
+          // _AddReviewSheet açılabiliyor.
           trailing: GestureDetector(
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => CreatePostPage(
-                  venueName: place.name,
-                  venueAddress: place.vicinity,
-                  venuePhotoUrl: place.photoUrl,
-                  venueLat: place.lat,
-                  venueLng: place.lng,
-                ),
-              ),
-            ),
+            onTap: () => showAddReviewSheet(context, ref, place),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
@@ -503,11 +507,11 @@ class _NavigatedVenuesList extends ConsumerWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.share_outlined,
+                  Icon(Icons.add_comment_outlined,
                       size: 13, color: context.colors.primary),
                   const SizedBox(width: 4),
                   Text(
-                    'profile.share'.tr(),
+                    'profile.add_review'.tr(),
                     style: TextStyle(
                         fontSize: 12,
                         color: context.colors.primary,

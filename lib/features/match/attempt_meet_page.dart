@@ -750,4 +750,111 @@ class _VenueBottomBar extends ConsumerWidget {
                                 place.ratingText,
                                 style: TextStyle(
                                   fontSize: 11,
- 
+                                  fontWeight: FontWeight.w600,
+                                  color: context.colors.textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        if (place.priceLabelText != null)
+                          Text(
+                            place.priceLabelText!,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF4CAF50),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () =>
+                      ref.read(savedVenuesProvider.notifier).toggle(place),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    decoration: BoxDecoration(
+                      color: isSaved
+                          ? context.colors.primary.withOpacity(0.12)
+                          : context.colors.scaffold,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isSaved
+                            ? context.colors.primary
+                            : context.colors.border,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          isSaved ? Icons.bookmark : Icons.bookmark_border,
+                          size: 16,
+                          color: isSaved
+                              ? context.colors.primary
+                              : context.colors.textSecondary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          isSaved ? 'match.saved'.tr() : 'match.save'.tr(),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isSaved
+                                ? context.colors.primary
+                                : context.colors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: GestureDetector(
+                  onTap: onOpenMaps,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    decoration: BoxDecoration(
+                      color: context.colors.primary,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.directions,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'match.navigate'.tr(),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
