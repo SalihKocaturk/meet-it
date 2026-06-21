@@ -381,7 +381,12 @@
     "no_friends_hint": "You don't have any friends yet.",
     "no_friends_cta": "Friends you add will show up here. Invite or add one now!",
     "add_friend_button": "Add Friend",
-    "no_reviews_hint": "No reviews yet. Add the first one!"
+    "no_reviews_hint": "No reviews yet. Add the first one!",
+    "personality_section": "Your Personality Profile",
+    "no_personality_hint": "You haven't taken the quiz yet.",
+    "no_personality_cta": "Discover your personality type and get tailored venue suggestions.",
+    "take_quiz_button": "Take Quiz",
+    "retake_quiz_button": "Retake Quiz"
   },
   "friend_profile": {
     "friends_since": "Friends since {date}"
@@ -420,7 +425,4 @@
     "calm_soul": "Calm Soul",
     "adventurer": "Adventurer",
     "foodie": "Foodie",
-    "social_butterfly_desc": "You love lively atmospheres and connect easily with new people. Your energy is contagious!",
-    "calm_soul_desc": "You prefer peaceful and quiet environments. Deep conversations and meaningful moments matter to you.",
-    "adventurer_desc": "You want to experience everything. Unusual activities and exploration make you happy.",
-    "intellectual_desc"
+    "social_butterfly_desc": "You love lively atmospheres and connect easily with new people.
