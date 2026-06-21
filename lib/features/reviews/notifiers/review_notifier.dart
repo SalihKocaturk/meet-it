@@ -87,9 +87,32 @@ class ReviewNotifier extends Notifier<ReviewState> {
     }
   }
 
+  /// Bir kullanıcı bir mekana zaten yorum yapmış mı? Spam'i önlemek için
+  /// hem UI katmanında (buton gizleme) hem de burada (asıl yazma anında,
+  /// UI state'i bayatlamış olsa bile) kontrol ediliyor.
+  Future<bool> hasReviewed(String placeId, String authorUid) async {
+    try {
+      final snap = await _db
+          .collection('venue_reviews')
+          .where('placeId', isEqualTo: placeId)
+          .where('authorUid', isEqualTo: authorUid)
+          .limit(1)
+          .get();
+      return snap.docs.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Yeni yorum ekler. Ziyaret edilmiş mekan kontrolü UI katmanında yapılır —
-  /// burada sadece Firestore'a yazma ve fotoğraf yükleme işi yapılır.
-  Future<void> addReview({
+  /// burada Firestore'a yazma ve fotoğraf yükleme işinin yanında, bir
+  /// kullanıcının aynı mekana birden fazla yorum yazmasını (spam) önlemek
+  /// için son bir kontrol daha yapılır.
+  ///
+  /// Döndürülen değer: true ise yorum eklendi, false ise kullanıcı bu
+  /// mekana zaten yorum yapmış olduğu için EKLENMEDİ (çağıran taraf bunu
+  /// kullanıcıya bildirmeli).
+  Future<bool> addReview({
     required String authorUid,
     required String authorName,
     String? authorPhotoUrl,
@@ -103,6 +126,13 @@ class ReviewNotifier extends Notifier<ReviewState> {
     String? venuePhotoUrlOverride,
   }) async {
     try {
+      // Aynı kullanıcı + aynı mekan için zaten bir yorum varsa burada
+      // engelle — UI butonu zaten gizliyor olmalı ama bu, state bayatsa
+      // veya iki istek aynı anda gönderilirse son güvenlik ağı.
+      if (await hasReviewed(venue.placeId, authorUid)) {
+        return false;
+      }
+
       final photoUrl = await _uploadPhoto(authorUid, photo);
 
       final review = VenueReviewModel(
@@ -124,8 +154,10 @@ class ReviewNotifier extends Notifier<ReviewState> {
 
       final ref = _db.collection('venue_reviews').doc();
       await ref.set(review.toMap());
+      return true;
     } catch (e) {
       state = state.copyWith(errorMessage: 'Yorum eklenirken hata oluştu.');
+      return false;
     }
   }
 

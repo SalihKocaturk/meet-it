@@ -392,6 +392,7 @@
     "no_reviews": "Bu mekana henüz yorum yapılmamış.",
     "add_review": "Yorum Ekle",
     "must_visit_first": "Bu mekana yorum atabilmek için önce gitmelisin.",
+    "already_reviewed": "Bu mekana zaten bir yorum bıraktın.",
     "rating_count": "{count} değerlendirme"
   },
   "review": {
@@ -404,6 +405,8 @@
     "select_rating_warning": "Lütfen en az 1 yıldız seç.",
     "review_added": "Yorum Eklendi!",
     "review_added_desc": "Yorumun mekana eklendi.",
+    "already_reviewed_title": "Zaten Yorum Yapmışsın",
+    "already_reviewed_desc": "Bir mekana sadece bir yorum yapabilirsin.",
     "delete_review": "Yorumu Sil",
     "delete_review_confirm": "Bu yorum silinsin mi?"
   },
@@ -420,7 +423,4 @@
     "social_butterfly_desc": "Canlı atmosferleri seven, yeni insanlarla kolayca kaynaşan birisin. Enerjin bulaşıcı!",
     "calm_soul_desc": "Huzurlu ve sessiz ortamları tercih edersin. Derin sohbetler ve anlamlı anlar senin için değerli.",
     "adventurer_desc": "Her deneyimi yaşamak istersin. Sıradışı aktiviteler ve keşifler seni mutlu eder.",
-    "intellectual_desc": "Kültür, sanat ve bilgi senin için önemli. Derinlikli konuşmalar ve ilham verici mekanlar seni çekiyor.",
-    "foodie_desc": "Yemek senin için bir deneyim. Kaliteli lezzetler ve özel mekanlar arayışındasın."
-  }
-}
+    "intellectual_desc": "Kültür, sanat ve bilgi se

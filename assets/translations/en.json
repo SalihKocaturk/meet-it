@@ -392,6 +392,7 @@
     "no_reviews": "No reviews for this venue yet.",
     "add_review": "Add Review",
     "must_visit_first": "You need to visit this venue before you can review it.",
+    "already_reviewed": "You've already left a review for this venue.",
     "rating_count": "{count} reviews"
   },
   "review": {
@@ -404,6 +405,8 @@
     "select_rating_warning": "Please select at least 1 star.",
     "review_added": "Review Added!",
     "review_added_desc": "Your review has been added to the venue.",
+    "already_reviewed_title": "You've Already Reviewed This",
+    "already_reviewed_desc": "You can only leave one review per venue.",
     "delete_review": "Delete Review",
     "delete_review_confirm": "Delete this review?"
   },
@@ -420,7 +423,4 @@
     "social_butterfly_desc": "You love lively atmospheres and connect easily with new people. Your energy is contagious!",
     "calm_soul_desc": "You prefer peaceful and quiet environments. Deep conversations and meaningful moments matter to you.",
     "adventurer_desc": "You want to experience everything. Unusual activities and exploration make you happy.",
-    "intellectual_desc": "Culture, art and knowledge are important to you. Deep discussions and inspiring venues attract you.",
-    "foodie_desc": "Food is an experience for you. You seek quality flavors and special venues."
-  }
-}
+    "intellectual_desc"

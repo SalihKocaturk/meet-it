@@ -85,6 +85,13 @@ class VenueDetailPage extends ConsumerWidget {
     final reviewsAsync = ref.watch(venueReviewsProvider(placeId));
     final navigatedVenues = ref.watch(navigatedVenuesProvider);
     final hasVisited = navigatedVenues.any((v) => v.placeId == placeId);
+    // Spam'i önlemek için bir kullanıcı bir mekana sadece BİR yorum
+    // yapabilir — burada kullanıcının bu mekana zaten yorumu var mı
+    // kontrol ediliyor (asıl yazma anındaki son kontrol review_notifier'da).
+    final currentUser = ref.watch(currentUserProvider);
+    final reviewsForCheck = reviewsAsync.value ?? const <VenueReviewModel>[];
+    final hasOwnReview = currentUser != null &&
+        reviewsForCheck.any((r) => r.authorUid == currentUser.uid);
     // placeId üzerinden Place Details'ten çekilen TÜM resmi fotoğraflar —
     // sayfa hangi yoldan açılmış olursa olsun (sadece tek venuePhotoUrl
     // elde olsa bile) çalışır, asıl çoklu-foto kaynağı bu.
@@ -262,70 +269,98 @@ class VenueDetailPage extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-              child: hasVisited
-                  ? SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () => showAddReviewSheet(
-                          context,
-                          ref,
-                          PlaceResult(
-                            placeId: placeId,
-                            name: venueName,
-                            vicinity: venueAddress,
-                            // photoReference bilinmiyor (sadece hazır URL var);
-                            // gerçek fotoğrafı venuePhotoUrlOverride ile veriyoruz.
-                            photoReference: null,
-                            rating: googleRating,
-                            userRatingsTotal: googleRatingCount,
-                            lat: lat ?? 0,
-                            lng: lng ?? 0,
-                          ),
-                          overridePhotoUrl: venuePhotoUrl,
-                        ),
-                        icon: const Icon(Icons.add_comment_outlined,
-                            color: Colors.white),
-                        label: Text(
-                          'venue_detail.add_review'.tr(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: context.colors.primary,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                      ),
+              // Üç durum: (1) zaten yorum yapılmış — spam'i önlemek için bir
+              // kullanıcı bir mekana sadece BİR yorum yapabilir, buton yerine
+              // bilgi notu gösterilir; (2) ziyaret edilmiş ve henüz yorum
+              // yapılmamış — Yorum Ekle butonu; (3) hiç ziyaret edilmemiş —
+              // "önce ziyaret et" notu.
+              child: hasOwnReview
+                  ? _InfoNote(
+                      icon: Icons.check_circle_outline,
+                      text: 'venue_detail.already_reviewed'.tr(),
                     )
-                  : Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: context.colors.card,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: context.colors.border),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info_outline,
-                              color: context.colors.hint, size: 20),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'venue_detail.must_visit_first'.tr(),
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: context.colors.textSecondary,
+                  : hasVisited
+                      ? SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () => showAddReviewSheet(
+                              context,
+                              ref,
+                              PlaceResult(
+                                placeId: placeId,
+                                name: venueName,
+                                vicinity: venueAddress,
+                                // photoReference bilinmiyor (sadece hazır URL
+                                // var); gerçek fotoğrafı venuePhotoUrlOverride
+                                // ile veriyoruz.
+                                photoReference: null,
+                                rating: googleRating,
+                                userRatingsTotal: googleRatingCount,
+                                lat: lat ?? 0,
+                                lng: lng ?? 0,
+                              ),
+                              overridePhotoUrl: venuePhotoUrl,
+                            ),
+                            icon: const Icon(Icons.add_comment_outlined,
+                                color: Colors.white),
+                            label: Text(
+                              'venue_detail.add_review'.tr(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: context.colors.primary,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
                           ),
-                        ],
-                      ),
-                    ),
+                        )
+                      : _InfoNote(
+                          icon: Icons.info_outline,
+                          text: 'venue_detail.must_visit_first'.tr(),
+                        ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Bilgi Notu (ziyaret/yorum durum bildirimi) ────────────────────────────────
+//
+// "Önce ziyaret et" ve "zaten yorum yaptın" notları birebir aynı görünümü
+// paylaşıyor; tekrarı önlemek için ortak widget'a çıkarıldı.
+class _InfoNote extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _InfoNote({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: context.colors.card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.colors.border),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: context.colors.hint, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 13,
+                color: context.colors.textSecondary,
+              ),
             ),
           ),
         ],
@@ -729,7 +764,7 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
 
     setState(() => _isSubmitting = true);
 
-    await ref.read(reviewProvider.notifier).addReview(
+    final added = await ref.read(reviewProvider.notifier).addReview(
           authorUid: user.uid,
           authorName: user.name,
           authorPhotoUrl: user.photoUrl,
@@ -742,7 +777,7 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
           venuePhotoUrlOverride: widget.overridePhotoUrl,
         );
 
-    // İlgili providerları geçersiz kıl, yeni yorum hemen görünsün.
+    // İlgili providerları geçersiz kıl, yeni yorum (eklendiyse) hemen görünsün.
     ref.invalidate(venueReviewsProvider(widget.venue.placeId));
     ref.invalidate(myReviewsProvider(user.uid));
     ref.invalidate(topReviewsProvider);
@@ -750,6 +785,25 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
     setState(() => _isSubmitting = false);
 
     if (!mounted) return;
+
+    // Spam koruması: sayfa açıkken (örn. iki sekmeli/iki istek senaryosu)
+    // kullanıcının bu mekana zaten bir yorumu oluşmuş olabilir — bu durumda
+    // "eklendi" yerine "zaten yorum yaptın" bilgisi gösterilir.
+    if (!added) {
+      showAppAlert(
+        context: context,
+        type: AppAlertType.warning,
+        title: 'review.already_reviewed_title'.tr(),
+        text: 'review.already_reviewed_desc'.tr(),
+        confirmBtnColor: context.colors.primary,
+        onConfirmBtnTap: () {
+          Navigator.pop(context); // alert kapat
+          Navigator.pop(context); // sheet kapat
+        },
+      );
+      return;
+    }
+
     showAppAlert(
       context: context,
       type: AppAlertType.success,
@@ -907,64 +961,4 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
                                   color: Colors.white,
                                   size: 18,
                                 ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    : Container(
-                        height: 100,
-                        decoration: BoxDecoration(
-                          color: context.colors.card,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: context.colors.border),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            Icons.add_photo_alternate_outlined,
-                            size: 32,
-                            color: context.colors.hint,
-                          ),
-                        ),
-                      ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isSubmitting ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: context.colors.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          'review.submit'.tr(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
+   
