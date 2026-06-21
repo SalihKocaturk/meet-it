@@ -463,6 +463,7 @@ class PlacesService {
     int? priceLevel,
     int? radius,
     double? minRating,
+    Set<String> excludePlaceIds = const {},
   }) async {
     final types = _resolveTypes(
       userProfile: userProfile,
@@ -527,8 +528,29 @@ class PlacesService {
 
     if (ratingFiltered.isEmpty) return [];
 
+    // ── Adım 6: Az önce (aynı kişiyle) gösterilen mekanları kısa süreli
+    // hariç tut ─────────────────────────────────────────────────────────────
+    //
+    // Sebep: aynı çift peş peşe arama yaptığında, ağırlıklı rastgele seçim
+    // havuzu farklılaştırsa da, orta-nokta modunda sonuçlar mesafeye göre
+    // yeniden sıralandığı için (bkz. venue_search_notifier.dart) en yakın
+    // mekan HER ZAMAN 1. sırada çıkıyordu — rastgelelik mesafe sıralamasıyla
+    // eziliyordu. Çözüm: çağıran taraf (VenueSearchNotifier) az önce
+    // gösterilen mekan ID'lerini kısa süreli (bellekte, kalıcı olmayan)
+    // tutuyor ve burada havuzdan çıkarmamızı istiyor. Havuzda yeterli
+    // alternatif yoksa (örn. çok dar bir bölgede arama), sonuç sayısı
+    // düşmesin diye hariç tutma uygulanmıyor.
+    var pool = ratingFiltered;
+    if (excludePlaceIds.isNotEmpty) {
+      final withoutRecent =
+          ratingFiltered.where((p) => !excludePlaceIds.contains(p.placeId)).toList();
+      if (withoutRecent.length >= _maxResultCount) {
+        pool = withoutRecent;
+      }
+    }
+
     // ── Kişilik + rating kombinasyon skoru ─────────────────────────────────
-    final scored = ratingFiltered.map((place) {
+    final scored = pool.map((place) {
       final personalityScore = _personalityMatch(
         place, userProfile, friendProfile, selectedActivities,
       );

@@ -112,6 +112,35 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
   @override
   VenueSearchState build() => const VenueSearchState();
 
+  // ── Kısa süreli "az önce gösterilen mekan" hafızası ────────────────────────
+  //
+  // Kullanıcı şikayeti: aynı arkadaşla peş peşe 3 kez arama yapınca 1.
+  // sırada hep aynı mekan çıkıyordu. Sebep: orta-nokta modunda sonuçlar
+  // mesafeye göre sıralanıyor, bu da deterministik — en yakın mekan hep
+  // kazanıyor. Çözüm: her arkadaş (veya tek başına mod) için son
+  // gösterilen mekan ID'lerini bellekte (uygulama kapanınca silinen, kısa
+  // süreli) tutup bir sonraki aramada bu mekanları havuzdan çıkarıyoruz —
+  // böylece bir öncekinden farklı bir mekan 1. sıraya çıkma şansı buluyor.
+  // Notifier instance app boyunca yaşadığı için bu hafıza "session" süresince
+  // kalıcıdır; kalıcı depolamaya (Firestore/SharedPreferences) YAZILMAZ.
+  static const int _maxHistoryPerKey = 9;
+  final Map<String, List<String>> _recentlyShownIds = {};
+
+  String _historyKey(String? friendUid) => friendUid ?? '__solo__';
+
+  void _recordShown(String? friendUid, List<PlaceResult> shown) {
+    if (shown.isEmpty) return;
+    final key = _historyKey(friendUid);
+    final history = _recentlyShownIds.putIfAbsent(key, () => []);
+    for (final p in shown) {
+      history.remove(p.placeId);
+      history.add(p.placeId);
+    }
+    while (history.length > _maxHistoryPerKey) {
+      history.removeAt(0);
+    }
+  }
+
   Future<void> searchVenues({
     required PersonalityProfile userProfile,
     required PersonalityProfile friendProfile,
@@ -203,6 +232,10 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
     );
 
     // ── Places API ────────────────────────────────────────────────────────
+    final excludeIds =
+        (_recentlyShownIds[_historyKey(friendUid)] ?? const <String>[])
+            .toSet();
+
     try {
       List<PlaceResult> results;
 
@@ -219,6 +252,7 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
           friendProfile: friendProfile,
           selectedActivities: selectedActivities,
           priceLevel: priceLevel,
+          excludePlaceIds: excludeIds,
         );
       } else {
         results = await PlacesService.searchVenues(
@@ -228,6 +262,7 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
           friendProfile: friendProfile,
           selectedActivities: selectedActivities,
           priceLevel: priceLevel,
+          excludePlaceIds: excludeIds,
         );
       }
 
@@ -251,6 +286,8 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
         final midpoint = sorted.take(3).toList();
         final others = sorted.skip(3).toList();
 
+        _recordShown(friendUid, midpoint);
+
         state = state.copyWith(
           midpointVenues: midpoint,
           allVenues: others,
@@ -258,6 +295,8 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
           isLoading: false,
         );
       } else {
+        _recordShown(friendUid, results.take(3).toList());
+
         state = state.copyWith(
           allVenues: results,
           currentPage: 0,
@@ -289,6 +328,7 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
     required PersonalityProfile friendProfile,
     required List<String> selectedActivities,
     int? priceLevel,
+    Set<String> excludePlaceIds = const {},
   }) async {
     final steps = AppConfig.midpointSearchRadiusSteps;
     List<PlaceResult> best = [];
@@ -305,6 +345,7 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
         radius: steps[i],
         // Son adımda puan şartını kaldır — bir şey bulunsun, hiç olmasın.
         minRating: isLastStep ? null : AppConfig.midpointMinRating,
+        excludePlaceIds: excludePlaceIds,
       );
 
       if (results.length > best.length) best = results;
