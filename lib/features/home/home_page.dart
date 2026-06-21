@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
+import 'package:meetit/features/friends/friend_profile_page.dart';
 import 'package:meetit/features/friends/models/user_friend_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/main/main_page.dart';
@@ -96,17 +98,34 @@ class _HomePageState extends ConsumerState<HomePage> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        'home.greeting'.tr(
-                          namedArgs: {
-                            'name': currentUser?.name.split(' ').first ?? '',
-                          },
-                        ),
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: context.colors.textPrimary,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'home.greeting'.tr(
+                              namedArgs: {
+                                'name':
+                                    currentUser?.name.split(' ').first ?? '',
+                              },
+                            ),
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: context.colors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          // Önceden tanımlı ama hiçbir yerde kullanılmayan
+                          // "home.subtitle" çevirisi — başlığın altındaki
+                          // boşluğu dolduran kısa bir alt metin olarak eklendi.
+                          Text(
+                            'home.subtitle'.tr(),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: context.colors.textSecondary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     // Profil avatarı — dokununca Profil sekmesine geç
@@ -116,8 +135,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                       child: currentUser?.photoUrl != null
                           ? CircleAvatar(
                               radius: 20,
-                              backgroundImage:
-                                  NetworkImage(currentUser!.photoUrl!),
+                              backgroundImage: NetworkImage(
+                                currentUser!.photoUrl!,
+                              ),
                             )
                           : CircularAvatar(
                               name: currentUser?.name ?? '',
@@ -146,18 +166,18 @@ class _HomePageState extends ConsumerState<HomePage> {
             SliverToBoxAdapter(
               child: connections.isEmpty
                   ? Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
-                      child: Text(
-                        'home.no_friends_hint'.tr(),
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: context.colors.textSecondary,
-                        ),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _NoFriendsCard(
+                        onAddFriend: () =>
+                            ref.read(mainTabIndexProvider.notifier).state = 2,
                       ),
                     )
                   : SizedBox(
-                      height: 96,
+                      // Kart içeriği (avatar + isim + Buluş butonu) ~136px
+                      // yükseklik gerektiriyor — daha kısa bir SizedBox,
+                      // butonun alt kenarının kart dışına taşmasına
+                      // (RenderFlex overflow) sebep oluyordu.
+                      height: 140,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -189,7 +209,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                   if (reviews.isEmpty) {
                     return Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
                       child: Text(
                         'home.no_reviews_hint'.tr(),
                         style: TextStyle(
@@ -214,7 +236,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                       return false;
                     },
                     child: SizedBox(
-                      height: 210,
+                      // 210, içerik (resim + metin bloğu) için 1px'lik bir
+                      // RenderFlex overflow'una sebep oluyordu — kartın tüm
+                      // içeriğine güvenli pay bırakmak için yükseklik artırıldı.
+                      height: 216,
                       child: ListView.separated(
                         controller: _carouselController,
                         scrollDirection: Axis.horizontal,
@@ -225,8 +250,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                         // ile sıfırlandığından kullanıcı sıçramayı fark etmez.
                         itemCount: reviews.length * 3,
                         separatorBuilder: (_, _) => const SizedBox(width: 14),
-                        itemBuilder: (_, i) =>
-                            _ReviewCarouselCard(review: reviews[i % reviews.length]),
+                        itemBuilder: (_, i) => _ReviewCarouselCard(
+                          review: reviews[i % reviews.length],
+                        ),
                       ),
                     ),
                   );
@@ -240,8 +266,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                   ),
                 ),
                 error: (_, _) => Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                   child: Text(
                     'home.no_reviews_hint'.tr(),
                     style: TextStyle(color: context.colors.textSecondary),
@@ -258,6 +286,93 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 }
 
+// ── Arkadaş Yok Kartı (boş durum + CTA) ───────────────────────────────────────
+//
+// Önceden sadece tek satırlık küçük bir ipucu metni vardı; bu da arkadaş
+// listesinin (140px) yanında ana sayfada tuhaf bir "boşluk" hissi
+// yaratıyordu. Şimdi aynı yüksekliğe yakın, ikon + açıklama + "Arkadaş Ekle"
+// butonu içeren bir kart gösteriliyor; buton Arkadaşlar sekmesine (index 2)
+// geçiş yapıyor.
+class _NoFriendsCard extends StatelessWidget {
+  final VoidCallback onAddFriend;
+  const _NoFriendsCard({required this.onAddFriend});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      decoration: BoxDecoration(
+        color: context.colors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.colors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: context.colors.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              Icons.people_outline,
+              color: context.colors.primary,
+              size: 26,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'home.no_friends_hint'.tr(),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: context.colors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'home.no_friends_cta'.tr(),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: context.colors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          GestureDetector(
+            onTap: onAddFriend,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: context.colors.primary,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'home.add_friend_button'.tr(),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── Arkadaş Kartı (Buluş butonlu) ─────────────────────────────────────────────
 
 class _HomeFriendCard extends ConsumerWidget {
@@ -267,29 +382,47 @@ class _HomeFriendCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      width: 84,
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+      width: 108,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       decoration: BoxDecoration(
         color: context.colors.card,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: context.colors.border),
       ),
+      // Buton bir piksel taşsa bile kartın köşeli kenarının dışına sızmasın.
+      clipBehavior: Clip.hardEdge,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularAvatar(name: friend.name, photoUrl: friend.photoUrl, radius: 22),
-          const SizedBox(height: 6),
-          Text(
-            friend.name.split(' ').first,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: context.colors.textPrimary,
+          // Avatar + isim: dokununca arkadaşın profil sayfasına geç.
+          GestureDetector(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => FriendProfilePage(friend: friend),
+              ),
+            ),
+            child: Column(
+              children: [
+                CircularAvatar(
+                  name: friend.name,
+                  photoUrl: friend.photoUrl,
+                  radius: 24,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  friend.name.split(' ').first,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: context.colors.textPrimary,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           GestureDetector(
             onTap: () {
               // friends_page.dart'taki _ConnectionTile ile aynı desen:
@@ -298,18 +431,27 @@ class _HomeFriendCard extends ConsumerWidget {
               ref.read(mainTabIndexProvider.notifier).state = 1;
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
               decoration: BoxDecoration(
                 color: context.colors.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: context.colors.primary.withOpacity(0.3)),
+                border: Border.all(
+                  color: context.colors.primary.withOpacity(0.3),
+                ),
               ),
-              child: Text(
-                'friends.meet'.tr(),
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: context.colors.primary,
+              // Yazı tipi ölçeği büyütülmüş cihazlarda bile metin kartın
+              // dışına taşmasın diye FittedBox ile sıkıştırılıyor.
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'friends.meet'.tr(),
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: context.colors.primary,
+                  ),
                 ),
               ),
             ),
@@ -363,72 +505,87 @@ class _ReviewCarouselCard extends StatelessWidget {
                           Container(color: context.colors.border),
                       errorWidget: (_, _, _) => Container(
                         color: context.colors.primary.withOpacity(0.08),
-                        child: Icon(Icons.location_on,
-                            color: context.colors.primary, size: 28),
+                        child: Icon(
+                          Icons.location_on,
+                          color: context.colors.primary,
+                          size: 28,
+                        ),
                       ),
                     )
                   : Container(
                       color: context.colors.primary.withOpacity(0.08),
-                      child: Icon(Icons.location_on,
-                          color: context.colors.primary, size: 28),
+                      child: Icon(
+                        Icons.location_on,
+                        color: context.colors.primary,
+                        size: 28,
+                      ),
                     ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    review.venueName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: context.colors.textPrimary,
+            // Görselin altındaki metin bloğu Expanded içine alındı —
+            // kart yüksekliği ne olursa olsun (font ölçeği, küçük piksel
+            // farkları vb.) Column kalan alana sığar, RenderFlex
+            // overflow'u (örn. eski "1px overflow" uyarısı) imkansız hale
+            // gelir.
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      review.venueName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: context.colors.textPrimary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      ...List.generate(
-                        5,
-                        (i) => Icon(
-                          i < review.rating
-                              ? Icons.star_rounded
-                              : Icons.star_outline_rounded,
-                          size: 12,
-                          color: i < review.rating
-                              ? const Color(0xFFFFB800)
-                              : context.colors.hint,
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        ...List.generate(
+                          5,
+                          (i) => Icon(
+                            i < review.rating
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded,
+                            size: 12,
+                            color: i < review.rating
+                                ? const Color(0xFFFFB800)
+                                : context.colors.hint,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (review.comment != null &&
+                        review.comment!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        review.comment!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: context.colors.textSecondary,
                         ),
                       ),
                     ],
-                  ),
-                  if (review.comment != null && review.comment!.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
-                      review.comment!,
-                      maxLines: 2,
+                      review.authorName,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 11,
-                        color: context.colors.textSecondary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: context.colors.primary,
                       ),
                     ),
                   ],
-                  const SizedBox(height: 4),
-                  Text(
-                    review.authorName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: context.colors.primary,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ],
