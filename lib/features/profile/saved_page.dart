@@ -16,7 +16,7 @@ import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
 import 'package:meetit/core/widgets/langauge_switcher.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:quickalert/quickalert.dart';
+import 'package:meetit/core/widgets/app_alert.dart';
 
 class ProfileMenuPage extends ConsumerStatefulWidget {
   const ProfileMenuPage({super.key});
@@ -42,9 +42,9 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
   }
 
   void _showLogoutAlert(BuildContext context) {
-    QuickAlert.show(
+    showAppAlert(
       context: context,
-      type: QuickAlertType.confirm,
+      type: AppAlertType.confirm,
       title: 'settings.sign_out_title'.tr(),
       text: 'settings.sign_out_confirm'.tr(),
       confirmBtnText: 'settings.sign_out_yes'.tr(),
@@ -299,9 +299,9 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                             _MenuItem(
                               icon: Icons.info_outline,
                               title: 'settings.about'.tr(),
-                              onTap: () => QuickAlert.show(
+                              onTap: () => showAppAlert(
                                 context: context,
-                                type: QuickAlertType.info,
+                                type: AppAlertType.info,
                                 title: 'app_name'.tr(),
                                 text: 'settings.about_text'.tr(),
                                 confirmBtnText: 'common.ok'.tr(),
@@ -661,4 +661,25 @@ class _GridPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
- 
+    return Container(
+      color: context.colors.primary.withOpacity(0.08),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.location_on, color: context.colors.primary, size: 22),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              review.venueName,
+              style: TextStyle(fontSize: 9, color: context.colors.primary),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

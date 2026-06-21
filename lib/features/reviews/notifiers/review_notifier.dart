@@ -44,15 +44,22 @@ class ReviewNotifier extends Notifier<ReviewState> {
   ReviewState build() => const ReviewState();
 
   /// Belirli bir mekana ait yorumları getirir (en yeniden eskiye).
+  //
+  // NOT: Firestore'da where('placeId', ...) + orderBy('createdAt', ...)
+  // birlikte kullanılınca composite index gerekiyor (oluşturulmamışsa
+  // FAILED_PRECONDITION hatası verip sorgu tamamen başarısız oluyor —
+  // canlı loglarda da bu hata görüldü). Index oluşturmayı beklemek yerine
+  // sorguyu sade where'e indirip sıralamayı client-side yapıyoruz; bu hem
+  // index'siz çalışır hem de ek bir Firebase Console adımı gerektirmez.
   Future<List<VenueReviewModel>> loadReviewsForVenue(String placeId) async {
     try {
       final snap = await _db
           .collection('venue_reviews')
           .where('placeId', isEqualTo: placeId)
-          .orderBy('createdAt', descending: true)
           .get();
       final reviews =
-          snap.docs.map((d) => VenueReviewModel.fromMap(d.id, d.data())).toList();
+          snap.docs.map((d) => VenueReviewModel.fromMap(d.id, d.data())).toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       state = state.copyWith(reviews: reviews, isLoading: false);
       return reviews;
     } catch (e) {
@@ -62,14 +69,19 @@ class ReviewNotifier extends Notifier<ReviewState> {
   }
 
   /// Bir kullanıcının yazdığı tüm yorumları getirir (en yeniden eskiye).
+  //
+  // Aynı composite-index sorunu burada da var (authorUid + createdAt),
+  // aynı çözüm uygulanıyor: client-side sıralama.
   Future<List<VenueReviewModel>> loadMyReviews(String uid) async {
     try {
       final snap = await _db
           .collection('venue_reviews')
           .where('authorUid', isEqualTo: uid)
-          .orderBy('createdAt', descending: true)
           .get();
-      return snap.docs.map((d) => VenueReviewModel.fromMap(d.id, d.data())).toList();
+      final reviews =
+          snap.docs.map((d) => VenueReviewModel.fromMap(d.id, d.data())).toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return reviews;
     } catch (e) {
       return [];
     }
@@ -186,17 +198,32 @@ final myReviewsProvider =
 });
 
 // ── Ana sayfa carousel'i için en yüksek puanlı yorumlar ──────────────────────
+//
+// SADECE gerçek kullanıcı yorumları gösterilir — sahte/bot yorum YOK.
+// Henüz hiç yorum yoksa liste boş döner; home_page.dart bu durumda
+// 'home.no_reviews_hint' mesajını gösteriyor (carousel'i sahte içerikle
+// doldurmak yerine dürüstçe "henüz yorum yok" demek tercih edildi).
+//
+// NOT: orderBy('rating',...).orderBy('createdAt',...) çift sıralaması
+// Firestore'da composite index gerektiriyor; index oluşturulmadığı için
+// sorgu FAILED_PRECONDITION ile tamamen başarısız oluyordu (canlı loglarda
+// görüldü) — bu da eklenen yorumların ana sayfada hiç görünmemesinin asıl
+// sebebiydi. Çözüm: index gerektirmeyen basit bir sorgu + client-side sort.
 final topReviewsProvider = FutureProvider<List<VenueReviewModel>>((ref) async {
   try {
     final snap = await FirebaseFirestore.instance
         .collection('venue_reviews')
-        .orderBy('rating', descending: true)
-        .orderBy('createdAt', descending: true)
-        .limit(15)
+        .limit(50)
         .get();
-    return snap.docs
+    final reviews = snap.docs
         .map((d) => VenueReviewModel.fromMap(d.id, d.data()))
-        .toList();
+        .toList()
+      ..sort((a, b) {
+        final ratingCmp = b.rating.compareTo(a.rating);
+        if (ratingCmp != 0) return ratingCmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
+    return reviews.take(15).toList();
   } catch (e) {
     return [];
   }

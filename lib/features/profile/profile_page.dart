@@ -16,6 +16,7 @@ import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:meetit/core/widgets/app_alert.dart';
 
 // Profil tab index
 final profileTabProvider = StateProvider.autoDispose<int>((ref) => 0);
@@ -189,11 +190,17 @@ class _ProfileHeader extends ConsumerWidget {
                         color: context.colors.hint,
                       ),
                       SizedBox(width: 3),
-                      Text(
-                        user!.location!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: context.colors.textSecondary,
+                      // Detaylı/uzun bir adres girilse bile satırın dışına
+                      // taşmasın diye Flexible + ellipsis kullanılıyor.
+                      Flexible(
+                        child: Text(
+                          user!.location!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: context.colors.textSecondary,
+                          ),
                         ),
                       ),
                     ],
@@ -338,13 +345,33 @@ class _Tab extends StatelessWidget {
 // Eski _PostsGrid'in yerine geçti: feedProvider/PostModel yerine
 // myReviewsProvider/VenueReviewModel kullanıyor. Görsel stil aynı kaldı.
 
-class _ReviewsGrid extends StatelessWidget {
+class _ReviewsGrid extends ConsumerWidget {
   final List<VenueReviewModel> reviews;
 
   const _ReviewsGrid({required this.reviews});
 
+  void _confirmDelete(BuildContext context, WidgetRef ref, VenueReviewModel review) {
+    final uid = ref.read(currentUserProvider)?.uid;
+    showAppAlert(
+      context: context,
+      type: AppAlertType.confirm,
+      title: 'review.delete_review'.tr(),
+      text: 'review.delete_review_confirm'.tr(),
+      confirmBtnText: 'common.delete'.tr(),
+      cancelBtnText: 'common.cancel'.tr(),
+      confirmBtnColor: context.colors.error,
+      onConfirmBtnTap: () async {
+        Navigator.pop(context);
+        await ref.read(reviewProvider.notifier).deleteReview(review.id);
+        ref.invalidate(venueReviewsProvider(review.placeId));
+        if (uid != null) ref.invalidate(myReviewsProvider(uid));
+        ref.invalidate(topReviewsProvider);
+      },
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (reviews.isEmpty) {
       return Container(
         color: context.colors.card,
@@ -378,30 +405,59 @@ class _ReviewsGrid extends StatelessWidget {
       itemCount: reviews.length,
       itemBuilder: (context, i) {
         final review = reviews[i];
-        final imgUrl = review.photoUrl ?? review.venuePhotoUrl;
-        return GestureDetector(
-          // Hücreye dokununca bu mekanın tüm yorumlarını gösteren
-          // VenueDetailPage açılır (tek bir yorum değil).
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => VenueDetailPage(
-                placeId: review.placeId,
-                venueName: review.venueName,
-                venueAddress: review.venueAddress,
-                venuePhotoUrl: review.venuePhotoUrl,
-                lat: review.lat,
-                lng: review.lng,
+        // Sadece kullanıcının kendi eklediği fotoğraf gösterilir — mekanın
+        // genel/stok fotoğrafı fallback olarak KULLANILMAZ. Aksi halde aynı
+        // mekana birden fazla yorum yapıldığında profilde aynı fotoğraf
+        // tekrar tekrar görünüyordu (ki bu fotoğraf kullanıcıya ait değildi).
+        final imgUrl = review.photoUrl;
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            GestureDetector(
+              // Hücreye dokununca bu mekanın tüm yorumlarını gösteren
+              // VenueDetailPage açılır (tek bir yorum değil).
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => VenueDetailPage(
+                    placeId: review.placeId,
+                    venueName: review.venueName,
+                    venueAddress: review.venueAddress,
+                    venuePhotoUrl: review.venuePhotoUrl,
+                    lat: review.lat,
+                    lng: review.lng,
+                  ),
+                ),
+              ),
+              onLongPress: () => _confirmDelete(context, ref, review),
+              child: imgUrl != null
+                  ? CachedNetworkImage(
+                      imageUrl: imgUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (_, _) => Container(color: context.colors.border),
+                      errorWidget: (_, _, _) => _ReviewPlaceholderTile(review: review),
+                    )
+                  : _ReviewPlaceholderTile(review: review),
+            ),
+            Positioned(
+              top: 4,
+              right: 4,
+              child: GestureDetector(
+                onTap: () => _confirmDelete(context, ref, review),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.45),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.delete_outline_rounded,
+                    size: 14,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
-          ),
-          child: imgUrl != null
-              ? CachedNetworkImage(
-                  imageUrl: imgUrl,
-                  fit: BoxFit.cover,
-                  placeholder: (_, _) => Container(color: context.colors.border),
-                  errorWidget: (_, _, _) => _ReviewPlaceholderTile(review: review),
-                )
-              : _ReviewPlaceholderTile(review: review),
+          ],
         );
       },
     );

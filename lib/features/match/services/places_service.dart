@@ -220,6 +220,13 @@ class PlacesService {
     'anaokulu', 'kreş', 'dershane', 'etüt merkezi',
     'kuaför', 'berber',
     'tekstil', 'toptan ', 'perakende',
+    // Çocuk parkları / oyun alanları — bir buluşma/randevu mekanı değil,
+    // genelde küçük, oturacak/sosyalleşilecek bir alanı olmayan belediye
+    // oyun parkları (örn. "İBB ... Çocuk Parkı"). "park" type'ı çıkmaması
+    // için isim bazlı eleniyor; gerçek gezi/yürüyüş parkları (Emirgan
+    // Korusu, Seka Park vb.) bu kelimeleri içermediğinden etkilenmiyor.
+    'çocuk parkı', 'çocuk oyun', 'oyun parkı', 'oyun grubu',
+    'çocuk oyun alanı', 'çocuk oyun grubu',
   ];
   // NOT: 'güzellik merkezi' / 'spa' bilerek listede YOK — 'spa' aktivitesi
   // seçildiğinde beauty_salon type'ı kasıtlı olarak whitelist'te (bkz.
@@ -693,6 +700,49 @@ class PlacesService {
     } catch (e) {
       // ignore: avoid_print
       print('[PlacesService] fetch error: $e');
+      return [];
+    }
+  }
+
+  // ── Mekanın TÜM fotoğraflarını placeId ile çek ───────────────────────────
+  //
+  // Nearby/Text Search yanıtı bir mekan için genelde sadece İLK fotoğrafı
+  // (veya hiç) içeriyor — galeri tek fotoya düşmesin diye Place Details
+  // endpoint'inden 'photo' alanı istenip mekanın tüm foto referansları
+  // çekiliyor. VenueDetailPage; placeId ne yoldan gelmiş olursa olsun
+  // (arama sonucu, yorum, kaydedilenler, vb.) bu sayede gerçek galeriye
+  // ulaşabiliyor.
+  static Future<List<String>> fetchPhotoUrls(String placeId) async {
+    if (placeId.isEmpty) return [];
+    try {
+      final uri = Uri.parse(AppConfig.placesDetailsUrl).replace(
+        queryParameters: {
+          'place_id': placeId,
+          'fields': 'photo',
+          'language': 'tr',
+          'key': AppConfig.googleMapsApiKey,
+        },
+      );
+      final response =
+          await http.get(uri).timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) return [];
+
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      if (body['status'] != 'OK') return [];
+
+      final result = body['result'] as Map<String, dynamic>?;
+      final photos = result?['photos'] as List<dynamic>?;
+      if (photos == null) return [];
+
+      return photos
+          .map((p) => (p as Map<String, dynamic>)['photo_reference'] as String?)
+          .whereType<String>()
+          .take(8)
+          .map(PlaceResult.buildPhotoUrl)
+          .toList();
+    } catch (e) {
+      // ignore: avoid_print
+      print('[PlacesService] fetchPhotoUrls error: $e');
       return [];
     }
   }

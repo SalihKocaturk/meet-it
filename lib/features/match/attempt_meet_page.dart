@@ -15,6 +15,7 @@ import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/match/providers/saved_venues_provider.dart';
 import 'package:meetit/features/match/providers/venue_search_provider.dart';
+import 'package:meetit/features/reviews/venue_detail_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Mekan önerilerini harita üzerinde pinlerle gösteren alternatif görünüm.
@@ -656,7 +657,18 @@ class _VenueBottomBar extends ConsumerWidget {
             ],
           ),
 
-          Row(
+          // Fotoğraf + isim/etiket bölümüne dokununca mekanın detay
+          // sayfasına gidilir (yorumlar, foto galerisi, beğeniler vb.) —
+          // alttaki ok/Kaydet/Git butonları kendi onTap'lerine sahip
+          // olduğu için bu genel tıklama onlarla çakışmaz.
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => VenueDetailPage.fromPlace(place),
+              ),
+            ),
+            child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Foto
@@ -771,6 +783,7 @@ class _VenueBottomBar extends ConsumerWidget {
                 ),
               ),
             ],
+            ),
           ),
 
           const SizedBox(height: 10),

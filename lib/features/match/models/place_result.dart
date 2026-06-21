@@ -9,7 +9,13 @@ class PlaceResult {
   final double? rating;
   final int? userRatingsTotal;
   final List<String> types; // ['restaurant', 'food', ...]
-  final String? photoReference; // Places Photo API için
+  final String? photoReference; // Places Photo API için (galerideki İLK foto)
+  // Google Places Nearby Search yanıtındaki TÜM photo_reference'lar.
+  // Google genelde bir mekan için birden fazla foto döndürür (genelde 1-10
+  // arası); önceden sadece ilki tutulduğu için mekan detay galerisi
+  // kullanıcı yorum fotoğrafı yoksa hep tek fotoğrafa düşüyordu. Artık
+  // hepsi tutuluyor ki galeri gerçekten "galeri" gibi dönebilsin.
+  final List<String> photoReferences;
   final double lat;
   final double lng;
   final bool isOpenNow;
@@ -23,20 +29,36 @@ class PlaceResult {
     this.userRatingsTotal,
     this.types = const [],
     this.photoReference,
+    this.photoReferences = const [],
     required this.lat,
     required this.lng,
     this.isOpenNow = false,
     this.priceLevel,
   });
 
-  /// Fotoğraf URL'si — null ise mekanın fotoğrafı yok
+  /// Fotoğraf URL'si — null ise mekanın fotoğrafı yok (geriye dönük uyum
+  /// için ilk fotoğrafı döner; galeri için [photoUrls] kullanılmalı).
   String? get photoUrl {
     if (photoReference == null) return null;
-    return '${AppConfig.placesPhotoUrl}'
-        '?maxwidth=600'
-        '&photo_reference=$photoReference'
-        '&key=${AppConfig.googleMapsApiKey}';
+    return _buildPhotoUrl(photoReference!);
   }
+
+  /// Mekana ait TÜM fotoğrafların URL listesi (Google resmi fotoğrafları).
+  /// Mekan detay sayfasındaki galeri bunu kullanır — tek foto yerine
+  /// gerçekten birden çok foto arasında dönebilsin diye.
+  List<String> get photoUrls =>
+      photoReferences.map(buildPhotoUrl).toList();
+
+  static String _buildPhotoUrl(String reference) => buildPhotoUrl(reference);
+
+  /// Bir `photo_reference`'tan kullanılabilir bir resim URL'si üretir.
+  /// Public — PlacesService.fetchPhotoUrls gibi PlaceResult dışındaki
+  /// yerlerin de aynı URL formatını üretebilmesi için.
+  static String buildPhotoUrl(String reference) =>
+      '${AppConfig.placesPhotoUrl}'
+      '?maxwidth=800'
+      '&photo_reference=$reference'
+      '&key=${AppConfig.googleMapsApiKey}';
 
   /// Google Maps'te aç URL'si
   String get googleMapsUrl =>
@@ -61,6 +83,15 @@ class PlaceResult {
       photoReference: photos != null && photos.isNotEmpty
           ? photos.first['photo_reference'] as String?
           : null,
+      // En fazla 8 foto referansı tutuluyor — galeri için yeterli, ama
+      // gereksiz yere çok sayıda Places Photo isteği yapılmasın diye sınırlı.
+      photoReferences: photos == null
+          ? const []
+          : photos
+              .map((p) => (p as Map<String, dynamic>)['photo_reference'] as String?)
+              .whereType<String>()
+              .take(8)
+              .toList(),
       lat: (location['lat'] as num?)?.toDouble() ?? 0,
       lng: (location['lng'] as num?)?.toDouble() ?? 0,
       isOpenNow: openingHours?['open_now'] as bool? ?? false,

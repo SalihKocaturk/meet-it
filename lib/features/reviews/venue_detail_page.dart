@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -10,9 +11,23 @@ import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/providers/saved_venues_provider.dart';
+import 'package:meetit/features/match/services/places_service.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
-import 'package:quickalert/quickalert.dart';
+import 'package:meetit/core/widgets/app_alert.dart';
+
+/// Bir mekanın placeId'sinden TÜM Google fotoğraflarını çeker.
+///
+/// VenueDetailPage hangi yoldan açılmış olursa olsun (arama sonucu, kendi/
+/// arkadaş profili yorumu, kaydedilenler, ana sayfa carousel'i...) elde
+/// genelde sadece TEK bir venuePhotoUrl bulunuyor — çünkü o veriler
+/// Firestore'daki yorum dokümanında veya basitleştirilmiş PlaceResult'ta
+/// tek foto olarak saklı. Galerinin gerçekten "galeri" olabilmesi için
+/// placeId üzerinden Place Details ile ek fotoğraflar burada çekiliyor.
+final venuePhotosProvider =
+    FutureProvider.family<List<String>, String>((ref, placeId) {
+  return PlacesService.fetchPhotoUrls(placeId);
+});
 
 /// Tek bir mekanın detay sayfası: fotoğraf + Google puanı + yorum listesi +
 /// (ziyaret edilmişse) yorum ekleme aksiyonu.
@@ -26,6 +41,11 @@ class VenueDetailPage extends ConsumerWidget {
   final String venueName;
   final String? venueAddress;
   final String? venuePhotoUrl;
+  // Mekanın TÜM resmi Google fotoğrafları (varsa). Tek `venuePhotoUrl`
+  // (geriye dönük uyum için hâlâ tutuluyor) yerine bu doluysa galeri bunu
+  // kullanır — bu sayede kullanıcı yorum fotoğrafı olmasa da mekanın
+  // gerçek galerisi dönebiliyor.
+  final List<String> venuePhotoUrls;
   final double? googleRating;
   final int? googleRatingCount;
   final double? lat;
@@ -37,6 +57,7 @@ class VenueDetailPage extends ConsumerWidget {
     required this.venueName,
     this.venueAddress,
     this.venuePhotoUrl,
+    this.venuePhotoUrls = const [],
     this.googleRating,
     this.googleRatingCount,
     this.lat,
@@ -51,6 +72,7 @@ class VenueDetailPage extends ConsumerWidget {
       venueName: place.name,
       venueAddress: place.vicinity,
       venuePhotoUrl: place.photoUrl,
+      venuePhotoUrls: place.photoUrls,
       googleRating: place.rating,
       googleRatingCount: place.userRatingsTotal,
       lat: place.lat,
@@ -63,50 +85,58 @@ class VenueDetailPage extends ConsumerWidget {
     final reviewsAsync = ref.watch(venueReviewsProvider(placeId));
     final navigatedVenues = ref.watch(navigatedVenuesProvider);
     final hasVisited = navigatedVenues.any((v) => v.placeId == placeId);
+    // placeId üzerinden Place Details'ten çekilen TÜM resmi fotoğraflar —
+    // sayfa hangi yoldan açılmış olursa olsun (sadece tek venuePhotoUrl
+    // elde olsa bile) çalışır, asıl çoklu-foto kaynağı bu.
+    final fetchedPhotosAsync = ref.watch(venuePhotosProvider(placeId));
+    final fetchedPhotos = fetchedPhotosAsync.value ?? const <String>[];
+
+    // Mekan hakkındaki tüm fotoğraflar: Place Details'ten çekilenler +
+    // (varsa) elimizdeki resmi mekan fotoğraf(lar)ı + kullanıcıların
+    // yorumlarına eklediği fotoğraflar — tek statik foto yerine galeri
+    // olarak gösterilir, tek foto amatör kaçtığı için birden fazlaysa
+    // dönen bir carousel'e dönüştürüldü.
+    final reviews = reviewsAsync.value ?? const <VenueReviewModel>[];
+    final galleryPhotos = <String>{
+      ...fetchedPhotos,
+      if (venuePhotoUrls.isNotEmpty)
+        ...venuePhotoUrls
+      else if (venuePhotoUrl != null)
+        venuePhotoUrl!,
+      ...reviews.map((r) => r.photoUrl).whereType<String>(),
+    }.toList();
+    final hasPhotos = galleryPhotos.isNotEmpty;
 
     return Scaffold(
       backgroundColor: context.colors.scaffold,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: venuePhotoUrl != null ? 260 : 0,
+            expandedHeight: hasPhotos ? 260 : 0,
             pinned: true,
             backgroundColor: context.colors.card,
-            foregroundColor: venuePhotoUrl != null
-                ? Colors.white
-                : context.colors.textPrimary,
+            foregroundColor:
+                hasPhotos ? Colors.white : context.colors.textPrimary,
             leading: GestureDetector(
               onTap: () => Navigator.pop(context),
               child: Container(
                 margin: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: venuePhotoUrl != null
+                  color: hasPhotos
                       ? Colors.black.withOpacity(0.35)
                       : Colors.transparent,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.arrow_back_ios_new,
-                  color: venuePhotoUrl != null
-                      ? Colors.white
-                      : context.colors.textPrimary,
+                  color: hasPhotos ? Colors.white : context.colors.textPrimary,
                   size: 18,
                 ),
               ),
             ),
-            flexibleSpace: venuePhotoUrl != null
+            flexibleSpace: hasPhotos
                 ? FlexibleSpaceBar(
-                    background: CachedNetworkImage(
-                      imageUrl: venuePhotoUrl!,
-                      fit: BoxFit.cover,
-                      placeholder: (_, _) =>
-                          Container(color: context.colors.border),
-                      errorWidget: (_, _, _) => Container(
-                        color: context.colors.primary.withOpacity(0.1),
-                        child: Icon(Icons.location_on,
-                            size: 48, color: context.colors.primary),
-                      ),
-                    ),
+                    background: _VenuePhotoGallery(photos: galleryPhotos),
                   )
                 : null,
           ),
@@ -304,9 +334,165 @@ class VenueDetailPage extends ConsumerWidget {
   }
 }
 
+// ── Mekan Fotoğraf Galerisi ───────────────────────────────────────────────────
+//
+// Tek statik foto yerine: mekanın resmi fotoğrafı + kullanıcıların yorumlara
+// eklediği fotoğraflardan oluşan, otomatik dönen (ve elle kaydırılabilen)
+// bir carousel. Tek foto varsa sade şekilde gösterilir, dönmez.
+class _VenuePhotoGallery extends StatefulWidget {
+  final List<String> photos;
+  const _VenuePhotoGallery({required this.photos});
+
+  @override
+  State<_VenuePhotoGallery> createState() => _VenuePhotoGalleryState();
+}
+
+class _VenuePhotoGalleryState extends State<_VenuePhotoGallery>
+    with SingleTickerProviderStateMixin {
+  late final PageController _controller = PageController();
+  Timer? _timer;
+  int _page = 0;
+
+  // Tek foto kaldığında (kullanıcı yorum fotoğrafı yoksa ve mekanın
+  // Google'da sadece 1 resmi varsa) sabit/durağan bir kare hoş durmuyordu.
+  // Bu yüzden tek fotoda da yavaş, sürekli bir "Ken Burns" zoom efekti
+  // uygulanıyor — hareket varmış gibi hissettirip statik görünümü kırıyor.
+  late final AnimationController _zoomController = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 8),
+  )..repeat(reverse: true);
+  late final Animation<double> _zoom = Tween<double>(begin: 1.0, end: 1.12)
+      .animate(CurvedAnimation(parent: _zoomController, curve: Curves.easeInOut));
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.photos.length > 1) {
+      _timer = Timer.periodic(const Duration(seconds: 4), (_) {
+        if (!mounted) return;
+        _page = (_page + 1) % widget.photos.length;
+        _controller.animateToPage(
+          _page,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    _zoomController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        PageView.builder(
+          controller: _controller,
+          itemCount: widget.photos.length,
+          onPageChanged: (i) => setState(() => _page = i),
+          itemBuilder: (context, i) => AnimatedBuilder(
+            animation: _zoom,
+            builder: (context, child) => Transform.scale(
+              scale: _zoom.value,
+              child: child,
+            ),
+            child: CachedNetworkImage(
+              imageUrl: widget.photos[i],
+              fit: BoxFit.cover,
+              placeholder: (_, _) => Container(color: context.colors.border),
+              errorWidget: (_, _, _) => Container(
+                color: context.colors.primary.withOpacity(0.1),
+                child: Icon(Icons.location_on,
+                    size: 48, color: context.colors.primary),
+              ),
+            ),
+          ),
+        ),
+        // Alt kenara hafif koyu gradyan — fotoğrafın altı çok parlak/düz
+        // olursa nokta göstergeleri ve geri butonu sırtı seçilmiyordu, bu
+        // aynı zamanda görsele bir derinlik/"profesyonel" his katıyor.
+        const Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 90,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Color(0x99000000)],
+              ),
+            ),
+          ),
+        ),
+        if (widget.photos.length > 1)
+          Positioned(
+            bottom: 14,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                widget.photos.length,
+                (i) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: i == _page ? 18 : 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: i == _page
+                        ? Colors.white
+                        : Colors.white.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (widget.photos.length > 1)
+          Positioned(
+            bottom: 14,
+            right: 14,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.photo_library_outlined,
+                      size: 12, color: Colors.white),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${_page + 1}/${widget.photos.length}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 // ── Yorum Satırı ──────────────────────────────────────────────────────────────
 
-class _ReviewTile extends StatelessWidget {
+class _ReviewTile extends ConsumerWidget {
   final VenueReviewModel review;
   const _ReviewTile({required this.review});
 
@@ -319,8 +505,35 @@ class _ReviewTile extends StatelessWidget {
     return '${dt.day}/${dt.month}/${dt.year}';
   }
 
+  Future<void> _toggleLike(WidgetRef ref, String uid) async {
+    await ref.read(reviewProvider.notifier).toggleLike(review.id, uid);
+    ref.invalidate(venueReviewsProvider(review.placeId));
+  }
+
+  void _confirmDelete(BuildContext context, WidgetRef ref, String uid) {
+    showAppAlert(
+      context: context,
+      type: AppAlertType.confirm,
+      title: 'review.delete_review'.tr(),
+      text: 'review.delete_review_confirm'.tr(),
+      confirmBtnText: 'common.delete'.tr(),
+      cancelBtnText: 'common.cancel'.tr(),
+      confirmBtnColor: context.colors.error,
+      onConfirmBtnTap: () async {
+        Navigator.pop(context);
+        await ref.read(reviewProvider.notifier).deleteReview(review.id);
+        ref.invalidate(venueReviewsProvider(review.placeId));
+        ref.invalidate(myReviewsProvider(uid));
+        ref.invalidate(topReviewsProvider);
+      },
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider);
+    final isOwn = user != null && user.uid == review.authorUid;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -376,6 +589,20 @@ class _ReviewTile extends StatelessWidget {
                   ),
                 ),
               ),
+              if (isOwn) ...[
+                const SizedBox(width: 4),
+                GestureDetector(
+                  onTap: () => _confirmDelete(context, ref, user!.uid),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(
+                      Icons.delete_outline_rounded,
+                      size: 18,
+                      color: context.colors.error,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           if (review.comment != null && review.comment!.isNotEmpty) ...[
@@ -401,6 +628,33 @@ class _ReviewTile extends StatelessWidget {
               ),
             ),
           ],
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: user == null ? null : () => _toggleLike(ref, user.uid),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  user != null && review.isLikedBy(user.uid)
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                  size: 16,
+                  color: user != null && review.isLikedBy(user.uid)
+                      ? context.colors.error
+                      : context.colors.hint,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${review.likeCount}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: context.colors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -460,9 +714,9 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
 
   Future<void> _submit() async {
     if (_rating == 0) {
-      QuickAlert.show(
+      showAppAlert(
         context: context,
-        type: QuickAlertType.warning,
+        type: AppAlertType.warning,
         title: 'validation.missing_field'.tr(),
         text: 'review.select_rating_warning'.tr(),
         confirmBtnColor: context.colors.primary,
@@ -496,9 +750,9 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
     setState(() => _isSubmitting = false);
 
     if (!mounted) return;
-    QuickAlert.show(
+    showAppAlert(
       context: context,
-      type: QuickAlertType.success,
+      type: AppAlertType.success,
       title: 'review.review_added'.tr(),
       text: 'review.review_added_desc'.tr(),
       confirmBtnColor: context.colors.primary,
@@ -511,10 +765,15 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
 
   @override
   Widget build(BuildContext context) {
+    // Klavye açıldığında viewInsets.bottom artıyor; bottom sheet'in
+    // mainAxisSize.min Column'u bu durumda sığmayabiliyor (RenderFlex
+    // overflow). Çözüm: içeriği SingleChildScrollView ile sarmalayıp
+    // klavye açıkken aşağı kaydırılabilir hale getirmek — bu sayede
+    // sabit yükseklikli yıldızlar/foto kutusu/buton hiçbir zaman taşmıyor.
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -708,3 +967,4 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
     );
   }
 }
+

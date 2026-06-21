@@ -61,11 +61,18 @@ class SavedVenuesNotifier extends Notifier<List<PlaceResult>> {
         'rating': p.rating,
         'user_ratings_total': p.userRatingsTotal,
         'types': p.types,
-        'photos': p.photoReference != null
-            ? [
-                {'photo_reference': p.photoReference}
-              ]
-            : null,
+        // Tüm foto referansları saklanıyor (sadece ilki değil) — kaydedilen/
+        // tarifi alınan mekanlar uygulama yeniden açıldığında da galerideki
+        // tüm fotoğrafları gösterebilsin diye.
+        'photos': p.photoReferences.isNotEmpty
+            ? p.photoReferences
+                .map((ref) => {'photo_reference': ref})
+                .toList()
+            : (p.photoReference != null
+                ? [
+                    {'photo_reference': p.photoReference}
+                  ]
+                : null),
         'geometry': {
           'location': {'lat': p.lat, 'lng': p.lng}
         },
@@ -117,11 +124,18 @@ class NavigatedVenuesNotifier extends Notifier<List<PlaceResult>> {
         'rating': p.rating,
         'user_ratings_total': p.userRatingsTotal,
         'types': p.types,
-        'photos': p.photoReference != null
-            ? [
-                {'photo_reference': p.photoReference}
-              ]
-            : null,
+        // Tüm foto referansları saklanıyor (sadece ilki değil) — kaydedilen/
+        // tarifi alınan mekanlar uygulama yeniden açıldığında da galerideki
+        // tüm fotoğrafları gösterebilsin diye.
+        'photos': p.photoReferences.isNotEmpty
+            ? p.photoReferences
+                .map((ref) => {'photo_reference': ref})
+                .toList()
+            : (p.photoReference != null
+                ? [
+                    {'photo_reference': p.photoReference}
+                  ]
+                : null),
         'geometry': {
           'location': {'lat': p.lat, 'lng': p.lng}
         },
