@@ -8,6 +8,7 @@ import 'package:meetit/features/friends/models/user_friend_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/personality/widgets/personality_breakdown.dart';
+import 'package:meetit/features/personality/widgets/personality_radar_chart.dart';
 
 /// Arkadaş listesindeki herkesle kişilik uyumunu (cosine similarity tabanlı
 /// `PersonalityProfile.compatibilityWith`) gösteren liste sayfası.
@@ -267,6 +268,50 @@ class FriendCompatibilityDetailPage extends StatelessWidget {
                   color: context.colors.textSecondary,
                 ),
               ),
+              const SizedBox(height: 24),
+
+              // ── Üst üste bindirilmiş radar chart ──────────────────────
+              //
+              // İki ayrı PersonalityBreakdown'daki skor çubukları yan yana
+              // kıyaslamayı zorlaştırıyordu (yukarı-aşağı kaydırmak
+              // gerekiyordu). Aynı radar üzerinde iki yarı saydam poligon
+              // çizerek örtüşme/farklılık tek bakışta görülüyor.
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                decoration: BoxDecoration(
+                  color: context.colors.card,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: context.colors.border),
+                ),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'friend_compat.overlap_title'.tr(),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: context.colors.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    PersonalityRadarChart(
+                      profile: myProfile,
+                      secondaryProfile: friendProfile,
+                      primaryLabel: 'friend_compat.you_label'.tr(),
+                      secondaryLabel: friend.name,
+                      size: 240,
+                    ),
+                  ],
+                ),
+              ),
+
               const SizedBox(height: 24),
 
               // ── Senin profilin ────────────────────────────────────────

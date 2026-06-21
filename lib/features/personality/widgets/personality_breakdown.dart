@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
+import 'package:meetit/features/personality/widgets/personality_radar_chart.dart';
 
 /// Bir [PersonalityProfile]'ın görsel dökümü: dominant tip, varsa ikincil
 /// tip rozeti, açıklama kartı ve skor çubukları.
@@ -76,6 +77,45 @@ class PersonalityBreakdown extends StatelessWidget {
               color: context.colors.textPrimary,
               height: 1.6,
             ),
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        // ── Radar (Spider) Chart ─────────────────────────────────────────
+        //
+        // Skor çubukları zaten her tipin yüzdesini ayrı ayrı gösteriyor,
+        // ama "profilin genel şekli" tek bakışta görülmüyordu. Radar chart
+        // 5 ekseni (5 kişilik tipi) aynı anda gösterip bir beşgen çizerek
+        // bunu sağlıyor — özellikle mekan ziyaretleriyle profil zamanla
+        // değiştiğinde, şeklin nasıl evrildiğini görmek daha sezgisel.
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          decoration: BoxDecoration(
+            color: context.colors.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: context.colors.border),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'quiz.personality_shape'.tr(),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: context.colors.textPrimary,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              PersonalityRadarChart(profile: profile, size: 230),
+            ],
           ),
         ),
 
