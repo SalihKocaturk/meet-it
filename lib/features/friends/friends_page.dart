@@ -5,12 +5,13 @@ import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friend_code_page.dart';
+import 'package:meetit/features/friends/friend_profile_page.dart';
 import 'package:meetit/features/friends/models/user_friend_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/main/main_page.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
-import 'package:quickalert/quickalert.dart';
+import 'package:meetit/core/widgets/app_alert.dart';
 
 // Arkadaşlar sekmesindeki arama metni için provider
 final friendsSearchProvider = StateProvider.autoDispose<String>((ref) => '');
@@ -654,9 +655,9 @@ class _SentRequestTile extends ConsumerWidget {
           // İptal butonu
           GestureDetector(
             onTap: () {
-              QuickAlert.show(
+              showAppAlert(
                 context: context,
-                type: QuickAlertType.confirm,
+                type: AppAlertType.confirm,
                 title: 'friends.cancel_request'.tr(),
                 text: 'friends.cancel_request_confirm'.tr(namedArgs: {'name': friend.name}),
                 confirmBtnText: 'friends.cancel_btn'.tr(),
@@ -697,42 +698,57 @@ class _ConnectionTile extends ConsumerWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          CircularAvatar(
-            name: friend.name,
-            photoUrl: friend.photoUrl,
-            radius: 24,
-          ),
-          SizedBox(width: 12),
+          // Avatar + isim: dokununca arkadaşın profil sayfasına geç.
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  friend.name,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: context.colors.textPrimary,
-                  ),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => FriendProfilePage(friend: friend),
                 ),
-                if (friend.personalityProfile != null)
-                  Row(
-                    children: [
-                      Text(
-                        friend.personalityProfile!.dominantType.emoji,
-                        style: TextStyle(fontSize: 12),
-                      ),
-                      SizedBox(width: 2),
-                      Text(
-                        friend.personalityProfile!.dominantType.displayName,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: context.colors.textSecondary,
-                        ),
-                      ),
-                    ],
+              ),
+              child: Row(
+                children: [
+                  CircularAvatar(
+                    name: friend.name,
+                    photoUrl: friend.photoUrl,
+                    radius: 24,
                   ),
-              ],
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          friend.name,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: context.colors.textPrimary,
+                          ),
+                        ),
+                        if (friend.personalityProfile != null)
+                          Row(
+                            children: [
+                              Text(
+                                friend.personalityProfile!.dominantType.emoji,
+                                style: TextStyle(fontSize: 12),
+                              ),
+                              SizedBox(width: 2),
+                              Text(
+                                friend.personalityProfile!.dominantType.displayName,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: context.colors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           // Buluşma yeri bul butonu — match sayfasına yönlendir
