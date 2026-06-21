@@ -22,10 +22,12 @@
             </intent-filter>
         </activity>
 
-        <!-- Google Maps API Key -->
+        <!-- Google Maps API Key — değer build.gradle.kts tarafından
+             android/secrets.properties dosyasından (git'e dahil değil)
+             manifestPlaceholders ile inject ediliyor. -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyAdmJt0XSx6AtiJLngBXhkgml7OYzUm_7Y"/>
+            android:value="${MAPS_API_KEY}"/>
 
         <meta-data
             android:name="flutterEmbedding"

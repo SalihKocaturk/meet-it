@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/constants/app_config.dart';
 import 'package:meetit/core/constants/map_styles.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
@@ -757,7 +758,7 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
         'https://maps.googleapis.com/maps/api/geocode/json'
         '?latlng=${pos.latitude},${pos.longitude}'
         '&language=tr'
-        '&key=AIzaSyAdmJt0XSx6AtiJLngBXhkgml7OYzUm_7Y',
+        '&key=${AppConfig.googleMapsApiKey}',
       );
       final res = await http.get(uri).timeout(const Duration(seconds: 6));
       final body = jsonDecode(res.body) as Map<String, dynamic>;

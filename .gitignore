@@ -62,16 +62,8 @@ key.properties
 .env.*
 !.env.example
 
-# Node / React (meetit subfolder)
-meetit/node_modules/
-meetit/dist/
-meetit/.vite/
-meetit/coverage/
-
-# PDF / large binary files
-*.pdf
-
-# macOS
-__MACOSX/
-Thumbs.db
-.git-rewrite/
+# API key secrets — gerçek dosyalar asla commit edilmez, sadece .example
+# şablonları repoda kalır (bkz. app_config.dart kurulum notları).
+android/secrets.properties
+dart_defines.json
+!dart_defines.example.json

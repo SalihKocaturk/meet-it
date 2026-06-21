@@ -2,15 +2,26 @@
 ///
 /// KURULUM:
 /// 1. Google Cloud Console'dan API key al (Maps SDK + Places API aktif olmalı)
-/// 2. Aşağıdaki [googleMapsApiKey] değerini kendi key'inle değiştir
-/// 3. android/app/src/main/AndroidManifest.xml içindeki placeholder'ı da güncelle
+/// 2. Anahtarı KOD İÇİNE YAZMA — aşağıdaki [googleMapsApiKey] derleme anında
+///    --dart-define ile geliyor:
+///      flutter run --dart-define=GOOGLE_MAPS_API_KEY=xxxxx
+///    veya bir dosyadan:
+///      flutter run --dart-define-from-file=dart_defines.json
+///    (dart_defines.json .gitignore'da — bkz. dart_defines.example.json)
+/// 3. Android tarafı için android/secrets.properties dosyasını doldur
+///    (bkz. android/secrets.properties.example) — bu dosya da .gitignore'da.
+///
+/// ⚠️  Daha önce buraya gerçek bir anahtar hardcoded yazılmıştı ve GitHub
+/// secret scanning tarafından "public leak" olarak işaretlendi. O anahtar
+/// Google Cloud Console'dan iptal edilip yenisiyle değiştirilmeli. Bundan
+/// sonra hiçbir API key bu dosyaya literal olarak YAZILMAYACAK.
 class AppConfig {
   AppConfig._();
 
-  /// Google Maps + Places API anahtarı.
-  /// ⚠️  BUNU GIT'E COMMIT ETME — production'da env/secrets kullan.
-  static const String googleMapsApiKey =
-      'AIzaSyAdmJt0XSx6AtiJLngBXhkgml7OYzUm_7Y';
+  /// Google Maps + Places API anahtarı — derleme zamanında inject edilir.
+  static const String googleMapsApiKey = String.fromEnvironment(
+    'GOOGLE_MAPS_API_KEY',
+  );
 
   /// Places Nearby Search endpoint'i
   static const String placesNearbyUrl =
@@ -19,6 +30,13 @@ class AppConfig {
   /// Places Photo endpoint'i
   static const String placesPhotoUrl =
       'https://maps.googleapis.com/maps/api/place/photo';
+
+  /// Places Details endpoint'i — sadece Nearby Search'ten gelen tek bir
+  /// foto referansıyla sınırlı kalmamak için, bir mekanın TÜM fotoğraflarını
+  /// placeId üzerinden ayrıca çekmek amacıyla kullanılıyor (bkz.
+  /// PlacesService.fetchPhotoUrls).
+  static const String placesDetailsUrl =
+      'https://maps.googleapis.com/maps/api/place/details/json';
 
   /// Varsayılan arama yarıçapı (metre) — tek başına arama modunda kullanılır.
   static const int defaultSearchRadius = 10000;

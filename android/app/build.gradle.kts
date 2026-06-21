@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -6,6 +9,16 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// android/secrets.properties — git'e dahil EDİLMEZ (bkz. .gitignore).
+// Gerçek API key'ler buradan okunup AndroidManifest.xml'deki
+// ${MAPS_API_KEY} placeholder'ına inject edilir. Şablon dosya:
+// android/secrets.properties.example.
+val secretsProperties = Properties()
+val secretsFile = rootProject.file("secrets.properties")
+if (secretsFile.exists()) {
+    secretsProperties.load(FileInputStream(secretsFile))
 }
 
 android {
@@ -31,6 +44,13 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // AndroidManifest.xml içindeki ${MAPS_API_KEY} buradan dolduruluyor.
+        // secrets.properties yoksa boş string verilir — build kırılmaz ama
+        // harita anahtarsız çalışmaz (geliştirici dosyayı doldurmayı unuttu
+        // demektir).
+        manifestPlaceholders["MAPS_API_KEY"] =
+            secretsProperties.getProperty("MAPS_API_KEY", "")
     }
 
     buildTypes {
