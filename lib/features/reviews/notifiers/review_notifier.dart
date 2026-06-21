@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 
@@ -152,8 +153,29 @@ class ReviewNotifier extends Notifier<ReviewState> {
         createdAt: DateTime.now(),
       );
 
-      final ref = _db.collection('venue_reviews').doc();
-      await ref.set(review.toMap());
+      final docRef = _db.collection('venue_reviews').doc();
+      await docRef.set(review.toMap());
+
+      // ── Kişilik profilini ziyaret edilen mekana göre evrilt ──────────────
+      //
+      // Statik quiz sonucu yerine, kullanıcı bir mekana yorum bıraktıkça
+      // (= orayı ziyaret ettikçe) profil küçük adımlarla o mekanın Google
+      // Places kategorilerine doğru kayar. Bu sayede profil zamanla
+      // kullanıcının gerçek alışkanlıklarını yansıtır. Henüz quiz
+      // tamamlanmamışsa (personalityProfile == null) dokunulmaz — evrim,
+      // var olan bir temel profili güncellemek için var, sıfırdan
+      // oluşturmak için değil.
+      final currentUser = this.ref.read(authProvider).user;
+      final currentProfile = currentUser?.personalityProfile;
+      if (currentUser != null && currentProfile != null) {
+        final evolved = currentProfile.evolvedWith(venue.types);
+        if (evolved != currentProfile) {
+          await this.ref
+              .read(authProvider.notifier)
+              .setPersonalityProfile(evolved);
+        }
+      }
+
       return true;
     } catch (e) {
       state = state.copyWith(errorMessage: 'Yorum eklenirken hata oluştu.');
@@ -233,30 +255,4 @@ final myReviewsProvider =
 //
 // SADECE gerçek kullanıcı yorumları gösterilir — sahte/bot yorum YOK.
 // Henüz hiç yorum yoksa liste boş döner; home_page.dart bu durumda
-// 'home.no_reviews_hint' mesajını gösteriyor (carousel'i sahte içerikle
-// doldurmak yerine dürüstçe "henüz yorum yok" demek tercih edildi).
-//
-// NOT: orderBy('rating',...).orderBy('createdAt',...) çift sıralaması
-// Firestore'da composite index gerektiriyor; index oluşturulmadığı için
-// sorgu FAILED_PRECONDITION ile tamamen başarısız oluyordu (canlı loglarda
-// görüldü) — bu da eklenen yorumların ana sayfada hiç görünmemesinin asıl
-// sebebiydi. Çözüm: index gerektirmeyen basit bir sorgu + client-side sort.
-final topReviewsProvider = FutureProvider<List<VenueReviewModel>>((ref) async {
-  try {
-    final snap = await FirebaseFirestore.instance
-        .collection('venue_reviews')
-        .limit(50)
-        .get();
-    final reviews = snap.docs
-        .map((d) => VenueReviewModel.fromMap(d.id, d.data()))
-        .toList()
-      ..sort((a, b) {
-        final ratingCmp = b.rating.compareTo(a.rating);
-        if (ratingCmp != 0) return ratingCmp;
-        return b.createdAt.compareTo(a.createdAt);
-      });
-    return reviews.take(15).toList();
-  } catch (e) {
-    return [];
-  }
-});
+// 'home.no_reviews_

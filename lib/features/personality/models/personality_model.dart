@@ -66,6 +66,67 @@ extension PersonalityTypeX on PersonalityType {
   // Not: Dart 3 enum'larında .name built-in olarak mevcuttur — override gerekmez.
 }
 
+// ── Google Places Tipi → Kişilik Ağırlığı Eşlemesi ──────────────────────────
+//
+// [PersonalityProfile.evolvedWith] tarafından kullanılır. Bir mekanın Google
+// Places `types` alanındaki kategoriler burada eşleşirse, o kategorinin
+// "taşıdığı" kişilik sinyali (0.0–1.0 ağırlıkla, birden fazla tipe
+// dağıtılabilir) profile küçük bir oranda karıştırılır. Eşlemeler kabaca
+// `_venueMap`'teki Türkçe etiketlerle aynı mantığı, gerçek Google kategori
+// adları üzerinden yansıtır.
+const Map<String, Map<PersonalityType, double>> kVenueTypePersonalityWeights =
+    {
+  // ── Sosyal Kelebek ──
+  'night_club': {PersonalityType.sosyalKelebek: 1.0},
+  'bar': {PersonalityType.sosyalKelebek: 0.8, PersonalityType.gurme: 0.2},
+  'bowling_alley': {
+    PersonalityType.sosyalKelebek: 0.5,
+    PersonalityType.maceraperest: 0.5,
+  },
+  'shopping_mall': {
+    PersonalityType.sosyalKelebek: 0.6,
+    PersonalityType.gurme: 0.4,
+  },
+  'movie_theater': {
+    PersonalityType.sosyalKelebek: 0.4,
+    PersonalityType.sakinRuh: 0.4,
+    PersonalityType.entelektuel: 0.2,
+  },
+
+  // ── Sakin Ruh ──
+  'spa': {PersonalityType.sakinRuh: 1.0},
+  'park': {PersonalityType.sakinRuh: 0.6, PersonalityType.maceraperest: 0.4},
+  'cafe': {PersonalityType.sakinRuh: 0.5, PersonalityType.gurme: 0.5},
+
+  // ── Maceraperest ──
+  'amusement_park': {PersonalityType.maceraperest: 1.0},
+  'gym': {PersonalityType.maceraperest: 0.8, PersonalityType.sakinRuh: 0.2},
+  'stadium': {
+    PersonalityType.maceraperest: 0.6,
+    PersonalityType.sosyalKelebek: 0.4,
+  },
+  'zoo': {PersonalityType.maceraperest: 0.6, PersonalityType.sakinRuh: 0.4},
+  'aquarium': {
+    PersonalityType.maceraperest: 0.5,
+    PersonalityType.entelektuel: 0.5,
+  },
+
+  // ── Entelektüel ──
+  'museum': {PersonalityType.entelektuel: 0.9, PersonalityType.sakinRuh: 0.1},
+  'art_gallery': {
+    PersonalityType.entelektuel: 0.8,
+    PersonalityType.sakinRuh: 0.2,
+  },
+  'library': {PersonalityType.entelektuel: 1.0},
+  'book_store': {PersonalityType.entelektuel: 0.7, PersonalityType.sakinRuh: 0.3},
+
+  // ── Gurme ──
+  'restaurant': {PersonalityType.gurme: 0.8, PersonalityType.sosyalKelebek: 0.2},
+  'bakery': {PersonalityType.gurme: 0.7, PersonalityType.sakinRuh: 0.3},
+  'meal_takeaway': {PersonalityType.gurme: 0.6},
+  'meal_delivery': {PersonalityType.gurme: 0.5},
+};
+
 // ── Kişilik Profili (Skor Tabanlı) ───────────────────────────────────────────
 
 /// Quiz sonuçlarını tek bir "kazanan tip" olarak değil,
@@ -162,6 +223,66 @@ class PersonalityProfile {
       scores: scores ?? Map.unmodifiable(this.scores),
       lastUpdated: lastUpdated ?? this.lastUpdated,
     );
+  }
+
+  // ── Dinamik Evrim (Ziyaret Edilen Mekanlara Göre) ───────────────────────
+  //
+  // Quiz sonucu artık tek seferlik/statik bir profil değil — kullanıcı bir
+  // mekana yorum bıraktığında (yani orayı ziyaret ettiğinde), o mekanın
+  // Google Places kategorileri ([PlaceResult.types]) küçük bir ağırlıkla
+  // mevcut profile karıştırılır. Böylece profil zamanla kullanıcının
+  // gerçek alışkanlıklarını yansıtacak şekilde "kayar" — ama tek bir ziyaret
+  // profili aniden değiştirmez (öğrenme oranı düşük tutulduğu için).
+
+  /// Bu profili, ziyaret edilen bir mekanın Google Places [placeTypes]
+  /// listesine göre hafifçe günceller ve yeni bir [PersonalityProfile] döner.
+  ///
+  /// [learningRate]: Yeni sinyalin profile karışma oranı (0.0–1.0). Varsayılan
+  /// %6 — yani 1 ziyaret profili büyük oranda değiştirmez, ama düzinelerce
+  /// ziyaret üzerinden profil belirgin şekilde evrilir.
+  ///
+  /// Eşleşen tip yoksa (örn. tanınmayan bir Places kategorisi) profil
+  /// değişmeden (ama lastUpdated güncellenmeden) geri döner.
+  PersonalityProfile evolvedWith(
+    List<String> placeTypes, {
+    double learningRate = 0.06,
+  }) {
+    // 1) Bu mekanın tiplerinden toplam bir "sinyal" vektörü oluştur.
+    final rawSignal = <PersonalityType, double>{};
+    for (final placeType in placeTypes) {
+      final weights = kVenueTypePersonalityWeights[placeType];
+      if (weights == null) continue;
+      for (final entry in weights.entries) {
+        rawSignal[entry.key] = (rawSignal[entry.key] ?? 0) + entry.value;
+      }
+    }
+    if (rawSignal.isEmpty) return this; // Tanınan bir kategori yoksa dokunma
+
+    // 2) Sinyali normalize et (toplamı 1 olsun).
+    final signalTotal = rawSignal.values.fold<double>(0, (a, b) => a + b);
+    final signal = <PersonalityType, double>{
+      for (final type in PersonalityType.values)
+        type: signalTotal > 0 ? (rawSignal[type] ?? 0) / signalTotal : 0,
+    };
+
+    // 3) Mevcut skorları normalize ederek sinyalle harmanla.
+    final currentTotal = scores.values.fold<double>(0, (a, b) => a + b);
+    final blended = <PersonalityType, double>{};
+    for (final type in PersonalityType.values) {
+      final current =
+          currentTotal > 0 ? (scores[type] ?? 0) / currentTotal : 0.2;
+      blended[type] =
+          current * (1 - learningRate) + signal[type]! * learningRate;
+    }
+
+    // 4) Sonucu yeniden normalize et (toplam tam 1 olsun).
+    final blendedTotal = blended.values.fold<double>(0, (a, b) => a + b);
+    final newScores = <PersonalityType, double>{
+      for (final type in PersonalityType.values)
+        type: blendedTotal > 0 ? blended[type]! / blendedTotal : 0.2,
+    };
+
+    return PersonalityProfile(scores: newScores, lastUpdated: DateTime.now());
   }
 
   // ── Mock Yardımcı Fabrika ─────────────────────────────────────────────────
