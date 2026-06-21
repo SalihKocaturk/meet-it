@@ -255,4 +255,30 @@ final myReviewsProvider =
 //
 // SADECE gerçek kullanıcı yorumları gösterilir — sahte/bot yorum YOK.
 // Henüz hiç yorum yoksa liste boş döner; home_page.dart bu durumda
-// 'home.no_reviews_
+// 'home.no_reviews_hint' mesajını gösteriyor (carousel'i sahte içerikle
+// doldurmak yerine dürüstçe "henüz yorum yok" demek tercih edildi).
+//
+// NOT: orderBy('rating',...).orderBy('createdAt',...) çift sıralaması
+// Firestore'da composite index gerektiriyor; index oluşturulmadığı için
+// sorgu FAILED_PRECONDITION ile tamamen başarısız oluyordu (canlı loglarda
+// görüldü) — bu da eklenen yorumların ana sayfada hiç görünmemesinin asıl
+// sebebiydi. Çözüm: index gerektirmeyen basit bir sorgu + client-side sort.
+final topReviewsProvider = FutureProvider<List<VenueReviewModel>>((ref) async {
+  try {
+    final snap = await FirebaseFirestore.instance
+        .collection('venue_reviews')
+        .limit(50)
+        .get();
+    final reviews = snap.docs
+        .map((d) => VenueReviewModel.fromMap(d.id, d.data()))
+        .toList()
+      ..sort((a, b) {
+        final ratingCmp = b.rating.compareTo(a.rating);
+        if (ratingCmp != 0) return ratingCmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
+    return reviews.take(15).toList();
+  } catch (e) {
+    return [];
+  }
+});

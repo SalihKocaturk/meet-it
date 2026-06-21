@@ -961,4 +961,64 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
                                   color: Colors.white,
                                   size: 18,
                                 ),
-   
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Container(
+                        height: 100,
+                        decoration: BoxDecoration(
+                          color: context.colors.card,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: context.colors.border),
+                        ),
+                        child: Center(
+                          child: Icon(
+                            Icons.add_photo_alternate_outlined,
+                            size: 32,
+                            color: context.colors.hint,
+                          ),
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isSubmitting ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: context.colors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'review.submit'.tr(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
