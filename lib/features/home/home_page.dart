@@ -5,7 +5,9 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/router/app_routes.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friend_profile_page.dart';
@@ -13,6 +15,9 @@ import 'package:meetit/features/friends/models/user_friend_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/main/main_page.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
+import 'package:meetit/features/personality/friend_compatibility_page.dart';
+import 'package:meetit/features/personality/personality_analysis_page.dart';
+import 'package:meetit/features/personality/providers/personality_provider.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
@@ -129,20 +134,27 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                     ),
                     // Profil avatarı — dokununca Profil sekmesine geç
+                    //
+                    // NOT: Önceden burada ham CircleAvatar + NetworkImage
+                    // kullanılıyordu — internet yokken (örn. Google hesabı
+                    // fotoğrafı lh3.googleusercontent.com'dan çekilemediğinde)
+                    // bu, yakalanmayan bir SocketException fırlatıyor ve bu da
+                    // build/layout sırasında art arda "Null check operator
+                    // used on a null value" / "RenderBox was not laid out"
+                    // hatalarına, dolayısıyla ana sayfanın bozuk/boş
+                    // görünmesine sebep oluyordu. CircularAvatar zaten
+                    // CachedNetworkImage + errorWidget ile bu durumu güvenli
+                    // şekilde harf-avatara düşürüyor — diğer tüm avatarlarda
+                    // (arkadaş kartları, profil sayfası vb.) bu yüzden o
+                    // kullanılıyordu, burada da aynısına geçirildi.
                     GestureDetector(
                       onTap: () =>
                           ref.read(mainTabIndexProvider.notifier).state = 3,
-                      child: currentUser?.photoUrl != null
-                          ? CircleAvatar(
-                              radius: 20,
-                              backgroundImage: NetworkImage(
-                                currentUser!.photoUrl!,
-                              ),
-                            )
-                          : CircularAvatar(
-                              name: currentUser?.name ?? '',
-                              radius: 20,
-                            ),
+                      child: CircularAvatar(
+                        name: currentUser?.name ?? '',
+                        photoUrl: currentUser?.photoUrl,
+                        radius: 20,
+                      ),
                     ),
                   ],
                 ),
@@ -278,7 +290,143 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
 
+            // ── Kişiliğini Yönet ────────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+                child: Text(
+                  'home.personality_section'.tr(),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: context.colors.textPrimary,
+                  ),
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                // NOT: Bu height olmadan, sınırsız (unbounded) bir dikey
+                // alanda yatay kayan bir ListView, layout aşamasında
+                // "RenderBox was not laid out" / NEEDS-PAINT hatası
+                // fırlatıyordu — ana sayfanın bozuk/boş görünmesinin bir
+                // diğer sebebi buydu.
+                height: 124,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: 3,
+                  separatorBuilder: (_, _) => const SizedBox(width: 12),
+                  itemBuilder: (_, i) {
+                    switch (i) {
+                      case 0:
+                        return _PersonalityActionCard(
+                          icon: Icons.refresh_rounded,
+                          title: 'quiz.retake_test'.tr(),
+                          subtitle: 'home.retake_quiz_desc'.tr(),
+                          onTap: () {
+                            ref.read(quizProvider.notifier).reset();
+                            context.push(AppRoutes.quiz);
+                          },
+                        );
+                      case 1:
+                        return _PersonalityActionCard(
+                          icon: Icons.insights_rounded,
+                          title: 'home.view_analysis'.tr(),
+                          subtitle: 'home.view_analysis_desc'.tr(),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const PersonalityAnalysisPage(),
+                            ),
+                          ),
+                        );
+                      default:
+                        return _PersonalityActionCard(
+                          icon: Icons.diversity_3_rounded,
+                          title: 'home.friend_compat'.tr(),
+                          subtitle: 'home.friend_compat_desc'.tr(),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const FriendCompatibilityPage(),
+                            ),
+                          ),
+                        );
+                    }
+                  },
+                ),
+              ),
+            ),
+
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Kişilik Eylem Kartı ────────────────────────────────────────────────────────
+
+class _PersonalityActionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _PersonalityActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 168,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: context.colors.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: context.colors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: context.colors.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Icon(icon, color: context.colors.primary, size: 20),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: context.colors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              subtitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                color: context.colors.textSecondary,
+              ),
+            ),
           ],
         ),
       ),
@@ -477,7 +625,7 @@ class _ReviewCarouselCard extends StatelessWidget {
             placeId: review.placeId,
             venueName: review.venueName,
             venueAddress: review.venueAddress,
-            venuePhotoUrl: review.venuePhotoUrl,
+            venuePhotoUrl: review.displayPhotoUrl,
             lat: review.lat,
             lng: review.lng,
           ),
@@ -497,9 +645,9 @@ class _ReviewCarouselCard extends StatelessWidget {
             SizedBox(
               height: 100,
               width: double.infinity,
-              child: review.venuePhotoUrl != null
+              child: review.displayPhotoUrl != null
                   ? CachedNetworkImage(
-                      imageUrl: review.venuePhotoUrl!,
+                      imageUrl: review.displayPhotoUrl!,
                       fit: BoxFit.cover,
                       placeholder: (_, _) =>
                           Container(color: context.colors.border),

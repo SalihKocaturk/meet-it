@@ -381,7 +381,13 @@
     "no_friends_hint": "You don't have any friends yet.",
     "no_friends_cta": "Friends you add will show up here. Invite or add one now!",
     "add_friend_button": "Add Friend",
-    "no_reviews_hint": "No reviews yet. Add the first one!"
+    "no_reviews_hint": "No reviews yet. Add the first one!",
+    "personality_section": "Manage Your Personality",
+    "retake_quiz_desc": "Update your venue recommendations",
+    "view_analysis": "View Personality Analysis",
+    "view_analysis_desc": "See how your profile has changed over time",
+    "friend_compat": "Friend Compatibility",
+    "friend_compat_desc": "Discover who matches you best"
   },
   "friend_profile": {
     "friends_since": "Friends since {date}"
@@ -423,4 +429,24 @@
     "social_butterfly_desc": "You love lively atmospheres and connect easily with new people. Your energy is contagious!",
     "calm_soul_desc": "You prefer peaceful and quiet environments. Deep conversations and meaningful moments matter to you.",
     "adventurer_desc": "You want to experience everything. Unusual activities and exploration make you happy.",
-    "intellectual_desc"
+    "intellectual_desc": "Culture, art and knowledge are important to you. Deep discussions and inspiring venues attract you.",
+    "foodie_desc": "Food is an experience for you. You seek quality flavors and special venues."
+  },
+  "personality_analysis": {
+    "title": "My Personality Analysis",
+    "evolves_hint": "Your profile isn't fixed: it slowly shifts over time as you write reviews for venues you visit. Just receiving a venue recommendation does not change your profile.",
+    "last_updated": "Last updated: {time}"
+  },
+  "friend_compat": {
+    "title": "Friend Compatibility",
+    "no_profile": "Hasn't taken the quiz yet",
+    "percent_match": "{percent}% Match",
+    "your_profile": "Your Profile",
+    "friend_profile": "{name}'s Profile",
+    "tier_excellent": "Excellent match! You have very similar personalities.",
+    "tier_great": "A great match — you'll have a wonderful time together.",
+    "tier_good": "A good match, you share common ground.",
+    "tier_medium": "A moderate match — your differences could make things interesting.",
+    "tier_different": "Quite different personalities, which can also bring new experiences."
+  }
+}

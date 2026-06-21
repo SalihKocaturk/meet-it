@@ -381,7 +381,13 @@
     "no_friends_hint": "Henüz arkadaşın yok.",
     "no_friends_cta": "Arkadaş eklediğinde burada görünecekler. Hemen bir arkadaşını davet et veya ekle!",
     "add_friend_button": "Arkadaş Ekle",
-    "no_reviews_hint": "Henüz yorum yok. İlk yorumu sen ekle!"
+    "no_reviews_hint": "Henüz yorum yok. İlk yorumu sen ekle!",
+    "personality_section": "Kişiliğini Yönet",
+    "retake_quiz_desc": "Mekan önerilerini güncelle",
+    "view_analysis": "Kişilik Analizini İncele",
+    "view_analysis_desc": "Profilinin zamanla nasıl değiştiğini gör",
+    "friend_compat": "Arkadaşlarla Uyum",
+    "friend_compat_desc": "Kim seninle daha uyumlu, keşfet"
   },
   "friend_profile": {
     "friends_since": "{date} tarihinden beri arkadaşsınız"
@@ -423,4 +429,24 @@
     "social_butterfly_desc": "Canlı atmosferleri seven, yeni insanlarla kolayca kaynaşan birisin. Enerjin bulaşıcı!",
     "calm_soul_desc": "Huzurlu ve sessiz ortamları tercih edersin. Derin sohbetler ve anlamlı anlar senin için değerli.",
     "adventurer_desc": "Her deneyimi yaşamak istersin. Sıradışı aktiviteler ve keşifler seni mutlu eder.",
-    "intellectual_desc": "Kültür, sanat ve bilgi se
+    "intellectual_desc": "Kültür, sanat ve bilgi senin için önemli. Derinlikli konuşmalar ve ilham verici mekanlar seni çekiyor.",
+    "foodie_desc": "Yemek senin için bir deneyim. Kaliteli lezzetler ve özel mekanlar arayışındasın."
+  },
+  "personality_analysis": {
+    "title": "Kişilik Analizim",
+    "evolves_hint": "Profilin sabit değil: gittiğin mekanlara yorum yazdıkça kişiliğin zamanla yavaşça değişir. Sadece bir mekan önerisi almak profilini değiştirmez.",
+    "last_updated": "Son güncelleme: {time}"
+  },
+  "friend_compat": {
+    "title": "Arkadaş Uyumu",
+    "no_profile": "Henüz quiz yapmadı",
+    "percent_match": "%{percent} Uyum",
+    "your_profile": "Senin Profilin",
+    "friend_profile": "{name} Profili",
+    "tier_excellent": "Mükemmel uyum! Çok benzer kişiliklere sahipsiniz.",
+    "tier_great": "Harika bir uyum, birlikte güzel zaman geçirebilirsiniz.",
+    "tier_good": "İyi bir uyum, ortak noktalarınız var.",
+    "tier_medium": "Orta seviye bir uyum, farklılıklarınız ilginç olabilir.",
+    "tier_different": "Oldukça farklı kişiliklere sahipsiniz, bu da yeni deneyimler getirebilir."
+  }
+}
