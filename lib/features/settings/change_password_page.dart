@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/widgets/app_text_field.dart';
-import 'package:quickalert/quickalert.dart';
+import 'package:meetit/core/widgets/app_alert.dart';
 
 final currentPasswordControllerProvider =
     Provider.autoDispose<TextEditingController>((ref) {
@@ -41,9 +41,9 @@ class ChangePasswordPage extends ConsumerWidget {
     final confirm = ref.read(confirmPasswordControllerProvider).text.trim();
 
     if (current.isEmpty || newPass.isEmpty || confirm.isEmpty) {
-      QuickAlert.show(
+      showAppAlert(
         context: context,
-        type: QuickAlertType.warning,
+        type: AppAlertType.warning,
         title: 'validation.missing_field'.tr(),
         text: 'change_password.empty_fields'.tr(),
         confirmBtnColor: context.colors.primary,
@@ -52,9 +52,9 @@ class ChangePasswordPage extends ConsumerWidget {
     }
 
     if (newPass.length < 6) {
-      QuickAlert.show(
+      showAppAlert(
         context: context,
-        type: QuickAlertType.error,
+        type: AppAlertType.error,
         title: 'validation.invalid_age'.tr(),
         text: 'change_password.too_short'.tr(),
         confirmBtnColor: context.colors.primary,
@@ -63,9 +63,9 @@ class ChangePasswordPage extends ConsumerWidget {
     }
 
     if (newPass != confirm) {
-      QuickAlert.show(
+      showAppAlert(
         context: context,
-        type: QuickAlertType.error,
+        type: AppAlertType.error,
         title: 'common.error'.tr(),
         text: 'change_password.dont_match'.tr(),
         confirmBtnColor: context.colors.primary,
@@ -91,9 +91,9 @@ class ChangePasswordPage extends ConsumerWidget {
       ref.read(changePasswordLoadingProvider.notifier).state = false;
       if (!context.mounted) return;
 
-      QuickAlert.show(
+      showAppAlert(
         context: context,
-        type: QuickAlertType.success,
+        type: AppAlertType.success,
         title: 'common.success'.tr(),
         text: 'change_password.updated'.tr(),
         confirmBtnColor: context.colors.primary,
@@ -108,9 +108,9 @@ class ChangePasswordPage extends ConsumerWidget {
       final msg = e.code == 'wrong-password'
           ? 'change_password.wrong_password'.tr()
           : '${'change_password.update_failed'.tr()} ${e.message}';
-      QuickAlert.show(
+      showAppAlert(
         context: context,
-        type: QuickAlertType.error,
+        type: AppAlertType.error,
         title: 'common.error'.tr(),
         text: msg,
         confirmBtnColor: context.colors.primary,

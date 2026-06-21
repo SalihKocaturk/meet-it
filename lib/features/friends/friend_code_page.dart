@@ -9,7 +9,7 @@ import 'package:meetit/features/friends/models/friendship_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:quickalert/quickalert.dart';
+import 'package:meetit/core/widgets/app_alert.dart';
 
 class FriendCodePage extends ConsumerStatefulWidget {
   const FriendCodePage({super.key});
@@ -94,9 +94,9 @@ class _FriendCodePageState extends ConsumerState<FriendCodePage> {
 
     if (existing.exists) {
       if (!mounted) return;
-      QuickAlert.show(
+      showAppAlert(
         context: context,
-        type: QuickAlertType.warning,
+        type: AppAlertType.warning,
         title: 'friend_code.already_exists'.tr(),
         text: 'friend_code.already_exists_desc'.tr(),
         confirmBtnColor: context.colors.primary,
@@ -107,9 +107,9 @@ class _FriendCodePageState extends ConsumerState<FriendCodePage> {
     await ref.read(friendsProvider.notifier).sendFriendRequest(targetUser.uid);
 
     if (!mounted) return;
-    QuickAlert.show(
+    showAppAlert(
       context: context,
-      type: QuickAlertType.success,
+      type: AppAlertType.success,
       title: 'friend_code.request_sent'.tr(),
       text: 'friend_code.request_sent_desc'.tr(namedArgs: {'name': targetUser.name}),
       confirmBtnColor: context.colors.primary,

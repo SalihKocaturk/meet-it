@@ -9,7 +9,7 @@ import 'package:meetit/core/widgets/langauge_switcher.dart';
 import 'package:meetit/features/auth/notifiers/auth_notifier.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/auth/providers/sign_in_form_provider.dart';
-import 'package:quickalert/quickalert.dart';
+import 'package:meetit/core/widgets/app_alert.dart';
 
 class SignInPage extends ConsumerWidget {
   const SignInPage({super.key});
@@ -26,9 +26,9 @@ class SignInPage extends ConsumerWidget {
       // Yeni bir hata mesajı geldi
       if (next.errorMessage != null &&
           next.errorMessage != previous?.errorMessage) {
-        QuickAlert.show(
+        showAppAlert(
           context: context,
-          type: QuickAlertType.error,
+          type: AppAlertType.error,
           title: 'auth.sign_in_failed'.tr(),
           text: next.errorMessage!.tr(),
           confirmBtnText: 'common.ok'.tr(),

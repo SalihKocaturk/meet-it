@@ -12,7 +12,7 @@ import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friend_code_page.dart';
 import 'package:meetit/features/match/match_page.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
-import 'package:quickalert/quickalert.dart';
+import 'package:meetit/core/widgets/app_alert.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -25,9 +25,9 @@ class SettingsPage extends ConsumerWidget {
   }
 
   void _showLogoutAlert(BuildContext context, WidgetRef ref) {
-    QuickAlert.show(
+    showAppAlert(
       context: context,
-      type: QuickAlertType.confirm,
+      type: AppAlertType.confirm,
       title: 'settings.sign_out_title'.tr(),
       text: 'settings.sign_out_confirm'.tr(),
       confirmBtnText: 'settings.sign_out_yes'.tr(),
@@ -234,9 +234,9 @@ class SettingsPage extends ConsumerWidget {
                         icon: Icons.info_outline,
                         title: 'settings.about'.tr(),
                         onTap: () {
-                          QuickAlert.show(
+                          showAppAlert(
                             context: context,
-                            type: QuickAlertType.info,
+                            type: AppAlertType.info,
                             title: 'MeetIt',
                             text: 'settings.about_text'.tr(),
                             confirmBtnText: 'common.ok'.tr(),
