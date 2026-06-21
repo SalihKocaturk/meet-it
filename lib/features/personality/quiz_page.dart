@@ -265,7 +265,7 @@ class _OptionTile extends StatelessWidget {
           decoration: BoxDecoration(
             color: isSelected
                 ? context.colors.primary.withOpacity(0.08)
-                : Colors.white,
+                : context.colors.card,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: isSelected
