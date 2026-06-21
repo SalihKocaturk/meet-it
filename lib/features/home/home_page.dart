@@ -5,9 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:meetit/core/constants/app_colors.dart';
-import 'package:meetit/core/router/app_routes.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friend_profile_page.dart';
@@ -15,7 +13,6 @@ import 'package:meetit/features/friends/models/user_friend_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/main/main_page.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
-import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
@@ -281,39 +278,6 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
 
-            // ── Kişilik Profilin ────────────────────────────────────────────
-            //
-            // Carousel'in altında ekranı doldurmayan ciddi bir boşluk vardı
-            // (kısa içerik + uzun ekran). Burada zaten elde olan ama hiçbir
-            // yerde "ana sayfada" gösterilmeyen PersonalityProfile verisini
-            // kullanarak kullanıcıya kendi kişilik dağılımını ve testi
-            // yenileme/alma CTA'sını gösteren bir kart ekledik — hem boşluğu
-            // dolduruyor hem de gerçek, anlamlı bir bilgi sunuyor (sahte
-            // içerik yerine).
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-                child: Text(
-                  'home.personality_section'.tr(),
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: context.colors.textPrimary,
-                  ),
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: currentUser?.personalityProfile != null
-                    ? _PersonalityCard(profile: currentUser!.personalityProfile!)
-                    : _NoPersonalityCard(
-                        onTakeQuiz: () => context.push(AppRoutes.quiz),
-                      ),
-              ),
-            ),
-
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
@@ -409,81 +373,85 @@ class _NoFriendsCard extends StatelessWidget {
   }
 }
 
-// ── Kişilik Profili Yok Kartı (boş durum + CTA) ───────────────────────────────
-//
-// _NoFriendsCard ile aynı görsel dilde: ikon + açıklama + aksiyon butonu.
-// Kullanıcı henüz testi çözmemişse mekan önerileri de kişiselleştirilemiyor,
-// bu yüzden CTA doğrudan quiz sayfasına yönlendiriyor.
-class _NoPersonalityCard extends StatelessWidget {
-  final VoidCallback onTakeQuiz;
-  const _NoPersonalityCard({required this.onTakeQuiz});
+// ── Arkadaş Kartı (Buluş butonlu) ─────────────────────────────────────────────
+
+class _HomeFriendCard extends ConsumerWidget {
+  final UserFriendModel friend;
+  const _HomeFriendCard({required this.friend});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      width: 108,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       decoration: BoxDecoration(
         color: context.colors.card,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: context.colors.border),
       ),
-      child: Row(
+      // Buton bir piksel taşsa bile kartın köşeli kenarının dışına sızmasın.
+      clipBehavior: Clip.hardEdge,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: context.colors.primary.withOpacity(0.1),
-              shape: BoxShape.circle,
+          // Avatar + isim: dokununca arkadaşın profil sayfasına geç.
+          GestureDetector(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => FriendProfilePage(friend: friend),
+              ),
             ),
-            alignment: Alignment.center,
-            child: Icon(
-              Icons.psychology_outlined,
-              color: context.colors.primary,
-              size: 26,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  'home.no_personality_hint'.tr(),
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: context.colors.textPrimary,
-                  ),
+                CircularAvatar(
+                  name: friend.name,
+                  photoUrl: friend.photoUrl,
+                  radius: 24,
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 6),
                 Text(
-                  'home.no_personality_cta'.tr(),
+                  friend.name.split(' ').first,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
-                    color: context.colors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                    color: context.colors.textPrimary,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(height: 8),
           GestureDetector(
-            onTap: onTakeQuiz,
+            onTap: () {
+              // friends_page.dart'taki _ConnectionTile ile aynı desen:
+              // arkadaşı seç + Match sekmesine geç.
+              ref.read(selectedFriendUidProvider.notifier).state = friend.uid;
+              ref.read(mainTabIndexProvider.notifier).state = 1;
+            },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
               decoration: BoxDecoration(
-                color: context.colors.primary,
-                borderRadius: BorderRadius.circular(10),
+                color: context.colors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: context.colors.primary.withOpacity(0.3),
+                ),
               ),
-              child: Text(
-                'home.take_quiz_button'.tr(),
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
+              // Yazı tipi ölçeği büyütülmüş cihazlarda bile metin kartın
+              // dışına taşmasın diye FittedBox ile sıkıştırılıyor.
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'friends.meet'.tr(),
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: context.colors.primary,
+                  ),
                 ),
               ),
             ),
@@ -494,98 +462,135 @@ class _NoPersonalityCard extends StatelessWidget {
   }
 }
 
-// ── Kişilik Profili Kartı ──────────────────────────────────────────────────────
-//
-// Dominant tip (emoji + ad + açıklama) + en yüksek 3 tipin skor barları +
-// testi yenileme butonu. PersonalityType.colorHex zaten modeldeydi ama hiçbir
-// yerde kullanılmıyordu — burada skor barlarının rengi olarak işe koşuldu.
-class _PersonalityCard extends StatelessWidget {
-  final PersonalityProfile profile;
-  const _PersonalityCard({required this.profile});
+// ── Carousel Kartı ────────────────────────────────────────────────────────────
 
-  Color _parseHex(String hex) =>
-      Color(int.parse(hex.substring(1), radix: 16) | 0xFF000000);
+class _ReviewCarouselCard extends StatelessWidget {
+  final VenueReviewModel review;
+  const _ReviewCarouselCard({required this.review});
 
   @override
   Widget build(BuildContext context) {
-    final dominant = profile.dominantType;
-    final topTypes = profile.rankedTypes.take(3).toList();
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.colors.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.colors.border),
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => VenueDetailPage(
+            placeId: review.placeId,
+            venueName: review.venueName,
+            venueAddress: review.venueAddress,
+            venuePhotoUrl: review.venuePhotoUrl,
+            lat: review.lat,
+            lng: review.lng,
+          ),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(dominant.emoji, style: const TextStyle(fontSize: 28)),
-              const SizedBox(width: 10),
-              Expanded(
+      child: Container(
+        width: 220,
+        decoration: BoxDecoration(
+          color: context.colors.card,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: context.colors.border),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              height: 100,
+              width: double.infinity,
+              child: review.venuePhotoUrl != null
+                  ? CachedNetworkImage(
+                      imageUrl: review.venuePhotoUrl!,
+                      fit: BoxFit.cover,
+                      placeholder: (_, _) =>
+                          Container(color: context.colors.border),
+                      errorWidget: (_, _, _) => Container(
+                        color: context.colors.primary.withOpacity(0.08),
+                        child: Icon(
+                          Icons.location_on,
+                          color: context.colors.primary,
+                          size: 28,
+                        ),
+                      ),
+                    )
+                  : Container(
+                      color: context.colors.primary.withOpacity(0.08),
+                      child: Icon(
+                        Icons.location_on,
+                        color: context.colors.primary,
+                        size: 28,
+                      ),
+                    ),
+            ),
+            // Görselin altındaki metin bloğu Expanded içine alındı —
+            // kart yüksekliği ne olursa olsun (font ölçeği, küçük piksel
+            // farkları vb.) Column kalan alana sığar, RenderFlex
+            // overflow'u (örn. eski "1px overflow" uyarısı) imkansız hale
+            // gelir.
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      dominant.displayName,
+                      review.venueName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: context.colors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        ...List.generate(
+                          5,
+                          (i) => Icon(
+                            i < review.rating
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded,
+                            size: 12,
+                            color: i < review.rating
+                                ? const Color(0xFFFFB800)
+                                : context.colors.hint,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (review.comment != null &&
+                        review.comment!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        review.comment!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: context.colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 4),
                     Text(
-                      dominant.description,
-                      maxLines: 2,
+                      review.authorName,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 12,
-                        color: context.colors.textSecondary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: context.colors.primary,
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          ...topTypes.map(
-            (entry) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 96,
-                    child: Text(
-                      '${entry.key.emoji} ${entry.key.displayName}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: context.colors.textSecondary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: LinearProgressIndicator(
-                        value: entry.value.clamp(0.0, 1.0),
-                        minHeight: 8,
-                        backgroundColor: context.colors.border,
-                        valueColor: AlwaysStoppedAnimation(
-                          _parseHex(entry.key.colorHex),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-           
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

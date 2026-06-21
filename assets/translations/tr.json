@@ -381,12 +381,7 @@
     "no_friends_hint": "Henüz arkadaşın yok.",
     "no_friends_cta": "Arkadaş eklediğinde burada görünecekler. Hemen bir arkadaşını davet et veya ekle!",
     "add_friend_button": "Arkadaş Ekle",
-    "no_reviews_hint": "Henüz yorum yok. İlk yorumu sen ekle!",
-    "personality_section": "Kişilik Profilin",
-    "no_personality_hint": "Henüz testi çözmedin.",
-    "no_personality_cta": "Kişilik tipini öğren, sana özel mekan önerileri al.",
-    "take_quiz_button": "Teste Başla",
-    "retake_quiz_button": "Testi Yenile"
+    "no_reviews_hint": "Henüz yorum yok. İlk yorumu sen ekle!"
   },
   "friend_profile": {
     "friends_since": "{date} tarihinden beri arkadaşsınız"
@@ -426,4 +421,6 @@
     "adventurer": "Maceraperest",
     "foodie": "Gurme",
     "social_butterfly_desc": "Canlı atmosferleri seven, yeni insanlarla kolayca kaynaşan birisin. Enerjin bulaşıcı!",
-    "calm_soul_desc":
+    "calm_soul_desc": "Huzurlu ve sessiz ortamları tercih edersin. Derin sohbetler ve anlamlı anlar senin için değerli.",
+    "adventurer_desc": "Her deneyimi yaşamak istersin. Sıradışı aktiviteler ve keşifler seni mutlu eder.",
+    "intellectual_desc": "Kültür, sanat ve bilgi se
