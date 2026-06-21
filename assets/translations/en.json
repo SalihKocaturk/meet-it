@@ -38,8 +38,8 @@
     "password_hint": "Enter your password",
     "name_surname": "Full Name",
     "name_hint": "Your first and last name",
-    "city_location": "City / Location",
-    "location_hint": "Istanbul, Ankara...",
+    "city_location": "City / District",
+    "location_hint": "e.g. Istanbul, Kadikoy",
     "age": "Age (18+)",
     "age_hint": "18",
     "gender": "Gender",
@@ -325,6 +325,7 @@
     "title": "Edit Profile",
     "section_personal": "PERSONAL INFO",
     "email_locked": "Email cannot be changed.",
+    "location_helper": "Just your city and district is enough, no need for a detailed address.",
     "save_changes": "Save Changes",
     "saved": "Saved",
     "profile_updated": "Your profile has been updated.",
@@ -378,7 +379,12 @@
     "friends_section": "Your Friends",
     "featured_section": "Featured Venues and Reviews",
     "no_friends_hint": "You don't have any friends yet.",
+    "no_friends_cta": "Friends you add will show up here. Invite or add one now!",
+    "add_friend_button": "Add Friend",
     "no_reviews_hint": "No reviews yet. Add the first one!"
+  },
+  "friend_profile": {
+    "friends_since": "Friends since {date}"
   },
   "venue_detail": {
     "title": "Venue",

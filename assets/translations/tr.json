@@ -38,8 +38,8 @@
     "password_hint": "Şifrenizi girin",
     "name_surname": "Ad Soyad",
     "name_hint": "Adın ve soyadın",
-    "city_location": "Şehir / Konum",
-    "location_hint": "İstanbul, Ankara...",
+    "city_location": "Şehir / İlçe",
+    "location_hint": "Örn: İstanbul, Kadıköy",
     "age": "Yaş (+18)",
     "age_hint": "18",
     "gender": "Cinsiyet",
@@ -325,6 +325,7 @@
     "title": "Profili Düzenle",
     "section_personal": "KİŞİSEL BİLGİLER",
     "email_locked": "Email adresi değiştirilemez.",
+    "location_helper": "Yalnızca şehir ve ilçe yazman yeterli, detaylı adres girme.",
     "save_changes": "Değişiklikleri Kaydet",
     "saved": "Kaydedildi",
     "profile_updated": "Profilin başarıyla güncellendi.",
@@ -378,7 +379,12 @@
     "friends_section": "Arkadaşların",
     "featured_section": "Öne Çıkan Mekanlar ve Yorumlar",
     "no_friends_hint": "Henüz arkadaşın yok.",
+    "no_friends_cta": "Arkadaş eklediğinde burada görünecekler. Hemen bir arkadaşını davet et veya ekle!",
+    "add_friend_button": "Arkadaş Ekle",
     "no_reviews_hint": "Henüz yorum yok. İlk yorumu sen ekle!"
+  },
+  "friend_profile": {
+    "friends_since": "{date} tarihinden beri arkadaşsınız"
   },
   "venue_detail": {
     "title": "Mekan",
