@@ -14,12 +14,12 @@ import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/models/user_friend_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
+import 'package:meetit/features/match/attempt_meet_page.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
+import 'package:meetit/features/match/providers/saved_venues_provider.dart';
 import 'package:meetit/features/match/providers/venue_search_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
-import 'package:meetit/features/match/providers/saved_venues_provider.dart';
-import 'package:meetit/features/match/attempt_meet_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class MatchPage extends ConsumerWidget {
@@ -99,7 +99,8 @@ class MatchPage extends ConsumerWidget {
                           const SizedBox(height: 8),
                           _LocationField(
                             defaultHint:
-                                currentUser?.location ?? 'match.location_hint'.tr(),
+                                currentUser?.location ??
+                                'match.location_hint'.tr(),
                           ),
                         ],
                       ),
@@ -424,8 +425,9 @@ class MatchPage extends ConsumerWidget {
                                   ),
                                   style: OutlinedButton.styleFrom(
                                     side: BorderSide(
-                                      color: context.colors.primary
-                                          .withOpacity(0.5),
+                                      color: context.colors.primary.withOpacity(
+                                        0.5,
+                                      ),
                                     ),
                                     padding: const EdgeInsets.symmetric(
                                       vertical: 13,
@@ -476,7 +478,9 @@ class _PersonalityBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'match.personality_type_label'.tr(namedArgs: {'name': type.displayName}),
+                  'match.personality_type_label'.tr(
+                    namedArgs: {'name': type.displayName},
+                  ),
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -614,11 +618,9 @@ class _LocationField extends ConsumerWidget {
       // girişe gerek kalmasın, arkadaşlarımız da benim konumumu DB'den
       // güvenilir şekilde okuyabilsin.
       if (result.hasCoords) {
-        await ref.read(authProvider.notifier).updateLocation(
-              result.lat!,
-              result.lng!,
-              address: result.text,
-            );
+        await ref
+            .read(authProvider.notifier)
+            .updateLocation(result.lat!, result.lng!, address: result.text);
       }
     }
 
@@ -1376,7 +1378,9 @@ class _VenueResultsView extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     _PersonalityPill(
-                      name: currentUser?.name.split(' ').first ?? 'match.you'.tr(),
+                      name:
+                          currentUser?.name.split(' ').first ??
+                          'match.you'.tr(),
                       type: currentUser?.personalityProfile?.dominantType,
                     ),
                     Column(
@@ -1589,11 +1593,13 @@ class _VenueResultsView extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'match.venue_count'.tr(namedArgs: {
-                        'count': '${searchState.venues.length}',
-                        'page': '${searchState.currentPage + 1}',
-                        'total': '${searchState.totalPages}',
-                      }),
+                      'match.venue_count'.tr(
+                        namedArgs: {
+                          'count': '${searchState.venues.length}',
+                          'page': '${searchState.currentPage + 1}',
+                          'total': '${searchState.totalPages}',
+                        },
+                      ),
                       style: TextStyle(
                         fontSize: 13,
                         color: context.colors.textSecondary,
@@ -1995,13 +2001,20 @@ class _VenueCard extends ConsumerWidget {
                       onTap: () async {
                         final uri = Uri.parse(place.googleMapsUrl);
                         if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          await launchUrl(
+                            uri,
+                            mode: LaunchMode.externalApplication,
+                          );
                         }
                       },
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.open_in_new, size: 13, color: context.colors.hint),
+                          Icon(
+                            Icons.open_in_new,
+                            size: 13,
+                            color: context.colors.hint,
+                          ),
                           SizedBox(width: 3),
                           Text(
                             'match.open_maps'.tr(),
@@ -2021,8 +2034,11 @@ class _VenueCard extends ConsumerWidget {
                 const SizedBox(height: 10),
                 Consumer(
                   builder: (ctx, ref, _) {
-                    final isSaved = ref.watch(savedVenuesProvider
-                        .select((list) => list.any((p) => p.placeId == place.placeId)));
+                    final isSaved = ref.watch(
+                      savedVenuesProvider.select(
+                        (list) => list.any((p) => p.placeId == place.placeId),
+                      ),
+                    );
                     return Row(
                       children: [
                         // Kaydet butonu
@@ -2146,4 +2162,3 @@ class _VenueCard extends ConsumerWidget {
     );
   }
 }
-                                                             
