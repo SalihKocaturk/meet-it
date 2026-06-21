@@ -612,12 +612,24 @@ class _HomeFriendCard extends ConsumerWidget {
 
 // ── Carousel Kartı ────────────────────────────────────────────────────────────
 
-class _ReviewCarouselCard extends StatelessWidget {
+class _ReviewCarouselCard extends ConsumerWidget {
   final VenueReviewModel review;
   const _ReviewCarouselCard({required this.review});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // NOT: review.displayPhotoUrl, Firestore'da SAKLI veriye (eski yorumlarda
+    // hâlâ kırık olabilen embedded-key URL veya hiç referans yok) dayanıyor.
+    // VenueDetailPage ise placeId üzerinden Place Details'ten HER ZAMAN taze
+    // bir foto çekiyor (venuePhotosProvider) — bu yüzden detay sayfasında foto
+    // görünüyor ama ana sayfa carousel'inde görünmüyordu. Aynı taze-çekme
+    // mekanizması burada da kullanılarak placeId'si olan TÜM yorumlar (eski
+    // veya yeni, fark etmez) için çalışan bir foto garanti ediliyor.
+    final fetchedPhotos = ref.watch(venuePhotosProvider(review.placeId));
+    final freshPhotoUrl =
+        fetchedPhotos.value?.isNotEmpty == true ? fetchedPhotos.value!.first : null;
+    final displayUrl = freshPhotoUrl ?? review.displayPhotoUrl;
+
     return GestureDetector(
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
@@ -625,7 +637,7 @@ class _ReviewCarouselCard extends StatelessWidget {
             placeId: review.placeId,
             venueName: review.venueName,
             venueAddress: review.venueAddress,
-            venuePhotoUrl: review.displayPhotoUrl,
+            venuePhotoUrl: displayUrl,
             lat: review.lat,
             lng: review.lng,
           ),
@@ -645,9 +657,9 @@ class _ReviewCarouselCard extends StatelessWidget {
             SizedBox(
               height: 100,
               width: double.infinity,
-              child: review.displayPhotoUrl != null
+              child: displayUrl != null
                   ? CachedNetworkImage(
-                      imageUrl: review.displayPhotoUrl!,
+                      imageUrl: displayUrl,
                       fit: BoxFit.cover,
                       placeholder: (_, _) =>
                           Container(color: context.colors.border),
