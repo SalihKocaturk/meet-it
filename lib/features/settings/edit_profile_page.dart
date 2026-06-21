@@ -12,7 +12,7 @@ import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/widgets/app_text_field.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
-import 'package:quickalert/quickalert.dart';
+import 'package:meetit/core/widgets/app_alert.dart';
 
 final editNameControllerProvider = Provider.autoDispose<TextEditingController>((
   ref,
@@ -95,9 +95,9 @@ class EditProfilePage extends ConsumerWidget {
     final currentUser = ref.read(currentUserProvider);
 
     if (name.isEmpty) {
-      QuickAlert.show(
+      showAppAlert(
         context: context,
-        type: QuickAlertType.warning,
+        type: AppAlertType.warning,
         title: 'validation.missing_field'.tr(),
         text: 'edit_profile.missing_name'.tr(),
         confirmBtnColor: context.colors.primary,
@@ -107,9 +107,9 @@ class EditProfilePage extends ConsumerWidget {
 
     final age = ageText.isNotEmpty ? int.tryParse(ageText) : null;
     if (ageText.isNotEmpty && (age == null || age < 18)) {
-      QuickAlert.show(
+      showAppAlert(
         context: context,
-        type: QuickAlertType.error,
+        type: AppAlertType.error,
         title: 'validation.invalid_age'.tr(),
         text: 'edit_profile.invalid_age'.tr(),
         confirmBtnColor: context.colors.primary,
@@ -161,9 +161,9 @@ class EditProfilePage extends ConsumerWidget {
       if (!context.mounted) return;
       if (!context.mounted) return;
       final nav = Navigator.of(context);
-      QuickAlert.show(
+      showAppAlert(
         context: context,
-        type: QuickAlertType.success,
+        type: AppAlertType.success,
         title: 'edit_profile.saved'.tr(),
         text: 'edit_profile.profile_updated'.tr(),
         confirmBtnColor: context.colors.primary,
@@ -175,9 +175,9 @@ class EditProfilePage extends ConsumerWidget {
     } catch (e) {
       ref.read(editProfileLoadingProvider.notifier).state = false;
       if (!context.mounted) return;
-      QuickAlert.show(
+      showAppAlert(
         context: context,
-        type: QuickAlertType.error,
+        type: AppAlertType.error,
         title: 'common.error'.tr(),
         text: 'edit_profile.update_error'.tr(),
         confirmBtnColor: context.colors.primary,
@@ -381,6 +381,18 @@ class EditProfilePage extends ConsumerWidget {
                 hint: 'auth.location_hint'.tr(),
                 prefixIcon: Icons.location_on_outlined,
                 textInputAction: TextInputAction.next,
+              ),
+              // Detaylı/uzun adres girilirse profil sayfasında taşma
+              // olabiliyor — yalnızca şehir/ilçe girilmesi öneriliyor.
+              Padding(
+                padding: const EdgeInsets.only(top: 4, left: 4),
+                child: Text(
+                  'edit_profile.location_helper'.tr(),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: context.colors.hint.withOpacity(0.8),
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
 
