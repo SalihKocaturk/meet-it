@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -239,11 +240,18 @@ class AuthNotifier extends Notifier<AuthState> {
       await _saveSession(savedUser);
       state = state.copyWith(user: savedUser, isLoading: false);
     } on FirebaseAuthException catch (e) {
+      // TEŞHİS: Gerçek hata kodu görünür olsun (geçici debug log — sorun
+      // bulununca kaldırılacak). 'flutter run' loglarında "[GoogleSignIn]"
+      // ile filtrelenebilir.
+      debugPrint('[GoogleSignIn] FirebaseAuthException code=${e.code} message=${e.message}');
       state = state.copyWith(
         isLoading: false,
         errorMessage: _authError(e.code),
       );
-    } catch (e) {
+    } catch (e, st) {
+      // TEŞHİS: catch(e) öncesi gerçek istisna yutuluyordu — şimdi yazdırılıyor.
+      debugPrint('[GoogleSignIn] unexpected error: $e');
+      debugPrint('[GoogleSignIn] stack: $st');
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'auth.sign_in_failed',
