@@ -1,3 +1,5 @@
+import 'package:meetit/features/match/models/place_result.dart';
+
 /// Firestore `venue_reviews` koleksiyonundaki tek bir mekan yorumu.
 ///
 /// PostModel'in yerini alır — paylaşım yerine, kullanıcının gerçekten
@@ -14,6 +16,16 @@ class VenueReviewModel {
   final String venueName;
   final String? venueAddress;
   final String? venuePhotoUrl;
+
+  /// Google Places `photo_reference` token'ı — VARSA, gösterimde her zaman
+  /// bu tercih edilir. SEBEP: [venuePhotoUrl] içine API key GÖMÜLÜ olarak
+  /// kaydediliyordu (bkz. PlaceResult.buildPhotoUrl); key bir gün
+  /// iptal edilip yenisiyle değiştirilirse (örn. sızıntı sonrası rotasyon),
+  /// eski yorumlardaki gömülü-key'li URL'ler kalıcı olarak 403 ile
+  /// kırılıyordu — "mekanların çoğunun fotosu yüklenmiyor" şikayetinin asıl
+  /// kaynağı buydu. Reference'tan URL'yi HER render'da güncel key ile
+  /// yeniden üretmek bu sınıfın kalıcı kırılmasını engeller.
+  final String? venuePhotoReference;
   final double? lat;
   final double? lng;
 
@@ -40,6 +52,7 @@ class VenueReviewModel {
     required this.venueName,
     this.venueAddress,
     this.venuePhotoUrl,
+    this.venuePhotoReference,
     this.lat,
     this.lng,
     required this.rating,
@@ -48,6 +61,14 @@ class VenueReviewModel {
     this.likedBy = const [],
     required this.createdAt,
   });
+
+  /// Gösterimde kullanılması gereken mekan fotoğrafı URL'si.
+  /// [venuePhotoReference] varsa GÜNCEL API key ile yeniden üretilir
+  /// (bkz. üstteki alan açıklaması); yoksa (eski yorumlar) eski
+  /// [venuePhotoUrl] kullanılır — geriye dönük uyumluluk için.
+  String? get displayPhotoUrl => venuePhotoReference != null
+      ? PlaceResult.buildPhotoUrl(venuePhotoReference!)
+      : venuePhotoUrl;
 
   int get likeCount => likedBy.length;
 
@@ -63,6 +84,7 @@ class VenueReviewModel {
       venueName: map['venueName'] as String? ?? '',
       venueAddress: map['venueAddress'] as String?,
       venuePhotoUrl: map['venuePhotoUrl'] as String?,
+      venuePhotoReference: map['venuePhotoReference'] as String?,
       lat: (map['lat'] as num?)?.toDouble(),
       lng: (map['lng'] as num?)?.toDouble(),
       rating: (map['rating'] as num?)?.toInt() ?? 0,
@@ -83,6 +105,8 @@ class VenueReviewModel {
         'venueName': venueName,
         if (venueAddress != null) 'venueAddress': venueAddress,
         if (venuePhotoUrl != null) 'venuePhotoUrl': venuePhotoUrl,
+        if (venuePhotoReference != null)
+          'venuePhotoReference': venuePhotoReference,
         if (lat != null) 'lat': lat,
         if (lng != null) 'lng': lng,
         'rating': rating,
@@ -106,6 +130,7 @@ class VenueReviewModel {
         venueName: venueName,
         venueAddress: venueAddress,
         venuePhotoUrl: venuePhotoUrl,
+        venuePhotoReference: venuePhotoReference,
         lat: lat,
         lng: lng,
         rating: rating ?? this.rating,

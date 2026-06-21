@@ -145,6 +145,12 @@ class ReviewNotifier extends Notifier<ReviewState> {
         venueName: venue.name,
         venueAddress: venue.vicinity,
         venuePhotoUrl: venuePhotoUrlOverride ?? venue.photoUrl,
+        // override verilmediyse (yeni, gerçek bir PlaceResult'tan ekleniyorsa)
+        // ham photo_reference de saklanır — gösterimde URL her zaman GÜNCEL
+        // API key ile yeniden üretilebilsin diye (bkz. VenueReviewModel.
+        // displayPhotoUrl açıklaması — key rotasyonunda eski URL'ler kırılıyordu).
+        venuePhotoReference:
+            venuePhotoUrlOverride == null ? venue.photoReference : null,
         lat: venue.lat,
         lng: venue.lng,
         rating: rating,

@@ -339,7 +339,7 @@ class _FriendReviewsGrid extends StatelessWidget {
                   placeId: review.placeId,
                   venueName: review.venueName,
                   venueAddress: review.venueAddress,
-                  venuePhotoUrl: review.venuePhotoUrl,
+                  venuePhotoUrl: review.displayPhotoUrl,
                   lat: review.lat,
                   lng: review.lng,
                 ),

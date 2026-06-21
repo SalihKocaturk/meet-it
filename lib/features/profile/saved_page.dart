@@ -484,7 +484,7 @@ class _SearchResults extends StatelessWidget {
       separatorBuilder: (_, _) => const Divider(height: 1),
       itemBuilder: (ctx, i) {
         final r = results[i];
-        final img = r.photoUrl ?? r.venuePhotoUrl;
+        final img = r.photoUrl ?? r.displayPhotoUrl;
         return ListTile(
           contentPadding: const EdgeInsets.symmetric(vertical: 6),
           leading: ClipRRect(
@@ -544,7 +544,7 @@ class _SearchResults extends StatelessWidget {
                 placeId: r.placeId,
                 venueName: r.venueName,
                 venueAddress: r.venueAddress,
-                venuePhotoUrl: r.venuePhotoUrl,
+                venuePhotoUrl: r.displayPhotoUrl,
                 lat: r.lat,
                 lng: r.lng,
               ),
@@ -624,7 +624,7 @@ class _ReviewListPage extends StatelessWidget {
               itemCount: reviews.length,
               itemBuilder: (context, i) {
                 final review = reviews[i];
-                final imgUrl = review.photoUrl ?? review.venuePhotoUrl;
+                final imgUrl = review.photoUrl ?? review.displayPhotoUrl;
                 return GestureDetector(
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
@@ -632,7 +632,7 @@ class _ReviewListPage extends StatelessWidget {
                         placeId: review.placeId,
                         venueName: review.venueName,
                         venueAddress: review.venueAddress,
-                        venuePhotoUrl: review.venuePhotoUrl,
+                        venuePhotoUrl: review.displayPhotoUrl,
                         lat: review.lat,
                         lng: review.lng,
                       ),
