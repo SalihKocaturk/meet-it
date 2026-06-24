@@ -8,6 +8,7 @@ import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/models/user_model.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
+import 'package:meetit/features/main/main_page.dart' show mainTabIndexProvider;
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/providers/saved_venues_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
@@ -17,6 +18,16 @@ import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:meetit/core/widgets/app_alert.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+/// Kaydedilen/tarif alınan mekanlar listesinde "tekrar tarif al" butonuna
+/// basılınca Google Maps'i mekanın konumuyla açar.
+Future<void> _reopenDirections(PlaceResult place) async {
+  final uri = Uri.parse(place.googleMapsUrl);
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+}
 
 // Profil tab index
 final profileTabProvider = StateProvider.autoDispose<int>((ref) => 0);
@@ -166,7 +177,12 @@ class _ProfileHeader extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     _Stat(label: 'profile.stat_posts'.tr(), value: postsCount),
-                    _Stat(label: 'profile.stat_friends'.tr(), value: friendsCount),
+                    _Stat(
+                      label: 'profile.stat_friends'.tr(),
+                      value: friendsCount,
+                      onTap: () =>
+                          ref.read(mainTabIndexProvider.notifier).state = 2,
+                    ),
                     _Stat(label: 'profile.stat_likes'.tr(), value: totalLikes),
                   ],
                 ),
@@ -235,12 +251,13 @@ class _ProfileHeader extends ConsumerWidget {
 class _Stat extends StatelessWidget {
   final String label;
   final int value;
+  final VoidCallback? onTap;
 
-  const _Stat({required this.label, required this.value});
+  const _Stat({required this.label, required this.value, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final content = Column(
       children: [
         Text(
           '$value',
@@ -255,6 +272,14 @@ class _Stat extends StatelessWidget {
           style: TextStyle(fontSize: 11, color: context.colors.textSecondary),
         ),
       ],
+    );
+
+    if (onTap == null) return content;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: content,
     );
   }
 }
@@ -515,10 +540,22 @@ class _SavedVenuesList extends ConsumerWidget {
       separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (_, i) => _VenueTile(
         place: venues[i],
-        trailing: GestureDetector(
-          onTap: () =>
-              ref.read(savedVenuesProvider.notifier).toggle(venues[i]),
-          child: Icon(Icons.bookmark, color: context.colors.primary, size: 22),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GestureDetector(
+              onTap: () =>
+                  ref.read(savedVenuesProvider.notifier).toggle(venues[i]),
+              child: Icon(Icons.bookmark,
+                  color: context.colors.primary, size: 22),
+            ),
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: () => _reopenDirections(venues[i]),
+              child: Icon(Icons.directions_outlined,
+                  color: context.colors.primary, size: 22),
+            ),
+          ],
         ),
       ),
     );
@@ -551,31 +588,45 @@ class _NavigatedVenuesList extends ConsumerWidget {
           place: place,
           // Eski "Feedde Paylaş" (CreatePostPage) butonu yerine "Yorum Ekle" —
           // bu mekan zaten navigatedVenuesProvider'da olduğu için doğrudan
-          // _AddReviewSheet açılabiliyor.
-          trailing: GestureDetector(
-            onTap: () => showAddReviewSheet(context, ref, place),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: context.colors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.add_comment_outlined,
-                      size: 13, color: context.colors.primary),
-                  const SizedBox(width: 4),
-                  Text(
-                    'profile.add_review'.tr(),
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: context.colors.primary,
-                        fontWeight: FontWeight.w600),
+          // _AddReviewSheet açılabiliyor. Ayrıca insanlar bu mekana zaten bir
+          // kez tarif aldığı için tekrar tarif alabilmesi için bir buton da
+          // eklendi.
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GestureDetector(
+                onTap: () => showAddReviewSheet(context, ref, place),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: context.colors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add_comment_outlined,
+                          size: 13, color: context.colors.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        'profile.add_review'.tr(),
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: context.colors.primary,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 10),
+              GestureDetector(
+                onTap: () => _reopenDirections(place),
+                child: Icon(Icons.directions_outlined,
+                    color: context.colors.primary, size: 22),
+              ),
+            ],
           ),
         );
       },

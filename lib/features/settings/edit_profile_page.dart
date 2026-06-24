@@ -7,12 +7,16 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/widgets/app_text_field.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
+import 'package:meetit/features/auth/models/user_model.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/core/widgets/app_alert.dart';
+import 'package:meetit/features/match/match_page.dart' show MapLocationPickerPage;
+import 'package:meetit/features/match/providers/match_provider.dart';
 
 final editNameControllerProvider = Provider.autoDispose<TextEditingController>((
   ref,
@@ -71,6 +75,36 @@ class EditProfilePage extends ConsumerWidget {
     );
     if (picked != null) {
       ref.read(editPhotoFileProvider.notifier).state = File(picked.path);
+    }
+  }
+
+  // Diğer yerlerdeki (Match, Settings) "konum güncelle" akışıyla aynı
+  // davranış: harita seçiciyi açar, seçilen konumu hem text alanına yazar
+  // hem de doğrudan Firestore'a kaydeder — kullanıcı "Kaydet"e basmadan
+  // bile konum DB'de güncel olur.
+  Future<void> _pickLocation(
+    BuildContext context,
+    WidgetRef ref,
+    TextEditingController locationCtrl,
+  ) async {
+    final currentUser = ref.read(currentUserProvider);
+    final result = await Navigator.of(context).push<UserLocation>(
+      MaterialPageRoute(
+        builder: (_) => MapLocationPickerPage(
+          initial: (currentUser?.hasCoords ?? false)
+              ? LatLng(currentUser!.lat!, currentUser.lng!)
+              : null,
+        ),
+      ),
+    );
+    if (result == null) return;
+
+    locationCtrl.text = result.text;
+
+    if (result.hasCoords) {
+      await ref
+          .read(authProvider.notifier)
+          .updateLocation(result.lat!, result.lng!, address: result.text);
     }
   }
 
@@ -143,19 +177,32 @@ class EditProfilePage extends ConsumerWidget {
             .update(updates);
       }
 
-      // Firebase Auth display name güncelle
-      await FirebaseAuth.instance.currentUser?.updateDisplayName(name);
+      // Firebase Auth display name güncelle — bu adım başarısız olsa bile
+      // (örn. yeniden kimlik doğrulama istenirse) aşağıdaki local state
+      // güncellemesi mutlaka çalışmalı, yoksa Firestore'a yazılan yeni isim
+      // Riverpod state'ine hiç yansımaz ve avatar/baş harf eski isimde
+      // kalır (uygulamayı yeniden başlatana kadar).
+      try {
+        await FirebaseAuth.instance.currentUser?.updateDisplayName(name);
+      } catch (_) {
+        // Sessizce yut — kritik olmayan bir adım, asıl veri Firestore'da.
+      }
 
-      // Local state güncelle
-      final updatedUser = currentUser?.copyWith(
-        name: name,
-        location: location.isNotEmpty ? location : null,
-        age: age,
-        gender: gender,
-        photoUrl: photoUrl,
-      );
-      if (updatedUser != null) {
-        await ref.read(authProvider.notifier).updateUser(updatedUser);
+      // Local state güncelle — `currentUser?.copyWith(...)` yerine Firestore'dan
+      // AZ ÖNCE YAZDIĞIMIZ dokümanı tekrar okuyup state'e yazıyoruz. Bunun
+      // sebebi: eğer `currentUser` (sayfa açılırken alınan anlık görüntü)
+      // herhangi bir nedenle null veya bayat olsaydı, `currentUser?.copyWith`
+      // sessizce null dönerdi ve `updateUser()` HİÇ ÇAĞRILMAZDI — Firestore'a
+      // yeni isim yazılmış olsa bile Riverpod state'i (ve dolayısıyla avatar/
+      // baş harf) eski isimde kalırdı. Firestore'dan taze veri okumak bu
+      // sınıfın tüm olası null/bayat-state senaryolarını ortadan kaldırıyor.
+      if (uid != null) {
+        final freshSnap =
+            await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        if (freshSnap.exists) {
+          final updatedUser = UserModel.fromMap(freshSnap.data()!);
+          await ref.read(authProvider.notifier).updateUser(updatedUser);
+        }
       }
 
       if (!context.mounted) return;
@@ -333,7 +380,7 @@ class EditProfilePage extends ConsumerWidget {
                   vertical: 14,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F5),
+                  color: context.colors.card,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: context.colors.border),
                 ),
@@ -375,12 +422,22 @@ class EditProfilePage extends ConsumerWidget {
 
               const SizedBox(height: 16),
 
-              AppTextField(
-                controller: locationCtrl,
-                label: 'auth.city_location'.tr(),
-                hint: 'auth.location_hint'.tr(),
-                prefixIcon: Icons.location_on_outlined,
-                textInputAction: TextInputAction.next,
+              GestureDetector(
+                onTap: () => _pickLocation(context, ref, locationCtrl),
+                child: AbsorbPointer(
+                  child: AppTextField(
+                    controller: locationCtrl,
+                    label: 'auth.city_location'.tr(),
+                    hint: 'auth.location_hint'.tr(),
+                    prefixIcon: Icons.location_on_outlined,
+                    suffixIcon: Icon(
+                      Icons.chevron_right,
+                      size: 18,
+                      color: context.colors.hint,
+                    ),
+                    readOnly: true,
+                  ),
+                ),
               ),
               // Detaylı/uzun adres girilirse profil sayfasında taşma
               // olabiliyor — yalnızca şehir/ilçe girilmesi öneriliyor.
