@@ -67,3 +67,9 @@ key.properties
 android/secrets.properties
 dart_defines.json
 !dart_defines.example.json
+
+# Thesis / presentation working files (not part of the app source)
+.tez_work12/
+SUNUM_NOTLARI.md
+*_MeetIt.pdf
+appimages/
