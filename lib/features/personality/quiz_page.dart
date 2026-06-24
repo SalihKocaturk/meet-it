@@ -70,6 +70,14 @@ class _QuizPageState extends ConsumerState<QuizPage>
     _fadeController.forward(from: 0);
   }
 
+  void _exitQuiz() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppRoutes.main);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final quizState = ref.watch(quizProvider);
@@ -96,26 +104,25 @@ class _QuizPageState extends ConsumerState<QuizPage>
               // Üst bar: geri + ilerleme
               Row(
                 children: [
-                  if (quizState.currentQuestionIndex > 0)
-                    GestureDetector(
-                      onTap: _animateToPrev,
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: context.colors.card,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: context.colors.border),
-                        ),
-                        child: Icon(
-                          Icons.arrow_back_ios_new,
-                          size: 16,
-                          color: context.colors.textPrimary,
-                        ),
+                  GestureDetector(
+                    onTap: quizState.currentQuestionIndex > 0
+                        ? _animateToPrev
+                        : _exitQuiz,
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: context.colors.card,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: context.colors.border),
                       ),
-                    )
-                  else
-                    SizedBox(width: 36),
+                      child: Icon(
+                        Icons.arrow_back_ios_new,
+                        size: 16,
+                        color: context.colors.textPrimary,
+                      ),
+                    ),
+                  ),
                   SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -157,7 +164,7 @@ class _QuizPageState extends ConsumerState<QuizPage>
               // Başlık
               Center(
                 child: Text(
-                  '🧠 ${'quiz.title'.tr()}',
+                  'quiz.title'.tr(),
                   style: TextStyle(
                     fontSize: 13,
                     color: context.colors.primary,

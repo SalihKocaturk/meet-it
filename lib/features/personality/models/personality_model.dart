@@ -71,36 +71,72 @@ extension PersonalityTypeX on PersonalityType {
 // [PersonalityProfile.evolvedWith] tarafından kullanılır. Bir mekanın Google
 // Places `types` alanındaki kategoriler burada eşleşirse, o kategorinin
 // "taşıdığı" kişilik sinyali (0.0–1.0 ağırlıkla, birden fazla tipe
-// dağıtılabilir) profile küçük bir oranda karıştırılır. Eşlemeler kabaca
-// `_venueMap`'teki Türkçe etiketlerle aynı mantığı, gerçek Google kategori
-// adları üzerinden yansıtır.
+// dağıtılabilir) profile küçük bir oranda karıştırılır.
+//
+// ÖNEMLİ — TUTARLILIK NOTU: Bu tablo, mekan ARAMA/EŞLEŞTİRME tarafında
+// kullanılan `PlacesService._personalityScores` (places_service.dart) ile
+// BİREBİR aynı oranları yansıtacak şekilde hizalanmıştır. Önceden bu iki
+// tablo birbirinden bağımsız elle yazılmıştı ve sayılar uyuşmuyordu — örneğin
+// burada 'gym' kullanıcıyı hem maceraperest HEM sakin ruh yönünde besliyordu,
+// ama arama tarafında gym SADECE maceraperest'e puan veriyordu (ayrıca
+// "sakin ruh kullanıcılara gym önerilmesin" diye bilerek arama dışı
+// bırakılmıştı — bkz. PlacesService._personalityTypes ve geçmiş düzeltme).
+// Sonuç: bir kullanıcıya kişiliğine göre ÖNERİLEN bir mekan, ziyaret
+// ettiğinde profilini FARKLI bir yöne kaydırabiliyordu. İki taraf da artık
+// aynı kaynaktan (places_service.dart'taki ağırlıklar) türetildiği için
+// "önerilen mekana göre eşleşme" ile "o mekana gidince kişiliğin nasıl
+// değişir" mantığı tutarlı. (places_service.dart `personality_model.dart`'ı
+// import ettiğinden, döngüsel bağımlılık olmasın diye tabloyu burada literal
+// olarak tekrar tanımlıyoruz — iki taraf güncellenirken birlikte
+// güncellenmeli.)
+//
+// Sadece `_personalityScores`'ta karşılığı OLMAYAN tipler (shopping_mall,
+// stadium, zoo, aquarium, book_store, meal_takeaway, meal_delivery, spa —
+// bunlar arama tarafında sadece aktivite seçildiğinde devreye giriyor, baskın
+// kişilik tipine göre hiç aranmıyor) eski yaklaşık ağırlıklarında bırakıldı.
 const Map<String, Map<PersonalityType, double>> kVenueTypePersonalityWeights =
     {
-  // ── Sosyal Kelebek ──
-  'night_club': {PersonalityType.sosyalKelebek: 1.0},
-  'bar': {PersonalityType.sosyalKelebek: 0.8, PersonalityType.gurme: 0.2},
-  'bowling_alley': {
-    PersonalityType.sosyalKelebek: 0.5,
+  // ── Sosyal Kelebek ── (places_service._personalityScores ile hizalı)
+  'night_club': {
+    PersonalityType.sosyalKelebek: 1.0,
     PersonalityType.maceraperest: 0.5,
+    PersonalityType.gurme: 0.3,
   },
+  'bar': {
+    PersonalityType.sosyalKelebek: 1.0,
+    PersonalityType.maceraperest: 0.4,
+    PersonalityType.gurme: 0.5,
+  },
+  'bowling_alley': {PersonalityType.maceraperest: 1.0},
   'shopping_mall': {
     PersonalityType.sosyalKelebek: 0.6,
     PersonalityType.gurme: 0.4,
   },
-  'movie_theater': {
-    PersonalityType.sosyalKelebek: 0.4,
-    PersonalityType.sakinRuh: 0.4,
-    PersonalityType.entelektuel: 0.2,
-  },
+  'movie_theater': {PersonalityType.entelektuel: 0.8},
 
   // ── Sakin Ruh ──
   'spa': {PersonalityType.sakinRuh: 1.0},
-  'park': {PersonalityType.sakinRuh: 0.6, PersonalityType.maceraperest: 0.4},
-  'cafe': {PersonalityType.sakinRuh: 0.5, PersonalityType.gurme: 0.5},
+  'park': {
+    PersonalityType.sakinRuh: 1.0,
+    PersonalityType.maceraperest: 0.9,
+    PersonalityType.entelektuel: 0.5,
+  },
+  'cafe': {
+    PersonalityType.sakinRuh: 1.0,
+    PersonalityType.gurme: 0.8,
+    PersonalityType.entelektuel: 0.6,
+    PersonalityType.sosyalKelebek: 0.4,
+  },
 
   // ── Maceraperest ──
-  'amusement_park': {PersonalityType.maceraperest: 1.0},
-  'gym': {PersonalityType.maceraperest: 0.8, PersonalityType.sakinRuh: 0.2},
+  'amusement_park': {
+    PersonalityType.maceraperest: 1.0,
+    PersonalityType.sosyalKelebek: 0.5,
+  },
+  // NOT: 'gym' artık SADECE maceraperest besliyor — "sakin ruh kullanıcıya
+  // gym önerilmesin" kararıyla tutarlı (eskiden sakin ruh'a da 0.2 puan
+  // veriyordu, bu çelişkiliydi).
+  'gym': {PersonalityType.maceraperest: 1.0},
   'stadium': {
     PersonalityType.maceraperest: 0.6,
     PersonalityType.sosyalKelebek: 0.4,
@@ -112,17 +148,18 @@ const Map<String, Map<PersonalityType, double>> kVenueTypePersonalityWeights =
   },
 
   // ── Entelektüel ──
-  'museum': {PersonalityType.entelektuel: 0.9, PersonalityType.sakinRuh: 0.1},
-  'art_gallery': {
-    PersonalityType.entelektuel: 0.8,
-    PersonalityType.sakinRuh: 0.2,
-  },
-  'library': {PersonalityType.entelektuel: 1.0},
+  'museum': {PersonalityType.entelektuel: 1.0, PersonalityType.sakinRuh: 0.6},
+  'art_gallery': {PersonalityType.entelektuel: 1.0},
+  'library': {PersonalityType.entelektuel: 0.9, PersonalityType.sakinRuh: 0.9},
   'book_store': {PersonalityType.entelektuel: 0.7, PersonalityType.sakinRuh: 0.3},
 
   // ── Gurme ──
-  'restaurant': {PersonalityType.gurme: 0.8, PersonalityType.sosyalKelebek: 0.2},
-  'bakery': {PersonalityType.gurme: 0.7, PersonalityType.sakinRuh: 0.3},
+  'restaurant': {
+    PersonalityType.gurme: 1.0,
+    PersonalityType.sosyalKelebek: 0.8,
+    PersonalityType.sakinRuh: 0.4,
+  },
+  'bakery': {PersonalityType.gurme: 0.9, PersonalityType.sakinRuh: 0.7},
   'meal_takeaway': {PersonalityType.gurme: 0.6},
   'meal_delivery': {PersonalityType.gurme: 0.5},
 };
@@ -241,12 +278,28 @@ class PersonalityProfile {
   /// %6 — yani 1 ziyaret profili büyük oranda değiştirmez, ama düzinelerce
   /// ziyaret üzerinden profil belirgin şekilde evrilir.
   ///
+  /// [rating]: Kullanıcının o mekana verdiği yıldız puanı (1–5). Verilirse
+  /// [learningRate] bu puana göre ölçeklenir — mekanı seçip gitmiş olması
+  /// zaten bir ilgi sinyali olduğu için etki asla negatife çevrilmez, sadece
+  /// zayıflatılır: 5 yıldızda tam etki, 3 yıldızda yarı etki, 1 yıldızda
+  /// ~sıfır etki. Düşük puan "bu kişilik tipine uymuyor" değil, "bu mekan
+  /// kötüydü" anlamına gelebileceğinden ters yönde bir evrim uygulanmaz.
+  /// `rating` verilmezse (null) ölçekleme yapılmadan eski davranış sürer.
+  ///
   /// Eşleşen tip yoksa (örn. tanınmayan bir Places kategorisi) profil
   /// değişmeden (ama lastUpdated güncellenmeden) geri döner.
   PersonalityProfile evolvedWith(
     List<String> placeTypes, {
     double learningRate = 0.06,
+    int? rating,
   }) {
+    if (rating != null) {
+      // 1 yıldız → 0.0, 3 yıldız → 0.5, 5 yıldız → 1.0 — asla negatif.
+      final ratingMultiplier = ((rating - 1) / 4).clamp(0.0, 1.0);
+      learningRate *= ratingMultiplier;
+      if (learningRate <= 0) return this; // Çok düşük puan: profile dokunma
+    }
+
     // 1) Bu mekanın tiplerinden toplam bir "sinyal" vektörü oluştur.
     final rawSignal = <PersonalityType, double>{};
     for (final placeType in placeTypes) {
@@ -350,19 +403,19 @@ const List<QuizQuestion> kQuizQuestions = [
     question: 'Boş zamanında ne yapmaktan en çok keyif alırsın?',
     options: [
       QuizOption(
-        text: '🎉 Arkadaşlarımla kalabalık mekanlarda eğlenirim',
+        text: 'Arkadaşlarımla kalabalık mekanlarda eğlenirim',
         type: PersonalityType.sosyalKelebek,
       ),
       QuizOption(
-        text: '📖 Sakin bir kafede kitap okur ya da film izlerim',
+        text: 'Sakin bir kafede kitap okur ya da film izlerim',
         type: PersonalityType.sakinRuh,
       ),
       QuizOption(
-        text: '🏕️ Yeni yerler keşfeder, doğada zaman geçiririm',
+        text: 'Yeni yerler keşfeder, doğada zaman geçiririm',
         type: PersonalityType.maceraperest,
       ),
       QuizOption(
-        text: '🎭 Müze, sergi veya kültürel etkinliklere giderim',
+        text: 'Müze, sergi veya kültürel etkinliklere giderim',
         type: PersonalityType.entelektuel,
       ),
     ],
@@ -373,19 +426,19 @@ const List<QuizQuestion> kQuizQuestions = [
     question: 'Arkadaşlarınla buluşunca genellikle ne yaparsınız?',
     options: [
       QuizOption(
-        text: '🎵 Bar, konser ya da eğlenceli sosyal mekanlar',
+        text: 'Bar, konser ya da eğlenceli sosyal mekanlar',
         type: PersonalityType.sosyalKelebek,
       ),
       QuizOption(
-        text: '☕ Huzurlu bir kafede saatlerce sohbet ederiz',
+        text: 'Huzurlu bir kafede saatlerce sohbet ederiz',
         type: PersonalityType.sakinRuh,
       ),
       QuizOption(
-        text: '🧗 Spor, outdoor aktivite veya macera planlarız',
+        text: 'Spor, outdoor aktivite veya macera planlarız',
         type: PersonalityType.maceraperest,
       ),
       QuizOption(
-        text: '🍝 İyi bir restoranda uzun yemek sohbeti yaparız',
+        text: 'İyi bir restoranda uzun yemek sohbeti yaparız',
         type: PersonalityType.gurme,
       ),
     ],
@@ -396,19 +449,19 @@ const List<QuizQuestion> kQuizQuestions = [
     question: 'İdeal bir hafta sonu nasıl geçerdi?',
     options: [
       QuizOption(
-        text: '🥳 Partiler, sosyal etkinlikler, yeni insanlar tanımak',
+        text: 'Partiler, sosyal etkinlikler, yeni insanlar tanımak',
         type: PersonalityType.sosyalKelebek,
       ),
       QuizOption(
-        text: '📚 Kitap okumak, belgesel izlemek, yeni şeyler öğrenmek',
+        text: 'Kitap okumak, belgesel izlemek, yeni şeyler öğrenmek',
         type: PersonalityType.entelektuel,
       ),
       QuizOption(
-        text: '🚵 Trekking, bisiklet ya da macera sporu',
+        text: 'Trekking, bisiklet ya da macera sporu',
         type: PersonalityType.maceraperest,
       ),
       QuizOption(
-        text: '🍷 Yeni restoranlar denemek, food festival gezmek',
+        text: 'Yeni restoranlar denemek, food festival gezmek',
         type: PersonalityType.gurme,
       ),
     ],
@@ -419,19 +472,19 @@ const List<QuizQuestion> kQuizQuestions = [
     question: 'Bir mekan seçerken en önemli kriterini söyle.',
     options: [
       QuizOption(
-        text: '🎶 Canlı atmosfer ve müzik olmalı',
+        text: 'Canlı atmosfer ve müzik olmalı',
         type: PersonalityType.sosyalKelebek,
       ),
       QuizOption(
-        text: '🕯️ Sakin, huzurlu ve şık bir ortam',
+        text: 'Sakin, huzurlu ve şık bir ortam',
         type: PersonalityType.sakinRuh,
       ),
       QuizOption(
-        text: '📰 Merak uyandıran, ilham veren bir yer olmalı',
+        text: 'Merak uyandıran, ilham veren bir yer olmalı',
         type: PersonalityType.entelektuel,
       ),
       QuizOption(
-        text: '🌟 Menü kalitesi ve şefin becerisi önemli',
+        text: 'Menü kalitesi ve şefin becerisi önemli',
         type: PersonalityType.gurme,
       ),
     ],
@@ -465,19 +518,19 @@ const List<QuizQuestion> kQuizQuestions = [
     question: 'Stresli bir günden sonra ne yaparsın?',
     options: [
       QuizOption(
-        text: '👫 Arkadaşlarımı arar, dışarı çıkarım',
+        text: 'Arkadaşlarımı arar, dışarı çıkarım',
         type: PersonalityType.sosyalKelebek,
       ),
       QuizOption(
-        text: '🛁 Sessiz bir ortamda yalnız dinlenirim',
+        text: 'Sessiz bir ortamda yalnız dinlenirim',
         type: PersonalityType.sakinRuh,
       ),
       QuizOption(
-        text: '🏃 Spor yaparım ya da bir yere koşarım',
+        text: 'Spor yaparım ya da bir yere koşarım',
         type: PersonalityType.maceraperest,
       ),
       QuizOption(
-        text: '🎙️ Podcast dinler ya da ilginç bir makale okurum',
+        text: 'Podcast dinler ya da ilginç bir makale okurum',
         type: PersonalityType.entelektuel,
       ),
     ],
@@ -488,19 +541,19 @@ const List<QuizQuestion> kQuizQuestions = [
     question: 'Tatilde hangi aktiviteyi seçerdin?',
     options: [
       QuizOption(
-        text: '🏖️ Büyük resort otelde eğlenceli sosyal aktiviteler',
+        text: 'Büyük resort otelde eğlenceli sosyal aktiviteler',
         type: PersonalityType.sosyalKelebek,
       ),
       QuizOption(
-        text: '🏛️ Tarihi ve kültürel mekânları derinlemesine keşfetmek',
+        text: 'Tarihi ve kültürel mekânları derinlemesine keşfetmek',
         type: PersonalityType.entelektuel,
       ),
       QuizOption(
-        text: '🧭 Backpacking, yeni şehirler ve doğa keşfi',
+        text: 'Backpacking, yeni şehirler ve doğa keşfi',
         type: PersonalityType.maceraperest,
       ),
       QuizOption(
-        text: '🥂 Gastronomi turu, yerel mutfakları tatmak',
+        text: 'Gastronomi turu, yerel mutfakları tatmak',
         type: PersonalityType.gurme,
       ),
     ],
@@ -511,19 +564,19 @@ const List<QuizQuestion> kQuizQuestions = [
     question: 'Film veya dizi seçerken hangisini tercih edersin?',
     options: [
       QuizOption(
-        text: '🎉 Komedi ya da romantik — arkadaşlarla izlemek çok daha iyi',
+        text: 'Komedi ya da romantik — arkadaşlarla izlemek çok daha iyi',
         type: PersonalityType.sosyalKelebek,
       ),
       QuizOption(
-        text: '🌿 Yavaş tempolu, duygusal bir drama',
+        text: 'Yavaş tempolu, duygusal bir drama',
         type: PersonalityType.sakinRuh,
       ),
       QuizOption(
-        text: '🧠 Belgesel, bilim kurgu ya da düşündürücü yapım',
+        text: 'Belgesel, bilim kurgu ya da düşündürücü yapım',
         type: PersonalityType.entelektuel,
       ),
       QuizOption(
-        text: '🍿 Fark etmez, asıl önemli ortam ve atıştırmalıklar',
+        text: 'Fark etmez, asıl önemli ortam ve atıştırmalıklar',
         type: PersonalityType.gurme,
       ),
     ],
@@ -534,19 +587,19 @@ const List<QuizQuestion> kQuizQuestions = [
     question: 'Yeni bir şehre taşınsaydın ilk ne yapardın?',
     options: [
       QuizOption(
-        text: '🌳 Mahallemi yavaşça keşfedip dingin bir köşe bulurdum',
+        text: 'Mahallemi yavaşça keşfedip dingin bir köşe bulurdum',
         type: PersonalityType.sakinRuh,
       ),
       QuizOption(
-        text: '🗺️ Şehrin tarihini, müzelerini ve kütüphanelerini araştırırdım',
+        text: 'Şehrin tarihini, müzelerini ve kütüphanelerini araştırırdım',
         type: PersonalityType.entelektuel,
       ),
       QuizOption(
-        text: '🏃 Yakın parkurları ve spor alanlarını hemen keşfederdim',
+        text: 'Yakın parkurları ve spor alanlarını hemen keşfederdim',
         type: PersonalityType.maceraperest,
       ),
       QuizOption(
-        text: '🍜 En iyi restoranları ve yemek mekanlarını araştırırdım',
+        text: 'En iyi restoranları ve yemek mekanlarını araştırırdım',
         type: PersonalityType.gurme,
       ),
     ],
@@ -557,19 +610,19 @@ const List<QuizQuestion> kQuizQuestions = [
     question: 'Akşam yemeği planlarken hangisini söylersin?',
     options: [
       QuizOption(
-        text: '🥳 "Büyük bir grup toplayalım, ne olursa olsun!"',
+        text: '"Büyük bir grup toplayalım, ne olursa olsun!"',
         type: PersonalityType.sosyalKelebek,
       ),
       QuizOption(
-        text: '🕯️ "Küçük, samimi ve huzurlu bir akşam yemeği olsun."',
+        text: '"Küçük, samimi ve huzurlu bir akşam yemeği olsun."',
         type: PersonalityType.sakinRuh,
       ),
       QuizOption(
-        text: '🌍 "Hiç denemediğim egzotik bir mutfağı deneyelim!"',
+        text: '"Hiç denemediğim egzotik bir mutfağı deneyelim!"',
         type: PersonalityType.maceraperest,
       ),
       QuizOption(
-        text: '⭐ "En iyi restoranı araştırayım, rezervasyon yapayım."',
+        text: '"En iyi restoranı araştırayım, rezervasyon yapayım."',
         type: PersonalityType.gurme,
       ),
     ],

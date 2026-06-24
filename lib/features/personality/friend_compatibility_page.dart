@@ -7,7 +7,6 @@ import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/models/user_friend_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
-import 'package:meetit/features/personality/widgets/personality_breakdown.dart';
 import 'package:meetit/features/personality/widgets/personality_radar_chart.dart';
 
 /// Arkadaş listesindeki herkesle kişilik uyumunu (cosine similarity tabanlı
@@ -183,7 +182,7 @@ class _FriendCompatTile extends StatelessWidget {
 // ── Detay Sayfası ─────────────────────────────────────────────────────────────
 
 /// İki kullanıcının kişilik profillerini yan yana karşılaştıran detay sayfası.
-class FriendCompatibilityDetailPage extends StatelessWidget {
+class FriendCompatibilityDetailPage extends ConsumerWidget {
   final UserFriendModel friend;
   final PersonalityProfile myProfile;
   final PersonalityProfile friendProfile;
@@ -206,7 +205,8 @@ class FriendCompatibilityDetailPage extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final me = ref.watch(currentUserProvider);
     return Scaffold(
       backgroundColor: context.colors.scaffold,
       appBar: AppBar(
@@ -237,7 +237,8 @@ class FriendCompatibilityDetailPage extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   CircularAvatar(
-                    name: 'common.user'.tr(),
+                    name: me?.name ?? 'common.user'.tr(),
+                    photoUrl: me?.photoUrl,
                     radius: 26,
                   ),
                   const SizedBox(width: 8),
@@ -312,39 +313,6 @@ class FriendCompatibilityDetailPage extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 24),
-
-              // ── Senin profilin ────────────────────────────────────────
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'friend_compat.your_profile'.tr(),
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: context.colors.textPrimary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              PersonalityBreakdown(profile: myProfile),
-
-              const SizedBox(height: 24),
-
-              // ── Arkadaşının profili ───────────────────────────────────
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'friend_compat.friend_profile'.tr(namedArgs: {'name': friend.name}),
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: context.colors.textPrimary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              PersonalityBreakdown(profile: friendProfile),
             ],
           ),
         ),

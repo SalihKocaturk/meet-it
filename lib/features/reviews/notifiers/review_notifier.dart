@@ -174,7 +174,7 @@ class ReviewNotifier extends Notifier<ReviewState> {
       final currentUser = this.ref.read(authProvider).user;
       final currentProfile = currentUser?.personalityProfile;
       if (currentUser != null && currentProfile != null) {
-        final evolved = currentProfile.evolvedWith(venue.types);
+        final evolved = currentProfile.evolvedWith(venue.types, rating: rating);
         if (evolved != currentProfile) {
           await this.ref
               .read(authProvider.notifier)

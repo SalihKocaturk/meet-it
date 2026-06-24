@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/router/app_routes.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
+import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/personality/providers/personality_provider.dart';
 import 'package:meetit/features/personality/widgets/personality_breakdown.dart';
+import 'package:meetit/features/personality/widgets/personality_history_chart.dart';
 
 /// Kullanıcının KAYITLI (quiz + sonradan ziyaret edilen mekanlarla evrilmiş)
 /// kişilik profilini gösteren sayfa.
@@ -23,6 +25,14 @@ class PersonalityAnalysisPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider);
     final profile = currentUser?.personalityProfile;
+    // `personalityHistory` boş olabilir (örn. quiz feature'ı eklenmeden önce
+    // hesap oluşturulmuş eski kullanıcılar) — bu durumda en azından şu anki
+    // profili tek noktalı bir geçmiş olarak kullan, grafiği tamamen
+    // gizlemek yerine "henüz tek kayıt var" boş durumunu göster.
+    final List<PersonalityProfile> history =
+        (currentUser?.personalityHistory.isNotEmpty ?? false)
+            ? currentUser!.personalityHistory
+            : (profile != null ? [profile] : const []);
 
     return Scaffold(
       backgroundColor: context.colors.scaffold,
@@ -112,6 +122,15 @@ class PersonalityAnalysisPage extends ConsumerWidget {
                     const SizedBox(height: 16),
 
                     PersonalityBreakdown(profile: profile),
+
+                    const SizedBox(height: 16),
+
+                    // ── Zaman içinde değişim grafiği ─────────────────────
+                    //
+                    // Sol: her tipin skorunun gerçek tarihlere göre çizgi
+                    // grafiği. Sağ: tip + rengi + ilk kayıttan bu yana
+                    // artış/azalış göstergesi.
+                    PersonalityHistoryChart(history: history),
 
                     const SizedBox(height: 24),
 
