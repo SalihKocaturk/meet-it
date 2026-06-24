@@ -80,7 +80,19 @@
     "error_invalid_email": "Invalid email address.",
     "error_too_many_requests": "Too many attempts. Please wait a moment.",
     "error_no_network": "No internet connection.",
-    "error_generic": "An error occurred. Please try again."
+    "error_generic": "An error occurred. Please try again.",
+    "verify_title": "Email Verification",
+    "verify_heading": "Verify Your Email Address",
+    "verify_desc": "We sent a verification link to {email}. Please check your inbox (and spam folder).",
+    "verify_confirm_btn": "I've Verified, Continue",
+    "verify_resend_btn": "Resend",
+    "verify_resend_cooldown": "Resend",
+    "verify_resent_success": "Verification email resent.",
+    "verify_resent_failed": "Could not send email. Please try again.",
+    "verify_not_yet_title": "Not Verified Yet",
+    "verify_not_yet_desc": "Your email doesn't appear to be verified yet. Please click the link in the email and try again.",
+    "verify_checking": "Checking...",
+    "verify_change_account": "Sign in with a different account"
   },
   "validation": {
     "missing_field": "Missing Field",
@@ -256,6 +268,7 @@
     "personality_selected": "Curated by personality analysis",
     "add_friend_hint": "Add a friend from the Friends tab first",
     "see_on_map": "Show on Map",
+    "list_view": "List View",
     "map_loading_venues": "Preparing venues on the map...",
     "map_you": "You",
     "map_friend": "Your friend",
@@ -400,7 +413,10 @@
     "add_review": "Add Review",
     "must_visit_first": "You need to visit this venue before you can review it.",
     "already_reviewed": "You've already left a review for this venue.",
-    "rating_count": "{count} reviews"
+    "rating_count": "{count} reviews",
+    "save": "Save",
+    "saved": "Saved",
+    "get_directions": "Get Directions"
   },
   "review": {
     "add_title": "Add Review",
@@ -436,7 +452,10 @@
   "personality_analysis": {
     "title": "My Personality Analysis",
     "evolves_hint": "Your profile isn't fixed: it slowly shifts over time as you write reviews for venues you visit. Just receiving a venue recommendation does not change your profile.",
-    "last_updated": "Last updated: {time}"
+    "last_updated": "Last updated: {time}",
+    "history_title": "Change Over Time",
+    "history_subtitle": "Last {count} records — lines on the left show each type's score, the list on the right shows the change since the first record.",
+    "history_empty": "There isn't more than one record yet. Once you start reviewing venues, your profile will change over time and a chart will appear here."
   },
   "friend_compat": {
     "title": "Friend Compatibility",

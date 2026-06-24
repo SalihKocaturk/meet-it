@@ -80,7 +80,19 @@
     "error_invalid_email": "Geçersiz email adresi.",
     "error_too_many_requests": "Çok fazla deneme. Lütfen biraz bekleyin.",
     "error_no_network": "İnternet bağlantısı yok.",
-    "error_generic": "Bir hata oluştu. Lütfen tekrar deneyin."
+    "error_generic": "Bir hata oluştu. Lütfen tekrar deneyin.",
+    "verify_title": "Email Doğrulama",
+    "verify_heading": "Email Adresinizi Doğrulayın",
+    "verify_desc": "{email} adresine bir doğrulama linki gönderdik. Lütfen gelen kutunuzu (ve spam klasörünü) kontrol edin.",
+    "verify_confirm_btn": "Doğruladım, Devam Et",
+    "verify_resend_btn": "Tekrar Gönder",
+    "verify_resend_cooldown": "Tekrar gönder",
+    "verify_resent_success": "Doğrulama emaili tekrar gönderildi.",
+    "verify_resent_failed": "Email gönderilemedi. Lütfen tekrar deneyin.",
+    "verify_not_yet_title": "Henüz Doğrulanmadı",
+    "verify_not_yet_desc": "Email adresiniz henüz doğrulanmamış görünüyor. Linke tıkladıktan sonra tekrar deneyin.",
+    "verify_checking": "Kontrol ediliyor...",
+    "verify_change_account": "Farklı bir hesapla giriş yap"
   },
   "validation": {
     "missing_field": "Eksik Alan",
@@ -256,6 +268,7 @@
     "personality_selected": "Kişilik analizine göre seçildi",
     "add_friend_hint": "Önce Arkadaşlar sekmesinden arkadaş ekle",
     "see_on_map": "Haritada Göster",
+    "list_view": "Liste Görünümü",
     "map_loading_venues": "Mekanlar haritaya hazırlanıyor...",
     "map_you": "Sen",
     "map_friend": "Arkadaşın",
@@ -400,7 +413,10 @@
     "add_review": "Yorum Ekle",
     "must_visit_first": "Bu mekana yorum atabilmek için önce gitmelisin.",
     "already_reviewed": "Bu mekana zaten bir yorum bıraktın.",
-    "rating_count": "{count} değerlendirme"
+    "rating_count": "{count} değerlendirme",
+    "save": "Kaydet",
+    "saved": "Kaydedildi",
+    "get_directions": "Tarif Al"
   },
   "review": {
     "add_title": "Yorum Ekle",
@@ -436,7 +452,10 @@
   "personality_analysis": {
     "title": "Kişilik Analizim",
     "evolves_hint": "Profilin sabit değil: gittiğin mekanlara yorum yazdıkça kişiliğin zamanla yavaşça değişir. Sadece bir mekan önerisi almak profilini değiştirmez.",
-    "last_updated": "Son güncelleme: {time}"
+    "last_updated": "Son güncelleme: {time}",
+    "history_title": "Zaman İçinde Değişim",
+    "history_subtitle": "Son {count} kayıt — soldaki çizgiler her tipin skorunu, sağdaki liste ilk kayıttan bu yana değişimi gösterir.",
+    "history_empty": "Henüz birden fazla kayıt yok. Mekanlara yorum yazmaya başladığında profilin zamanla değişecek ve burada bir grafik oluşacak."
   },
   "friend_compat": {
     "title": "Arkadaş Uyumu",
