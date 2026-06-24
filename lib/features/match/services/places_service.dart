@@ -227,6 +227,13 @@ class PlacesService {
     // Korusu, Seka Park vb.) bu kelimeleri içermediğinden etkilenmiyor.
     'çocuk parkı', 'çocuk oyun', 'oyun parkı', 'oyun grubu',
     'çocuk oyun alanı', 'çocuk oyun grubu',
+    // Mezarlık — `_alwaysExcluded` zaten 'cemetery' type'ını eliyor, ama
+    // Google Places bazı tarihi/şehir mezarlıklarını 'park', 'tourist_
+    // attraction' ya da 'natural_feature' gibi alakasız type'larla
+    // etiketleyebiliyor (type filtresi bunları yakalayamıyor). Bu yüzden
+    // isim bazlı ek bir güvenlik ağı da gerekiyor — bir buluşma mekanı
+    // olarak hiçbir koşulda mezarlık önerilmemeli.
+    'mezarlık', 'mezarlığı', 'şehitlik', 'şehitliği', 'kabristan',
   ];
   // NOT: 'güzellik merkezi' / 'spa' bilerek listede YOK — 'spa' aktivitesi
   // seçildiğinde beauty_salon type'ı kasıtlı olarak whitelist'te (bkz.
@@ -797,16 +804,35 @@ class PlacesService {
     }
 
     // ── MOD 2: Aktivite seçilmemişse SADECE kişiliğe göre ────────────────────
+    //
+    // BUG FİX: Önceden `types.addAll(userTypes); types.addAll(friendTypes);`
+    // şeklinde art arda ekleniyordu. Dart Set'i ekleme sırasını koruduğundan
+    // ve sonunda `take(...)` ile kesildiğinden, baskın tipler farklı
+    // olduğunda kullanıcının 4 tipi havuzu doldurup arkadaşın tipinden sadece
+    // 1 tanesine yer kalıyordu — yani "iki tarafa da uygun mekan ara"
+    // mantığı, ARANAN mekan kategorilerinde aslında kullanıcı tarafına ağır
+    // basıyordu (skorlama iki profilin ortalamasını alsa da, havuzun kendisi
+    // zaten taraflı geliyordu). Çözüm: ortak olmayan tipleri round-robin
+    // (sırayla kullanıcı-arkadaş-kullanıcı-arkadaş) ekleyip her iki tarafa adil
+    // temsil hakkı veriyoruz.
     final types = <String>{};
 
     final userTypes = _personalityTypes[userProfile.dominantType] ?? [];
     final friendTypes = _personalityTypes[friendProfile.dominantType] ?? [];
 
-    // İki kişinin ortak tipleri önce (her ikisine de uygun)
+    // İki kişinin ortak tipleri önce (her ikisine de uygun, kayıpsız kazanç)
     final common = userTypes.toSet().intersection(friendTypes.toSet());
     types.addAll(common);
-    types.addAll(userTypes);
-    types.addAll(friendTypes);
+
+    final userOnly = userTypes.where((t) => !common.contains(t)).toList();
+    final friendOnly = friendTypes.where((t) => !common.contains(t)).toList();
+    final maxLen = userOnly.length > friendOnly.length
+        ? userOnly.length
+        : friendOnly.length;
+    for (var i = 0; i < maxLen; i++) {
+      if (i < userOnly.length) types.add(userOnly[i]);
+      if (i < friendOnly.length) types.add(friendOnly[i]);
+    }
 
     // Secondary tipler — daha geniş havuz.
     //
@@ -814,25 +840,43 @@ class PlacesService {
     // tip döndürüyor (UI'da "ikincil eğilim" göstermek için makul bir eşik).
     // Ama burada, arama havuzuna YENİ bir mekan kategorisi eklemek için bu
     // çok düşük: "sakin ruh" kullanıcının %12 gibi zayıf bir "maceraperest"
-    // eğilimi olması, sonuçlara spor salonu/stadyum sokulmasına yol açıyordu
-    // (dominant tipin 4 type'ı + bu 1 ekstra type = take(5) ile tam sınırda
-    // kalıyor ve dominant tipin kendi mekanlarıyla aynı kefeye giriyordu).
+    // eğilimi olması, sonuçlara spor salonu/stadyum sokulmasına yol açıyordu.
     // Bu yüzden burada daha sıkı, yerel bir eşik kullanıyoruz: ikincil eğilim
     // gerçekten belirgin değilse (≥ %25) arama havuzuna katılmasın.
     const secondaryPoolThreshold = 0.25;
 
-    void addSecondaryPool(PersonalityProfile profile) {
+    final userSecondary = <String>[];
+    final friendSecondary = <String>[];
+    void collectSecondaryPool(
+      PersonalityProfile profile,
+      List<String> sink,
+    ) {
       final ranked = profile.rankedTypes;
       if (ranked.length < 2) return;
       final second = ranked[1];
       if (second.value >= secondaryPoolThreshold) {
-        types.addAll(_personalityTypes[second.key] ?? []);
+        sink.addAll(_personalityTypes[second.key] ?? []);
       }
     }
 
-    addSecondaryPool(userProfile);
-    addSecondaryPool(friendProfile);
+    collectSecondaryPool(userProfile, userSecondary);
+    collectSecondaryPool(friendProfile, friendSecondary);
 
-    return types.take(5).toList();
+    // İkincil havuzlar da aynı round-robin mantığıyla ekleniyor — aksi halde
+    // burada da kullanıcının ikincil tipi, arkadaşın ikincil tipinin önüne
+    // geçip aynı adaletsizliği ikincil seviyede tekrarlardı.
+    final maxSecondaryLen = userSecondary.length > friendSecondary.length
+        ? userSecondary.length
+        : friendSecondary.length;
+    for (var i = 0; i < maxSecondaryLen; i++) {
+      if (i < userSecondary.length) types.add(userSecondary[i]);
+      if (i < friendSecondary.length) types.add(friendSecondary[i]);
+    }
+
+    // Tip sayısı arttıkça Google Places'e atılan istek sayısı da artıyor
+    // (her type için 1 ayrı çağrı, bkz. `_fetchNearby` döngüsü). Round-robin
+    // sayesinde artık 5 sınırı kullanıcı/arkadaş dengesini bozuyordu (4 kendi
+    // tipi + 1 karşı taraf); adil bir 50/50 bölünme için sınırı 6'ya çıkardık.
+    return types.take(6).toList();
   }
 }

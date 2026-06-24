@@ -30,6 +30,26 @@ class MatchPage extends ConsumerWidget {
     final currentUser = ref.watch(currentUserProvider);
     final connections = ref.watch(connectionsProvider);
     final showVenues = ref.watch(showVenuesProvider);
+    final showMapView = ref.watch(showMapViewProvider);
+
+    // BUG FIX: venueSearchProvider autoDispose DEĞİL (liste/harita geçişinde
+    // state korunsun diye) — ama bu yüzden önceki arkadaşla yapılan aramanın
+    // sonuçları (ve haritadaki eski mekan pin'leri) bir sonraki arkadaş
+    // seçiminde/yeni buluşma akışında hâlâ state'te kalıp tekrar gösteriliyordu.
+    // Seçili arkadaş değiştiğinde eski arama sonuçlarını temizliyoruz.
+    ref.listen(selectedFriendUidProvider, (previous, next) {
+      if (previous != next) {
+        ref.read(venueSearchProvider.notifier).reset();
+      }
+    });
+
+    // Harita görünümü kendi Scaffold'unu ve SafeArea/Stack'ini zaten
+    // yönetiyor (bkz. AttemptMeetPage.build) — burada doğrudan onu
+    // döndürüyoruz, MatchPage'in normal Scaffold'unu SARMIYORUZ (gereksiz
+    // iç içe Scaffold olmasın diye).
+    if (showVenues && showMapView) {
+      return const AttemptMeetPage();
+    }
 
     return Scaffold(
       backgroundColor: context.colors.scaffold,
@@ -219,9 +239,7 @@ class MatchPage extends ConsumerWidget {
                           final selectedFriend = ref.watch(
                             selectedFriendProvider,
                           );
-                          // "Haritada Göster" butonu için arama durumu —
-                          // arama sürerken bu buton da spinner gösterir.
-                          final isMapSearchLoading = ref.watch(
+                          final isSearchLoading = ref.watch(
                             venueSearchProvider.select((s) => s.isLoading),
                           );
                           // Arkadaş seçilmese de tek başına mekan arama
@@ -233,8 +251,8 @@ class MatchPage extends ConsumerWidget {
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton.icon(
-                                  onPressed: isEnabled
-                                      ? () {
+                                  onPressed: isEnabled && !isSearchLoading
+                                      ? () async {
                                           final currentUser = ref.read(
                                             currentUserProvider,
                                           );
@@ -259,7 +277,8 @@ class MatchPage extends ConsumerWidget {
                                           final userLoc = ref.read(
                                             userLocationProvider,
                                           );
-                                          ref
+
+                                          await ref
                                               .read(
                                                 venueSearchProvider.notifier,
                                               )
@@ -273,18 +292,66 @@ class MatchPage extends ConsumerWidget {
                                                 userLat: userLoc?.lat,
                                                 userLng: userLoc?.lng,
                                               );
+
+                                          if (!context.mounted) return;
+
+                                          // ── Artık varsayılan görünüm
+                                          // HARİTA: tek buton hem aramayı
+                                          // yapıyor hem de sonuçları haritada
+                                          // gösteriyor. Liste/harita geçişi
+                                          // ARTIK Navigator.push/pop İLE
+                                          // YAPILMIYOR — sadece iki state
+                                          // (showVenuesProvider +
+                                          // showMapViewProvider) değişiyor ve
+                                          // MatchPage'in gövdesi buna göre
+                                          // yeniden çiziliyor. Bu sayede
+                                          // "geri" tuşu her zaman tek basışta
+                                          // doğrudan forma döner — eskiden
+                                          // (push/pop kullanılırken) bir ara
+                                          // ekrana (önceki görünüme) gidip
+                                          // ikinci bir geri basışı
+                                          // gerektiriyordu.
+                                          final result = ref.read(
+                                            venueSearchProvider,
+                                          );
+                                          if (!result.hasResults) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  result.errorMessage ??
+                                                      'match.no_venues_found'
+                                                          .tr(),
+                                                ),
+                                              ),
+                                            );
+                                            return;
+                                          }
+
                                           ref
-                                                  .read(
-                                                    showVenuesProvider.notifier,
-                                                  )
-                                                  .state =
-                                              true;
+                                              .read(
+                                                showMapViewProvider.notifier,
+                                              )
+                                              .state = true;
+                                          ref
+                                              .read(showVenuesProvider.notifier)
+                                              .state = true;
                                         }
                                       : null,
-                                  icon: const Icon(
-                                    Icons.search,
-                                    color: Colors.white,
-                                  ),
+                                  icon: isSearchLoading
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Icon(
+                                          Icons.search,
+                                          color: Colors.white,
+                                        ),
                                   label: Text(
                                     'match.see_venues'.tr(),
                                     style: TextStyle(
@@ -322,122 +389,6 @@ class MatchPage extends ConsumerWidget {
                                     textAlign: TextAlign.center,
                                   ),
                                 ),
-
-                              // ── Haritada Göster butonu ───────────────────
-                              //
-                              // Mevcut liste tabanlı "Mekan Önerilerini Gör"
-                              // akışına dokunmadan, aynı arama mantığını
-                              // çalıştırıp sonucu harita üzerinde pinlerle
-                              // gösteren AYRI bir görünüme (AttemptMeetPage)
-                              // geçiş yapar. Eski akış bozulmasın diye bu
-                              // bilerek tamamen ek/yeni bir buton.
-                              const SizedBox(height: 10),
-                              SizedBox(
-                                width: double.infinity,
-                                child: OutlinedButton.icon(
-                                  onPressed: isMapSearchLoading
-                                      ? null
-                                      : () async {
-                                          final currentUser = ref.read(
-                                            currentUserProvider,
-                                          );
-                                          final activities = ref.read(
-                                            selectedActivitiesProvider,
-                                          );
-                                          final userProfile =
-                                              currentUser?.personalityProfile ??
-                                              PersonalityProfile.mock(
-                                                PersonalityType.sosyalKelebek,
-                                              );
-                                          final friendProfile =
-                                              selectedFriend
-                                                  ?.personalityProfile ??
-                                              userProfile;
-                                          final priceLevel = ref.read(
-                                            selectedPriceLevelProvider,
-                                          );
-                                          final userLoc = ref.read(
-                                            userLocationProvider,
-                                          );
-
-                                          await ref
-                                              .read(
-                                                venueSearchProvider.notifier,
-                                              )
-                                              .searchVenues(
-                                                userProfile: userProfile,
-                                                friendProfile: friendProfile,
-                                                selectedActivities: activities
-                                                    .toList(),
-                                                friendUid: selectedFriend?.uid,
-                                                priceLevel: priceLevel,
-                                                userLat: userLoc?.lat,
-                                                userLng: userLoc?.lng,
-                                              );
-
-                                          if (!context.mounted) return;
-
-                                          final result = ref.read(
-                                            venueSearchProvider,
-                                          );
-                                          if (!result.hasResults) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  result.errorMessage ??
-                                                      'match.no_venues_found'
-                                                          .tr(),
-                                                ),
-                                              ),
-                                            );
-                                            return;
-                                          }
-
-                                          Navigator.of(context).push(
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  const AttemptMeetPage(),
-                                            ),
-                                          );
-                                        },
-                                  icon: isMapSearchLoading
-                                      ? SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: context.colors.primary,
-                                          ),
-                                        )
-                                      : Icon(
-                                          Icons.map_outlined,
-                                          color: context.colors.primary,
-                                        ),
-                                  label: Text(
-                                    'match.see_on_map'.tr(),
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: context.colors.primary,
-                                    ),
-                                  ),
-                                  style: OutlinedButton.styleFrom(
-                                    side: BorderSide(
-                                      color: context.colors.primary.withOpacity(
-                                        0.5,
-                                      ),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 13,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                  ),
-                                ),
-                              ),
                             ],
                           );
                         },
@@ -1350,6 +1301,31 @@ class _VenueResultsView extends ConsumerWidget {
                     ],
                   ),
                 ),
+                // Harita/liste tek butonla yönetiliyor: buradayken (liste
+                // görünümü) bu buton aynı arama sonuçlarını haritada
+                // (AttemptMeetPage) gösterir. Navigator KULLANILMIYOR —
+                // sadece showMapViewProvider true yapılıyor; tekrar arama
+                // yapılmıyor.
+                if (searchState.hasResults)
+                  GestureDetector(
+                    onTap: () {
+                      ref.read(showMapViewProvider.notifier).state = true;
+                    },
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: context.colors.card,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: context.colors.border),
+                      ),
+                      child: Icon(
+                        Icons.map_outlined,
+                        size: 18,
+                        color: context.colors.textPrimary,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),

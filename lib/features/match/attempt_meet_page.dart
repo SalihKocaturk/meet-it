@@ -387,8 +387,21 @@ class _AttemptMeetPageState extends ConsumerState<AttemptMeetPage> {
         ? LatLng(_venues.first.lat, _venues.first.lng)
         : const LatLng(41.0082, 28.9784); // İstanbul varsayılan
     final isDark = ref.watch(themeModeProvider) == ThemeMode.dark;
+    final distanceWarning = ref.watch(venueSearchProvider).distanceWarning;
 
-    return Scaffold(
+    // Bu sayfa artık kendi route'u olarak PUSH EDİLMİYOR — match_page.dart'ın
+    // gövdesine doğrudan gömülüyor. Yani sistem/donanım "geri" tuşuna
+    // basıldığında kapatılacak bir Navigator route'u YOK; PopScope ile bunu
+    // yakalayıp aynı sayfadaki yazılım geri butonuyla AYNI davranışı (forma
+    // dön) uyguluyoruz. Bu olmadan donanım geri tuşu MatchPage'in ALTINDAKİ
+    // (yanlış) bir route'u kapatmaya çalışırdı.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        ref.read(showVenuesProvider.notifier).state = false;
+      },
+      child: Scaffold(
       body: Stack(
         children: [
           GoogleMap(
@@ -426,52 +439,110 @@ class _AttemptMeetPageState extends ConsumerState<AttemptMeetPage> {
             mapToolbarEnabled: false,
           ),
 
-          if (!_markersReady)
+          if (!_markersReady || distanceWarning != null)
             Positioned(
               top: 0,
               left: 0,
               right: 0,
               child: SafeArea(
-                child: Container(
-                  margin: const EdgeInsets.only(top: 64, left: 12, right: 12),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: context.colors.card,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 64, left: 12, right: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      const SizedBox(width: 10),
-                      Text('match.map_loading_venues'.tr()),
+                      if (!_markersReady)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: context.colors.card,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                              const SizedBox(width: 10),
+                              Text('match.map_loading_venues'.tr()),
+                            ],
+                          ),
+                        ),
+                      if (!_markersReady && distanceWarning != null)
+                        const SizedBox(height: 10),
+                      // ── Mesafe uyarısı (liste görünümündekiyle aynı) ──────────
+                      // Liste görünümünde gösterilen uyarı haritada da
+                      // gösterilmiyordu — kullanıcı orta noktanın neden
+                      // hesaplanamadığını burada da görebilmeli.
+                      if (distanceWarning != null)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFA000).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.warning_amber_rounded,
+                                size: 18,
+                                color: Color(0xFFFFA000),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  distanceWarning,
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    color: context.colors.textPrimary,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
                 ),
               ),
             ),
 
-          // ── Üst: geri butonu ─────────────────────────────────────────────
+          // ── Üst: geri butonu + liste görünümüne geçiş ────────────────────
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  // ARTIK Navigator.pop YOK: bu sayfa kendi route'u olarak
+                  // push EDİLMİYOR, match_page.dart'ın gövdesine doğrudan
+                  // gömülüyor (bkz. match_page.dart showMapViewProvider).
+                  // Bu yüzden "geri" tek başına forma dönmek için sadece
+                  // showVenuesProvider'ı false yapıyor — eskiden burada
+                  // Navigator.pop kullanılıyordu, bu da YANLIŞ bir route'u
+                  // (MatchPage'in altındaki sayfayı) kapatmaya çalışıyordu.
                   GestureDetector(
-                    onTap: () => Navigator.pop(context),
+                    onTap: () {
+                      ref.read(showVenuesProvider.notifier).state = false;
+                    },
                     child: Container(
                       width: 40,
                       height: 40,
@@ -486,6 +557,52 @@ class _AttemptMeetPageState extends ConsumerState<AttemptMeetPage> {
                         ],
                       ),
                       child: const Icon(Icons.arrow_back),
+                    ),
+                  ),
+                  // Harita/liste görünümü TEK butonla yönetiliyor: burada
+                  // (haritadayken) sağ üstteki bu buton, aynı arama
+                  // sonuçlarını liste şeklinde gösteren _VenueResultsView'a
+                  // geçer. Navigator KULLANILMIYOR — sadece showMapViewProvider
+                  // false yapılıyor (showVenuesProvider zaten true, results
+                  // modundan çıkılmıyor, sadece alt görünüm değişiyor).
+                  // Sonuçlar zaten venueSearchProvider'da duruyor, tekrar
+                  // arama yapılmıyor.
+                  GestureDetector(
+                    onTap: () {
+                      ref.read(showMapViewProvider.notifier).state = false;
+                    },
+                    child: Container(
+                      height: 40,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: context.colors.card,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.12),
+                            blurRadius: 6,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.view_list_outlined,
+                            size: 18,
+                            color: context.colors.textPrimary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'match.list_view'.tr(),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: context.colors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -570,6 +687,7 @@ class _AttemptMeetPageState extends ConsumerState<AttemptMeetPage> {
               ),
             ),
         ],
+      ),
       ),
     );
   }

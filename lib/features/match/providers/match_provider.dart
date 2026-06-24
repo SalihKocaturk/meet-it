@@ -14,6 +14,20 @@ final selectedActivitiesProvider =
 // ── Mekan önerileri gösteriliyor mu? ──────────────────────────────────────────
 final showVenuesProvider = StateProvider.autoDispose<bool>((ref) => false);
 
+// ── Sonuçlar gösterilirken: harita mı liste mi? ───────────────────────────────
+//
+// ÖNEMLİ: Bu, liste/harita arasında geçiş yaparken AYRI bir route
+// push/pop edilmediği için var — `AttemptMeetPage` artık `MatchPage`'in
+// gövdesine doğrudan (Navigator olmadan) gömülüyor, tıpkı `_VenueResultsView`
+// gibi. Önceki tasarımda geçiş Navigator.push/pop ile yapılıyordu; bu da
+// "liste→harita→geri" gibi bir akışta geri tuşuna BİR KEZ basmanın
+// kullanıcıyı tekrar listeye değil de doğrudan forma götürmesini
+// engelliyordu (önceki ekrana dönüyordu, formdan çıkmak için ikinci bir
+// geri basışı gerekiyordu). Artık tek bir state (bu provider + yukarıdaki
+// showVenuesProvider) hangi görünümün aktif olduğunu belirliyor; "geri"
+// her zaman tek basışta forma döner.
+final showMapViewProvider = StateProvider.autoDispose<bool>((ref) => true);
+
 // ── Kullanıcının girdiği konum (text + lat/lng) ───────────────────────────────
 class UserLocation {
   final String text;

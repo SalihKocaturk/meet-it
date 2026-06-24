@@ -207,15 +207,16 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
           // bulmak gerçekçi değil. Kullanıcıyı uyar, kendi konumuna
           // göre aramaya devam et.
           distanceWarning =
-              'İkiniz arasındaki mesafe çok uzun (${dist.round()} km). '
-              'Ortak bir mekan önerilemiyor, bunun yerine kendi '
-              'konumuna yakın mekanlar gösteriliyor.';
+              'Buluşmak istediğiniz arkadaşınız size çok uzak '
+              '(~${dist.round()} km). Bu yüzden ortak bir mekan '
+              'önerilemiyor, bunun yerine sana yakın mekanlar '
+              'gösteriliyor.';
         }
       } else {
         // Arkadaşın konum bilgisi yok — orta nokta hesaplanamıyor.
         distanceWarning =
-            'Arkadaşının konum bilgisi bulunamadığı için ortak bir '
-            'buluşma noktası hesaplanamadı. Kendi konumuna yakın '
+            'Arkadaşınızın konum bilgisi bulunamadığı için ortak bir '
+            'buluşma noktası hesaplanamadı. Bunun yerine sana yakın '
             'mekanlar gösteriliyor.';
       }
     }
