@@ -48,7 +48,11 @@ class _SplashPageState extends ConsumerState<SplashPage>
     final auth = ref.read(authProvider);
 
     if (auth.isAuthenticated) {
-      context.go(auth.hasPersonality ? AppRoutes.main : AppRoutes.quiz);
+      if (auth.needsEmailVerification) {
+        context.go(AppRoutes.verification, extra: auth.user?.email ?? '');
+      } else {
+        context.go(auth.hasPersonality ? AppRoutes.main : AppRoutes.quiz);
+      }
     } else {
       context.go(AppRoutes.signIn);
     }
@@ -68,9 +72,8 @@ class _SplashPageState extends ConsumerState<SplashPage>
         child: FadeTransition(
           opacity: _pulseAnim,
           child: Image.asset(
-            'assets/images/logo.png',
-            height: 120,
-            color: Colors.white,
+            'assets/images/logo_icon.png',
+            height: 96,
           ),
         ),
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:meetit/features/match/providers/match_provider.dart';
 
 // Sign Up form controller provider'ları (autoDispose)
 final signUpNameControllerProvider =
@@ -39,3 +40,10 @@ final signUpAgeControllerProvider =
 
 // Cinsiyet seçimi için StateProvider (String? — opsiyonel)
 final signUpGenderProvider = StateProvider.autoDispose<String?>((ref) => null);
+
+// Haritadan seçilen gerçek konum (lat/lng + adres metni). Henüz Firebase
+// hesabı yokken sadece burada (form state'inde) tutulur; hesap
+// oluşturulduktan SONRA AuthNotifier.signUp() içinde UserModel'e lat/lng
+// olarak yazılır (bkz. sign_up_page.dart _onSignUp).
+final signUpPickedLocationProvider =
+    StateProvider.autoDispose<UserLocation?>((ref) => null);

@@ -30,19 +30,20 @@ import 'app_routes.dart';
 ///
 /// Çözüm: GoRouter'ı bir kez oluştur, `refreshListenable` ile SADECE
 /// routing'i gerçekten etkileyen alanlar (isSessionLoading, isAuthenticated,
-/// hasPersonality) değiştiğinde haberdar ol. Diğer profil güncellemeleri
-/// router'ı hiç etkilemesin.
+/// hasPersonality, needsEmailVerification) değiştiğinde haberdar ol. Diğer
+/// profil güncellemeleri router'ı hiç etkilemesin.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final refreshNotifier = _RouterRefreshNotifier();
 
-  // authProvider'ı sadece DİNLE (watch değil) — routing'i etkileyen 3 alan
+  // authProvider'ı sadece DİNLE (watch değil) — routing'i etkileyen alanlar
   // değişmediği sürece refreshNotifier'ı tetiklemiyoruz.
-  (bool, bool, bool)? lastKey;
+  (bool, bool, bool, bool)? lastKey;
   ref.listen(authProvider, (previous, next) {
     final key = (
       next.isSessionLoading,
       next.isAuthenticated,
       next.hasPersonality,
+      next.needsEmailVerification,
     );
     if (lastKey != null && lastKey == key) return;
     lastKey = key;
@@ -61,6 +62,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isSessionLoading = authState.isSessionLoading;
       final isAuthenticated = authState.isAuthenticated;
       final hasPersonality = authState.hasPersonality;
+      final needsEmailVerification = authState.needsEmailVerification;
       final location = state.matchedLocation;
 
       // Oturum henüz SharedPreferences'tan yükleniyor → splash'te kal
@@ -78,6 +80,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // Giriş yapmamışsa public'e git
       if (!isAuthenticated && !publicRoutes.contains(location)) {
         return AppRoutes.signIn;
+      }
+
+      // Giriş yapmış ama email'i doğrulanmamış → doğrulama sayfasına git
+      // (quiz/ana uygulamadan ÖNCE gelir; kullanıcı doğrulamadan içeri
+      // giremesin).
+      if (isAuthenticated &&
+          needsEmailVerification &&
+          location != AppRoutes.verification) {
+        return AppRoutes.verification;
       }
 
       // Giriş yapmış ama quiz yok → quiz'e yönlendir

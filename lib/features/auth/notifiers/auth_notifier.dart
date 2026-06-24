@@ -14,6 +14,13 @@ import 'package:meetit/features/personality/providers/personality_provider.dart'
 
 const _kSessionKey = 'meetit_session';
 
+/// `UserModel.personalityHistory` listesinin tutacağı maksimum anlık
+/// görüntü (snapshot) sayısı — sınırsız büyüyüp Firestore doküman boyutunu
+/// şişirmesin diye en eski kayıtlar bu sınırın üzerinde silinir. 40 kayıt,
+/// haftada birkaç mekan ziyareti yapan bir kullanıcı için aylarca yetecek
+/// bir geçmiş sağlıyor.
+const kMaxPersonalityHistory = 40;
+
 // ── Auth State ────────────────────────────────────────────────────────────────
 
 class AuthState {
@@ -22,11 +29,23 @@ class AuthState {
   final bool isSessionLoading;
   final String? errorMessage;
 
+  /// Firebase'deki `currentUser.emailVerified` durumunu yansıtır.
+  ///
+  /// NOT: Bu alan KASITLI OLARAK SharedPreferences'a / session'a
+  /// kalıcı yazılmıyor (sadece in-memory) — çünkü kaynağı her zaman
+  /// Firebase'in o anki durumu olmalı; cihazda eski/yanlış bir değer
+  /// "yapışıp" kalmasın. Email/şifre ile giriş yapan kullanıcılar için
+  /// `signIn`/`signUp` sırasında taze hesaplanır. Google ile giriş yapan
+  /// kullanıcılarda her zaman `false` kalır (Google hesapları zaten
+  /// Google tarafından doğrulanmış sayılır).
+  final bool needsEmailVerification;
+
   const AuthState({
     this.user,
     this.isLoading = false,
     this.isSessionLoading = false,
     this.errorMessage,
+    this.needsEmailVerification = false,
   });
 
   bool get isAuthenticated => user != null;
@@ -37,6 +56,7 @@ class AuthState {
     bool? isLoading,
     bool? isSessionLoading,
     String? errorMessage,
+    bool? needsEmailVerification,
     bool clearUser = false,
     bool clearError = false,
   }) {
@@ -45,6 +65,8 @@ class AuthState {
       isLoading: isLoading ?? this.isLoading,
       isSessionLoading: isSessionLoading ?? this.isSessionLoading,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      needsEmailVerification:
+          needsEmailVerification ?? this.needsEmailVerification,
     );
   }
 }
@@ -127,6 +149,14 @@ class AuthNotifier extends Notifier<AuthState> {
           email: email, password: password);
       final fbUser = cred.user!;
 
+      // Firebase'in cache'lediği `emailVerified` bayrağı eski olabilir
+      // (kullanıcı linke tıkladıktan sonra cihazda hâlâ "doğrulanmamış"
+      // görünebilir) — taze durum için sunucudan yeniden çekiyoruz.
+      try {
+        await fbUser.reload();
+      } catch (_) {}
+      final isVerified = _auth.currentUser?.emailVerified ?? fbUser.emailVerified;
+
       final doc = await _firestore.collection('users').doc(fbUser.uid).get();
       late UserModel user;
       if (doc.exists) {
@@ -142,7 +172,11 @@ class AuthNotifier extends Notifier<AuthState> {
       }
 
       await _saveSession(user);
-      state = state.copyWith(user: user, isLoading: false);
+      state = state.copyWith(
+        user: user,
+        isLoading: false,
+        needsEmailVerification: !isVerified,
+      );
     } on FirebaseAuthException catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -164,6 +198,8 @@ class AuthNotifier extends Notifier<AuthState> {
     int? age,
     String? gender,
     String? photoUrl,
+    double? lat,
+    double? lng,
   }) async {
     if (email.isEmpty || password.isEmpty || name.isEmpty) {
       state = state.copyWith(errorMessage: 'validation.fill_required');
@@ -177,6 +213,19 @@ class AuthNotifier extends Notifier<AuthState> {
           email: email, password: password);
       await cred.user!.updateDisplayName(name);
 
+      // Hesaba onay (doğrulama) maili gönder. Bu çağrı Firebase Auth
+      // tarafından otomatik olarak gerçek bir email gönderir — ekstra bir
+      // backend/SMTP kurulumu gerekmez. Gönderim başarısız olsa bile (örn.
+      // ağ hatası) kayıt akışını durdurmuyoruz; kullanıcı doğrulama
+      // sayfasından "Tekrar Gönder" ile yeniden deneyebilir.
+      try {
+        await cred.user!.sendEmailVerification();
+      } catch (e) {
+        // TEŞHİS: Gerçek hata kodu görünür olsun — "mail gönderilemiyor"
+        // şikayetinin asıl sebebini görmek için (geçici debug log).
+        debugPrint('[sendEmailVerification/signUp] error: $e');
+      }
+
       final user = UserModel(
         uid: cred.user!.uid,
         name: name,
@@ -186,11 +235,17 @@ class AuthNotifier extends Notifier<AuthState> {
         gender: gender,
         photoUrl: photoUrl,
         createdAt: DateTime.now(),
+        lat: lat,
+        lng: lng,
       );
 
       await _firestore.collection('users').doc(user.uid).set(user.toMap());
       await _saveSession(user);
-      state = state.copyWith(user: user, isLoading: false);
+      state = state.copyWith(
+        user: user,
+        isLoading: false,
+        needsEmailVerification: true,
+      );
     } on FirebaseAuthException catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -278,6 +333,39 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  // ── Email Doğrulama ───────────────────────────────────────────────────────
+
+  /// Firebase'den taze kullanıcı durumunu çekip `emailVerified` bayrağını
+  /// kontrol eder ve `state.needsEmailVerification`'ı güncelleyip sonucu
+  /// (true = doğrulanmış) döner. [VerificationPage]'deki "Doğruladım" butonu
+  /// bunu çağırır.
+  Future<bool> checkEmailVerified() async {
+    final fbUser = _auth.currentUser;
+    if (fbUser == null) return false;
+    try {
+      await fbUser.reload();
+    } catch (_) {
+      return !state.needsEmailVerification;
+    }
+    final isVerified = _auth.currentUser?.emailVerified ?? false;
+    state = state.copyWith(needsEmailVerification: !isVerified);
+    return isVerified;
+  }
+
+  /// Doğrulama emailini tekrar gönderir. Başarılıysa `true` döner.
+  Future<bool> resendVerificationEmail() async {
+    final fbUser = _auth.currentUser;
+    if (fbUser == null) return false;
+    try {
+      await fbUser.sendEmailVerification();
+      return true;
+    } catch (e) {
+      // TEŞHİS: Gerçek hata kodu görünür olsun (geçici debug log).
+      debugPrint('[sendEmailVerification/resend] error: $e');
+      return false;
+    }
+  }
+
   // ── Personality ───────────────────────────────────────────────────────────
 
   /// Profil güncellemesi sonrası local state + session güncelle
@@ -286,18 +374,34 @@ class AuthNotifier extends Notifier<AuthState> {
     state = state.copyWith(user: updatedUser);
   }
 
-  /// Quiz bittikten sonra kişilik profilini hem state'e hem Firestore'a yaz.
+  /// Quiz bittikten sonra VEYA bir mekan ziyaretiyle (`evolvedWith`) profil
+  /// değiştiğinde çağrılır — yeni profili hem state'e hem Firestore'a yazar.
+  ///
+  /// Ayrıca [PersonalityHistoryChart] tarafından kullanılan zaman serisine
+  /// (`personalityHistory`) bu anki profilin bir anlık görüntüsünü ekler.
+  /// Bu sayede "kişiliğim zamanla nasıl değişti" sorusu, sadece son durumu
+  /// değil, geçmişteki her güncellemeyi de gösterebilir.
   Future<void> setPersonalityProfile(PersonalityProfile profile) async {
     final user = state.user;
     if (user == null) return;
 
-    final updatedUser = user.copyWith(personalityProfile: profile);
+    final updatedHistory = [...user.personalityHistory, profile];
+    // En eski kayıtları kırp — sınırsız büyümesin.
+    final trimmedHistory = updatedHistory.length > kMaxPersonalityHistory
+        ? updatedHistory.sublist(updatedHistory.length - kMaxPersonalityHistory)
+        : updatedHistory;
+
+    final updatedUser = user.copyWith(
+      personalityProfile: profile,
+      personalityHistory: trimmedHistory,
+    );
     await _saveSession(updatedUser);
 
     // Firestore'a kaydet
     try {
       await _firestore.collection('users').doc(user.uid).update({
         'personalityProfile': profile.toMap(),
+        'personalityHistory': trimmedHistory.map((p) => p.toMap()).toList(),
       });
     } catch (_) {
       // Firestore hatası session'ı etkilemesin

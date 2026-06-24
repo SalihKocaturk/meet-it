@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:meetit/core/constants/app_colors.dart';
-import 'package:meetit/core/utils/app_snackbar.dart';
+import 'package:meetit/core/widgets/app_alert.dart';
 import 'package:meetit/core/widgets/app_text_field.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/auth/providers/forgot_password_form_provider.dart';
@@ -15,10 +15,13 @@ class ForgotPasswordPage extends ConsumerWidget {
     final email = ref.read(forgotPasswordEmailControllerProvider).text.trim();
 
     if (email.isEmpty) {
-      AppSnackbar.warning(
-        context,
+      showAppAlert(
+        context: context,
+        type: AppAlertType.warning,
         title: 'validation.missing_field'.tr(),
-        message: 'auth.enter_email_warning'.tr(),
+        text: 'auth.enter_email_warning'.tr(),
+        confirmBtnText: 'common.ok'.tr(),
+        confirmBtnColor: context.colors.primary,
       );
       return;
     }
@@ -28,7 +31,14 @@ class ForgotPasswordPage extends ConsumerWidget {
     if (!context.mounted) return;
     final error = ref.read(authErrorProvider);
     if (error != null) {
-      AppSnackbar.error(context, title: 'auth.send_failed'.tr(), message: error.tr());
+      showAppAlert(
+        context: context,
+        type: AppAlertType.error,
+        title: 'auth.send_failed'.tr(),
+        text: error.tr(),
+        confirmBtnText: 'common.ok'.tr(),
+        confirmBtnColor: context.colors.primary,
+      );
       ref.read(authProvider.notifier).clearError();
       return;
     }

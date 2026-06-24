@@ -11,6 +11,17 @@ class UserModel {
   final DateTime createdAt;
   final PersonalityProfile? personalityProfile;
 
+  /// Kişilik profilinin zaman içindeki kayıtları (en eskiden en yeniye).
+  ///
+  /// Her [PersonalityProfile] değişikliğinde (quiz tamamlama VEYA
+  /// `evolvedWith` ile mekan ziyaretine bağlı evrim) o anki skorların bir
+  /// "anlık görüntüsü" (snapshot) buraya eklenir — bu sayede "kişiliğim
+  /// zamanla nasıl değişti" sorusuna bir zaman serisi grafiğiyle cevap
+  /// verilebilir (bkz. PersonalityHistoryChart). Sınırsız büyümesin diye
+  /// AuthNotifier.setPersonalityProfile son [kMaxPersonalityHistory]
+  /// kaydı tutacak şekilde kırpıyor.
+  final List<PersonalityProfile> personalityHistory;
+
   /// Kullanıcının son bilinen GPS/harita üzerinden seçtiği konum
   /// koordinatları. Firestore'a kaydedilir ki arkadaşlar buluşma
   /// mekanı ararken bu kullanıcının konumunu her zaman güvenilir bir
@@ -29,6 +40,7 @@ class UserModel {
     this.photoUrl,
     required this.createdAt,
     this.personalityProfile,
+    this.personalityHistory = const [],
     this.lat,
     this.lng,
   });
@@ -50,6 +62,12 @@ class UserModel {
               map['personalityProfile'] as Map<String, dynamic>,
             )
           : null,
+      personalityHistory: (map['personalityHistory'] as List<dynamic>?)
+              ?.map(
+                (e) => PersonalityProfile.fromMap(e as Map<String, dynamic>),
+              )
+              .toList() ??
+          const [],
       lat: (map['lat'] as num?)?.toDouble(),
       lng: (map['lng'] as num?)?.toDouble(),
     );
@@ -67,6 +85,9 @@ class UserModel {
       'createdAt': createdAt.millisecondsSinceEpoch,
       if (personalityProfile != null)
         'personalityProfile': personalityProfile!.toMap(),
+      if (personalityHistory.isNotEmpty)
+        'personalityHistory':
+            personalityHistory.map((p) => p.toMap()).toList(),
       if (lat != null) 'lat': lat,
       if (lng != null) 'lng': lng,
     };
@@ -85,6 +106,7 @@ class UserModel {
     DateTime? createdAt,
     PersonalityProfile? personalityProfile,
     bool clearProfile = false,
+    List<PersonalityProfile>? personalityHistory,
     double? lat,
     double? lng,
   }) {
@@ -99,6 +121,7 @@ class UserModel {
       createdAt: createdAt ?? this.createdAt,
       personalityProfile:
           clearProfile ? null : (personalityProfile ?? this.personalityProfile),
+      personalityHistory: personalityHistory ?? this.personalityHistory,
       lat: lat ?? this.lat,
       lng: lng ?? this.lng,
     );

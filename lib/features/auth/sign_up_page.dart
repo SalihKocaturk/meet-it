@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/router/app_routes.dart';
-import 'package:meetit/core/utils/app_snackbar.dart';
+import 'package:meetit/core/widgets/app_alert.dart';
 import 'package:meetit/core/widgets/app_text_field.dart';
 import 'package:meetit/core/widgets/langauge_switcher.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/auth/providers/sign_up_form_provider.dart';
+import 'package:meetit/features/match/match_page.dart' show MapLocationPickerPage;
+import 'package:meetit/features/match/providers/match_provider.dart';
 
 class SignUpPage extends ConsumerWidget {
   const SignUpPage({super.key});
@@ -24,6 +26,7 @@ class SignUpPage extends ConsumerWidget {
     final email = ref.read(signUpEmailControllerProvider).text.trim();
     final password = ref.read(signUpPasswordControllerProvider).text.trim();
     final location = ref.read(signUpLocationControllerProvider).text.trim();
+    final pickedLocation = ref.read(signUpPickedLocationProvider);
     final ageText = ref.read(signUpAgeControllerProvider).text.trim();
     final gender = ref.read(signUpGenderProvider);
 
@@ -32,20 +35,26 @@ class SignUpPage extends ConsumerWidget {
         password.isEmpty ||
         location.isEmpty ||
         ageText.isEmpty) {
-      AppSnackbar.warning(
-        context,
+      showAppAlert(
+        context: context,
+        type: AppAlertType.warning,
         title: 'validation.missing_field'.tr(),
-        message: 'validation.fill_required'.tr(),
+        text: 'validation.fill_required'.tr(),
+        confirmBtnText: 'common.ok'.tr(),
+        confirmBtnColor: context.colors.primary,
       );
       return;
     }
 
     final age = int.tryParse(ageText) ?? 0;
     if (age < 18) {
-      AppSnackbar.error(
-        context,
+      showAppAlert(
+        context: context,
+        type: AppAlertType.error,
         title: 'validation.invalid_age'.tr(),
-        message: 'validation.must_be_18'.tr(),
+        text: 'validation.must_be_18'.tr(),
+        confirmBtnText: 'common.ok'.tr(),
+        confirmBtnColor: context.colors.primary,
       );
       return;
     }
@@ -59,25 +68,42 @@ class SignUpPage extends ConsumerWidget {
           location: location,
           age: age,
           gender: gender,
+          lat: pickedLocation?.lat,
+          lng: pickedLocation?.lng,
         );
 
     if (!context.mounted) return;
     final error = ref.read(authErrorProvider);
     if (error != null) {
-      AppSnackbar.error(context, title: 'auth.sign_up_failed'.tr(), message: error.tr());
+      showAppAlert(
+        context: context,
+        type: AppAlertType.error,
+        title: 'auth.sign_up_failed'.tr(),
+        text: error.tr(),
+        confirmBtnText: 'common.ok'.tr(),
+        confirmBtnColor: context.colors.primary,
+      );
       ref.read(authProvider.notifier).clearError();
       return;
     }
 
-    AppSnackbar.success(
-      context,
+    // Yeni kayıt olanlara önce email doğrulama sayfasına yönlendir —
+    // hesaba gönderilen onay mailini doğrulamadan quiz'e geçemezler
+    // (router'daki `needsEmailVerification` kontrolü de bunu zaten
+    // garanti eder, burada sadece doğru sayfaya gidiyoruz). "Devam Et"e
+    // basılınca yönlendirir.
+    showAppAlert(
+      context: context,
+      type: AppAlertType.success,
       title: 'auth.welcome'.tr(),
-      message: 'auth.account_created'.tr(),
+      text: 'auth.account_created'.tr(),
+      confirmBtnText: 'common.ok'.tr(),
+      confirmBtnColor: context.colors.primary,
+      onConfirmBtnTap: () {
+        Navigator.of(context).pop();
+        context.go(AppRoutes.verification, extra: email);
+      },
     );
-
-    await Future.delayed(const Duration(milliseconds: 1200));
-    // Yeni kayıt olanlara her zaman quiz'e yönlendir
-    if (context.mounted) context.go(AppRoutes.quiz);
   }
 
   @override
@@ -165,13 +191,7 @@ class SignUpPage extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
 
-              AppTextField(
-                controller: locationCtrl,
-                label: 'auth.city_location'.tr(),
-                hint: 'auth.location_hint'.tr(),
-                prefixIcon: Icons.location_on_outlined,
-                textInputAction: TextInputAction.next,
-              ),
+              _SignUpLocationField(locationCtrl: locationCtrl),
               const SizedBox(height: 16),
 
               AppTextField(
@@ -201,7 +221,7 @@ class SignUpPage extends ConsumerWidget {
                     initialValue: selectedGender,
                     decoration: InputDecoration(
                       filled: true,
-                      fillColor: const Color(0xFFFFF8F6),
+                      fillColor: context.colors.card,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 14,
@@ -308,6 +328,60 @@ class SignUpPage extends ConsumerWidget {
               const SizedBox(height: 16),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Kayıt Sırasında Gerçek Konum Seçimi ─────────────────────────────────────
+//
+// Düz metin alanı yerine, uygulamanın diğer yerlerinde (Match, Settings)
+// kullanılan harita tabanlı konum seçiciyi (MapLocationPickerPage) burada
+// da kullanıyoruz. Henüz Firebase hesabı oluşturulmadığı için seçilen
+// lat/lng `signUpPickedLocationProvider`'da tutulur; hesap oluşturulduktan
+// SONRA AuthNotifier.signUp() bunu UserModel'e yazar (bkz. _onSignUp).
+class _SignUpLocationField extends ConsumerWidget {
+  final TextEditingController locationCtrl;
+
+  const _SignUpLocationField({required this.locationCtrl});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final picked = ref.watch(signUpPickedLocationProvider);
+    final hasCoords = picked?.hasCoords ?? false;
+
+    Future<void> pickLocation() async {
+      final result = await Navigator.of(context).push<UserLocation>(
+        MaterialPageRoute(builder: (_) => const MapLocationPickerPage()),
+      );
+      if (result == null) return;
+      ref.read(signUpPickedLocationProvider.notifier).state = result;
+      // Doğrulama mantığı hâlâ text controller'a bakıyor — senkron tutuyoruz.
+      locationCtrl.text = result.text;
+    }
+
+    // Diğer alanlarla (isim, e-posta, şifre) aynı düz text field görünümü —
+    // ama dokunulduğunda klavye yerine harita seçiciyi (MapLocationPickerPage)
+    // açar ve seçilen konumu alana yazar. AbsorbPointer, alanın kendisinin
+    // odak/klavye almasını engelleyip dokunuşu dıştaki GestureDetector'a
+    // bırakır.
+    return GestureDetector(
+      onTap: pickLocation,
+      child: AbsorbPointer(
+        child: AppTextField(
+          controller: locationCtrl,
+          label: 'auth.city_location'.tr(),
+          hint: 'auth.location_hint'.tr(),
+          prefixIcon: hasCoords
+              ? Icons.location_on
+              : Icons.location_on_outlined,
+          suffixIcon: Icon(
+            Icons.chevron_right,
+            size: 18,
+            color: context.colors.hint,
+          ),
+          readOnly: true,
         ),
       ),
     );

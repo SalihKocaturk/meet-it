@@ -4,12 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/router/app_routes.dart';
+import 'package:meetit/core/widgets/app_alert.dart';
 import 'package:meetit/core/widgets/app_text_field.dart';
 import 'package:meetit/core/widgets/langauge_switcher.dart';
 import 'package:meetit/features/auth/notifiers/auth_notifier.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/auth/providers/sign_in_form_provider.dart';
-import 'package:meetit/core/widgets/app_alert.dart';
 
 class SignInPage extends ConsumerWidget {
   const SignInPage({super.key});
@@ -43,7 +43,11 @@ class SignInPage extends ConsumerWidget {
 
       // Giriş başarılı → yönlendir
       if (!previous!.isAuthenticated && next.isAuthenticated) {
-        context.go(next.hasPersonality ? AppRoutes.main : AppRoutes.quiz);
+        if (next.needsEmailVerification) {
+          context.go(AppRoutes.verification, extra: next.user?.email ?? '');
+        } else {
+          context.go(next.hasPersonality ? AppRoutes.main : AppRoutes.quiz);
+        }
       }
     });
 
@@ -74,9 +78,9 @@ class SignInPage extends ConsumerWidget {
                   // Logo — klavye açıkken küçül
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    height: isKeyboardOpen ? 80 : 140,
+                    height: isKeyboardOpen ? 60 : 100,
                     child: Image.asset(
-                      'assets/images/logo.png',
+                      'assets/images/logo_icon.png',
                       fit: BoxFit.fitHeight,
                     ),
                   ),
@@ -277,4 +281,3 @@ class SignInPage extends ConsumerWidget {
         .signIn(email: email.text.trim(), password: password.text.trim());
   }
 }
-
