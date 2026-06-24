@@ -508,7 +508,7 @@ class _SuggestionTile extends ConsumerWidget {
           SizedBox(width: 8),
           GestureDetector(
             onTap: () =>
-                ref.read(friendsProvider.notifier).removeFriend(friend.uid),
+                ref.read(friendsProvider.notifier).dismissSuggestion(friend.uid),
             child: Icon(Icons.close, size: 18, color: context.colors.hint),
           ),
         ],
@@ -781,6 +781,37 @@ class _ConnectionTile extends ConsumerWidget {
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Arkadaşlıktan çıkar butonu — onay alıp removeFriend çağırır
+          GestureDetector(
+            onTap: () {
+              showAppAlert(
+                context: context,
+                type: AppAlertType.confirm,
+                title: 'friends.unfriend_title'.tr(),
+                text: 'friends.unfriend_confirm'.tr(namedArgs: {'name': friend.name}),
+                confirmBtnText: 'friends.unfriend'.tr(),
+                cancelBtnText: 'common.cancel'.tr(),
+                confirmBtnColor: Colors.red,
+                onConfirmBtnTap: () {
+                  Navigator.pop(context);
+                  ref.read(friendsProvider.notifier).removeFriend(friend.uid);
+                },
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.person_remove_outlined,
+                size: 16,
+                color: Colors.red,
               ),
             ),
           ),

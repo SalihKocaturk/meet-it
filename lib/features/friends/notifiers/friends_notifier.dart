@@ -284,6 +284,15 @@ class FriendsNotifier extends Notifier<FriendsState> {
     }
   }
 
+  /// Bir öneriyi listeden kapat (henüz arkadaş olunmadığı için
+  /// Firestore'da silinecek bir friendship dokümanı yok — sadece
+  /// yerel state'ten çıkarılır).
+  void dismissSuggestion(String targetUid) {
+    state = state.copyWith(
+      suggestions: state.suggestions.where((f) => f.uid != targetUid).toList(),
+    );
+  }
+
   void updateSearchQuery(String query) =>
       state = state.copyWith(searchQuery: query);
 }
