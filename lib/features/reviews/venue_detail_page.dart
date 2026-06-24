@@ -15,6 +15,7 @@ import 'package:meetit/features/match/services/places_service.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:meetit/core/widgets/app_alert.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Bir mekanın placeId'sinden TÜM Google fotoğraflarını çeker.
 ///
@@ -114,6 +115,21 @@ class VenueDetailPage extends ConsumerWidget {
     }.toList();
     final hasPhotos = galleryPhotos.isNotEmpty;
 
+    // Kaydet / Tarif Al butonları için minimal bir PlaceResult — sayfa hangi
+    // yoldan açılmış olursa olsun (lat/lng bilinmiyorsa 0) çalışır, aynı
+    // fallback "Yorum Ekle" akışında da kullanılıyor.
+    final place = PlaceResult(
+      placeId: placeId,
+      name: venueName,
+      vicinity: venueAddress,
+      rating: googleRating,
+      userRatingsTotal: googleRatingCount,
+      lat: lat ?? 0,
+      lng: lng ?? 0,
+    );
+    final savedVenues = ref.watch(savedVenuesProvider);
+    final isSaved = savedVenues.any((p) => p.placeId == placeId);
+
     return Scaffold(
       backgroundColor: context.colors.scaffold,
       body: CustomScrollView(
@@ -171,6 +187,40 @@ class VenueDetailPage extends ConsumerWidget {
                       ),
                     ),
                   ],
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _VenueActionButton(
+                          icon: isSaved
+                              ? Icons.bookmark
+                              : Icons.bookmark_border,
+                          label: isSaved
+                              ? 'venue_detail.saved'.tr()
+                              : 'venue_detail.save'.tr(),
+                          filled: isSaved,
+                          onTap: () => ref
+                              .read(savedVenuesProvider.notifier)
+                              .toggle(place),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _VenueActionButton(
+                          icon: Icons.directions_outlined,
+                          label: 'venue_detail.get_directions'.tr(),
+                          filled: false,
+                          onTap: () async {
+                            final uri = Uri.parse(place.googleMapsUrl);
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(uri,
+                                  mode: LaunchMode.externalApplication);
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                   if (googleRating != null) ...[
                     const SizedBox(height: 8),
                     Row(
@@ -327,6 +377,57 @@ class VenueDetailPage extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Mekan Aksiyon Butonu (Kaydet / Tarif Al) ──────────────────────────────────
+//
+// Mekan detay sayfasının üst kısmında "Kaydet" ve "Tarif Al" için kullanılan
+// ortak pill buton. [filled] true ise (mekan kayıtlıysa) dolu/primary
+// renkte, değilse outline şeklinde gösterilir.
+class _VenueActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool filled;
+  final VoidCallback onTap;
+
+  const _VenueActionButton({
+    required this.icon,
+    required this.label,
+    required this.filled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.colors.primary;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: filled ? color : color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: filled ? null : Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 17, color: filled ? Colors.white : color),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: filled ? Colors.white : color,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -527,9 +628,41 @@ class _VenuePhotoGalleryState extends State<_VenuePhotoGallery>
 
 // ── Yorum Satırı ──────────────────────────────────────────────────────────────
 
-class _ReviewTile extends ConsumerWidget {
+class _ReviewTile extends ConsumerStatefulWidget {
   final VenueReviewModel review;
   const _ReviewTile({required this.review});
+
+  @override
+  ConsumerState<_ReviewTile> createState() => _ReviewTileState();
+}
+
+class _ReviewTileState extends ConsumerState<_ReviewTile>
+    with SingleTickerProviderStateMixin {
+  // Instagram'daki gibi: yoruma çift dokununca kalp ikonu kısaca büyüyüp
+  // kaybolur. Bu animasyon sadece görsel geri bildirim — beğeni durumunu
+  // `reviewProvider` (Firestore) zaten ayrı yönetiyor.
+  late final AnimationController _heartController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 450),
+  );
+  late final Animation<double> _heartScale = TweenSequence<double>([
+    TweenSequenceItem(
+        tween: Tween(begin: 0.0, end: 1.2)
+            .chain(CurveTween(curve: Curves.easeOutBack)),
+        weight: 35),
+    TweenSequenceItem(tween: ConstantTween(1.2), weight: 20),
+    TweenSequenceItem(
+        tween: Tween(begin: 1.2, end: 0.0).chain(CurveTween(curve: Curves.easeIn)),
+        weight: 45),
+  ]).animate(_heartController);
+
+  VenueReviewModel get review => widget.review;
+
+  @override
+  void dispose() {
+    _heartController.dispose();
+    super.dispose();
+  }
 
   String _timeAgo(DateTime dt) {
     final diff = DateTime.now().difference(dt);
@@ -543,6 +676,16 @@ class _ReviewTile extends ConsumerWidget {
   Future<void> _toggleLike(WidgetRef ref, String uid) async {
     await ref.read(reviewProvider.notifier).toggleLike(review.id, uid);
     ref.invalidate(venueReviewsProvider(review.placeId));
+  }
+
+  // Çift dokunma: Instagram'da olduğu gibi SADECE beğenir, asla beğeniyi
+  // geri almaz — yorum zaten beğenilmişse sadece kalp animasyonu oynar.
+  Future<void> _doubleTapLike(WidgetRef ref, String? uid) async {
+    _heartController.forward(from: 0);
+    if (uid == null) return;
+    if (!review.isLikedBy(uid)) {
+      await _toggleLike(ref, uid);
+    }
   }
 
   void _confirmDelete(BuildContext context, WidgetRef ref, String uid) {
@@ -565,11 +708,20 @@ class _ReviewTile extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final isOwn = user != null && user.uid == review.authorUid;
 
-    return Container(
+    // Yorumun her yerine (yıldız/sil ikonu hariç) çift dokununca beğen —
+    // tek dokunmadaki kalp ikonu zaten ayrı bir GestureDetector ile toggle
+    // ediyor, çift dokunma ise Instagram'daki gibi sadece beğenir ve kısa
+    // bir kalp animasyonu gösterir.
+    return GestureDetector(
+      onDoubleTap: () => _doubleTapLike(ref, user?.uid),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -688,6 +840,27 @@ class _ReviewTile extends ConsumerWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+          ),
+          // Çift dokunmada kısaca büyüyüp kaybolan kalp — gerçek kullanıcı
+          // etkileşimini engellememesi için IgnorePointer ile sarılı.
+          IgnorePointer(
+            child: ScaleTransition(
+              scale: _heartScale,
+              child: Icon(
+                Icons.favorite_rounded,
+                size: 90,
+                color: Colors.white,
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withOpacity(0.35),
+                    blurRadius: 16,
+                  ),
+                ],
+              ),
             ),
           ),
         ],

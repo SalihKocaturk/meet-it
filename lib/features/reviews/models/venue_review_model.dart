@@ -74,6 +74,20 @@ class VenueReviewModel {
 
   bool isLikedBy(String uid) => likedBy.contains(uid);
 
+  /// Bu yorumun ait olduğu mekanı, kaydetme/tarif alma gibi `PlaceResult`
+  /// bekleyen ortak aksiyonlarda (örn. `savedVenuesProvider`, Google Maps
+  /// linki) kullanabilmek için minimal bir `PlaceResult`'a çevirir.
+  /// lat/lng bilinmiyorsa 0 ile dolduruluyor — `venue_detail_page.dart`'taki
+  /// "Yorum Ekle" akışında da aynı fallback kullanılıyor.
+  PlaceResult toPlaceResult() => PlaceResult(
+        placeId: placeId,
+        name: venueName,
+        vicinity: venueAddress,
+        photoReference: venuePhotoReference,
+        lat: lat ?? 0,
+        lng: lng ?? 0,
+      );
+
   factory VenueReviewModel.fromMap(String id, Map<String, dynamic> map) {
     return VenueReviewModel(
       id: id,
