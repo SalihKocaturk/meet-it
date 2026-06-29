@@ -275,8 +275,13 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                           items: [
                             _MenuItem(
                               icon: Icons.dark_mode_outlined,
-                              title:
-                                  ref.watch(themeModeProvider) == ThemeMode.dark
+                              // `ThemeMode.system` durumunda da doğru metni
+                              // göstermek için isEffectivelyDark kullanılıyor
+                              // (== ThemeMode.dark yalnızca açık/kapalı
+                              // tercihi seçildiğinde doğru sonuç verirdi).
+                              title: isEffectivelyDark(
+                                ref.watch(themeModeProvider),
+                              )
                                   ? 'settings.light_mode'.tr()
                                   : 'settings.dark_mode'.tr(),
                               onTap: () =>

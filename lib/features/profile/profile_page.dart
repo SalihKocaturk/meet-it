@@ -192,55 +192,12 @@ class _ProfileHeader extends ConsumerWidget {
 
           SizedBox(height: 12),
 
-          // Bio bilgileri
-          if (user?.location != null || user?.personalityProfile != null)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (user?.location != null)
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on_outlined,
-                        size: 13,
-                        color: context.colors.hint,
-                      ),
-                      SizedBox(width: 3),
-                      // Detaylı/uzun bir adres girilse bile satırın dışına
-                      // taşmasın diye Flexible + ellipsis kullanılıyor.
-                      Flexible(
-                        child: Text(
-                          user!.location!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: context.colors.textSecondary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                if (user?.personalityProfile != null)
-                  Row(
-                    children: [
-                      Text(
-                        user!.personalityProfile!.dominantType.emoji,
-                        style: TextStyle(fontSize: 13),
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        user!.personalityProfile!.dominantType.displayName,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: context.colors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-
+          // NOT: Profil sekmesinde konum ve kişilik (dominant tip) satırı
+          // kaldırıldı — kullanıcı isteği: bu bilgilerin profil tab'ında
+          // gösterilmesi şart değil. Konum bilgisi zaten Edit Profile
+          // sayfasında harita üzerinden seçilip saklanıyor; kişilik tipi
+          // de "Kişilik Analizim" ve "Arkadaşlarla Uyum" kartlarından
+          // görülebiliyor — burada tekrar göstermeye gerek yok.
           const SizedBox(height: 16),
         ],
       ),
