@@ -71,8 +71,15 @@ class _QuizPageState extends ConsumerState<QuizPage>
   }
 
   void _exitQuiz() {
-    if (context.canPop()) {
-      context.pop();
+    // NOT: Bilerek go_router'ın context.pop()/canPop() yerine ham
+    // Navigator API'si kullanılıyor — bu sayfa artık her zaman go_router
+    // rotası olarak açılmıyor; `ensurePersonalityReady` (bkz.
+    // important_action_guard.dart) onu düz bir MaterialPageRoute olarak
+    // PUSH ediyor. Navigator.of(context) her iki durumda da (go_router
+    // rotası VEYA düz push) doğru sonucu verir.
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop(false);
     } else {
       context.go(AppRoutes.main);
     }
@@ -406,7 +413,22 @@ class _ResultPage extends ConsumerWidget {
                         .read(authProvider.notifier)
                         .setPersonalityProfile(result);
                     if (!context.mounted) return;
-                    context.go(AppRoutes.main);
+                    // NOT: Test artık her zaman router seviyesinde bir
+                    // sayfa olarak AÇILMIYOR — `ensurePersonalityReady`
+                    // (bkz. important_action_guard.dart) bunu düz bir
+                    // MaterialPageRoute ile PUSH ediyor; bu yüzden ham
+                    // Navigator API'si kullanılıyor (go_router'ın
+                    // context.pop()/canPop() yerine — bkz. _exitQuiz).
+                    // Pop edilebilirse `pop(true)` ile çağıran tarafa
+                    // ("testi tamamladım, devam et") haber veriyoruz;
+                    // pop edilecek bir şey yoksa (testin tek/ilk rota
+                    // olduğu eski senaryo) ana sayfaya gidiyoruz.
+                    final navigator = Navigator.of(context);
+                    if (navigator.canPop()) {
+                      navigator.pop(true);
+                    } else {
+                      context.go(AppRoutes.main);
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: context.colors.primary,
