@@ -758,6 +758,9 @@ class _ConnectionTile extends ConsumerWidget {
               ref.read(selectedFriendUidProvider.notifier).state = friend.uid;
               // Buluşma sekmesine geç (yeni sıralamada index 1)
               ref.read(mainTabIndexProvider.notifier).state = 1;
+              // Buluş sayısını artır — ana sayfadaki "Arkadaşların" listesi
+              // bu sayıma göre en çok buluşulan kişiye öncelik verir.
+              ref.read(friendsProvider.notifier).incrementMeetCount(friend.uid);
             },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

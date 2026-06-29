@@ -8,12 +8,19 @@ class FriendshipModel {
   final FriendshipStatus status;
   final DateTime createdAt;
 
+  /// Bu arkadaşla "Buluş" butonuna kaç kez basıldığı (her iki taraf da
+  /// sayılır — dokümana yön bağımsız, çift taraflı tek sayaç). Ana
+  /// sayfadaki "Arkadaşların" listesi, en sık buluşulan kişiye öncelik
+  /// vermek için bununla sıralanıyor (bkz. home_page.dart).
+  final int meetCount;
+
   const FriendshipModel({
     required this.id,
     required this.fromUid,
     required this.toUid,
     required this.status,
     required this.createdAt,
+    this.meetCount = 0,
   });
 
   /// İki uid'den deterministik doc ID üret
@@ -34,6 +41,7 @@ class FriendshipModel {
       createdAt: DateTime.fromMillisecondsSinceEpoch(
         (map['createdAt'] as int?) ?? DateTime.now().millisecondsSinceEpoch,
       ),
+      meetCount: (map['meetCount'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -42,14 +50,17 @@ class FriendshipModel {
         'toUid': toUid,
         'status': status.name,
         'createdAt': createdAt.millisecondsSinceEpoch,
+        'meetCount': meetCount,
       };
 
-  FriendshipModel copyWith({FriendshipStatus? status}) => FriendshipModel(
+  FriendshipModel copyWith({FriendshipStatus? status, int? meetCount}) =>
+      FriendshipModel(
         id: id,
         fromUid: fromUid,
         toUid: toUid,
         status: status ?? this.status,
         createdAt: createdAt,
+        meetCount: meetCount ?? this.meetCount,
       );
 }
 

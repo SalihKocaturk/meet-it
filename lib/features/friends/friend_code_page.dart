@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/utils/important_action_guard.dart';
 import 'package:meetit/features/auth/models/user_model.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/models/friendship_model.dart';
@@ -82,6 +83,14 @@ class _FriendCodePageState extends ConsumerState<FriendCodePage> {
   }
 
   Future<void> _sendRequest(UserModel targetUser) async {
+    // NOT: Arkadaş ekleme "önemli işlem" sayılıyor — kullanıcı email'ini
+    // doğrulamadan arkadaş ekleyemesin. Doğrulanmamışsa burada
+    // VerificationPage PUSH edilir; kullanıcı vazgeçerse (geri tuşu/
+    // "Daha Sonra") `false` döner ve işlem burada durur.
+    // bkz. `important_action_guard.dart`.
+    if (!await ensureEmailVerified(context, ref)) return;
+    if (!mounted) return;
+
     final currentUid = ref.read(authProvider).user?.uid;
     if (currentUid == null) return;
 

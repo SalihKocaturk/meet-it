@@ -99,10 +99,15 @@ class FriendsNotifier extends Notifier<FriendsState> {
       final acceptedUids = <String>{};
       final pendingFromMe = <String>{};
       final pendingToMe = <String>{};
+      // Her arkadaşın meetCount'u — doğrudan friendship dokümanından
+      // okunuyor (yön bağımsız, tek bir paylaşılan sayaç, bkz.
+      // FriendshipModel.meetCount).
+      final meetCounts = <String, int>{};
 
       for (final f in friendships) {
         final otherUid =
             f.fromUid == currentUid ? f.toUid : f.fromUid;
+        meetCounts[otherUid] = f.meetCount;
         switch (f.status) {
           case FriendshipStatus.accepted:
             acceptedUids.add(otherUid);
@@ -132,6 +137,7 @@ class FriendsNotifier extends Notifier<FriendsState> {
               : FriendStatus.pending,
           addedAt: DateTime.now(),
           personalityProfile: u.personalityProfile,
+          meetCount: meetCounts[u.uid] ?? 0,
         );
         if (acceptedUids.contains(u.uid)) {
           connections.add(friend);
@@ -295,4 +301,42 @@ class FriendsNotifier extends Notifier<FriendsState> {
 
   void updateSearchQuery(String query) =>
       state = state.copyWith(searchQuery: query);
+
+  /// Bir arkadaşla "Buluş" butonuna basıldığında çağrılır (home_page.dart ve
+  /// friends_page.dart'taki bağlantı kartlarından). Sayaç, friendship
+  /// dokümanı üzerinde tutuluyor — bu sayede yön (kim arkadaş isteği
+  /// gönderdi) önemsiz, iki taraf da aynı sayacı paylaşıyor ve ana
+  /// sayfadaki "Arkadaşların" listesi en sık buluşulan kişiye göre
+  /// sıralanabiliyor (bkz. home_page.dart).
+  ///
+  /// Firestore tarafı FieldValue.increment ile atomik artırılıyor; yerel
+  /// state ise optimistic olarak güncelleniyor ki kullanıcı butona basar
+  /// basmaz sıralama değişikliğini (varsa) hemen görsün — bir sonraki
+  /// snapshot zaten gerçek değeri getirip üzerine yazacak.
+  Future<void> incrementMeetCount(String targetUid) async {
+    final currentUid = ref.read(authProvider).user?.uid;
+    if (currentUid == null) return;
+
+    final docId = FriendshipModel.docId(currentUid, targetUid);
+
+    // Optimistic local update — connections listesindeki ilgili arkadaşın
+    // meetCount'unu hemen bir artır.
+    final idx = state.connections.indexWhere((f) => f.uid == targetUid);
+    if (idx != -1) {
+      final updated = List<UserFriendModel>.from(state.connections);
+      updated[idx] =
+          updated[idx].copyWith(meetCount: updated[idx].meetCount + 1);
+      state = state.copyWith(connections: updated);
+    }
+
+    try {
+      await _db
+          .collection('friendships')
+          .doc(docId)
+          .update({'meetCount': FieldValue.increment(1)});
+    } catch (_) {
+      // Sessizce yut — bu sadece bir sıralama/öncelik sinyali, kullanıcının
+      // asıl işlemi (buluşma akışına geçiş) bundan etkilenmemeli.
+    }
+  }
 }

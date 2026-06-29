@@ -16,6 +16,12 @@ class UserFriendModel {
   final double? lat;
   final double? lng;
 
+  /// Bu arkadaşla "Buluş" butonuna toplam kaç kez basıldığı — friendship
+  /// dokümanından okunur (bkz. FriendshipModel.meetCount). Ana sayfadaki
+  /// arkadaş listesini en sık buluşulan kişiye öncelik verecek şekilde
+  /// sıralamak için kullanılır.
+  final int meetCount;
+
   const UserFriendModel({
     required this.uid,
     required this.name,
@@ -25,6 +31,7 @@ class UserFriendModel {
     this.personalityProfile,
     this.lat,
     this.lng,
+    this.meetCount = 0,
   });
 
   factory UserFriendModel.fromMap(Map<String, dynamic> map) {
@@ -44,6 +51,7 @@ class UserFriendModel {
           : null,
       lat: (map['lat'] as num?)?.toDouble(),
       lng: (map['lng'] as num?)?.toDouble(),
+      meetCount: (map['meetCount'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -57,6 +65,7 @@ class UserFriendModel {
       'personalityProfile': personalityProfile?.toMap(),
       if (lat != null) 'lat': lat,
       if (lng != null) 'lng': lng,
+      'meetCount': meetCount,
     };
   }
 
@@ -70,6 +79,7 @@ class UserFriendModel {
     bool clearProfile = false,
     double? lat,
     double? lng,
+    int? meetCount,
   }) {
     return UserFriendModel(
       uid: uid ?? this.uid,
@@ -80,6 +90,7 @@ class UserFriendModel {
       personalityProfile: clearProfile
           ? null
           : (personalityProfile ?? this.personalityProfile),
+      meetCount: meetCount ?? this.meetCount,
       lat: lat ?? this.lat,
       lng: lng ?? this.lng,
     );
