@@ -1504,4 +1504,49 @@ class PlacesService {
 
     // Secondary tipler — daha geniş havuz.
     //
-    // NOT: `se
+    // NOT: `secondaryType` getter'ı %10 gibi düşük bir eşikte bile ikincil
+    // tip döndürüyor (UI'da "ikincil eğilim" göstermek için makul bir eşik).
+    // Ama burada, arama havuzuna YENİ bir mekan kategorisi eklemek için bu
+    // çok düşük: "sakin ruh" kullanıcının %12 gibi zayıf bir "maceraperest"
+    // eğilimi olması, sonuçlara spor salonu/stadyum sokulmasına yol açıyordu.
+    // Bu yüzden burada daha sıkı, yerel bir eşik kullanıyoruz: ikincil eğilim
+    // gerçekten belirgin değilse (≥ %25) arama havuzuna katılmasın.
+    const secondaryPoolThreshold = 0.25;
+
+    final userSecondary = <String>[];
+    final friendSecondary = <String>[];
+    void collectSecondaryPool(
+      PersonalityProfile profile,
+      List<String> sink,
+    ) {
+      final ranked = profile.rankedTypes;
+      if (ranked.length < 2) return;
+      final second = ranked[1];
+      if (second.value >= secondaryPoolThreshold) {
+        sink.addAll(_personalityTypes[second.key] ?? []);
+      }
+    }
+
+    collectSecondaryPool(userProfile, userSecondary);
+    collectSecondaryPool(friendProfile, friendSecondary);
+
+    // İkincil havuzlar da aynı round-robin mantığıyla ekleniyor — aksi halde
+    // burada da kullanıcının ikincil tipi, arkadaşın ikincil tipinin önüne
+    // geçip aynı adaletsizliği ikincil seviyede tekrarlardı.
+    final maxSecondaryLen = userSecondary.length > friendSecondary.length
+        ? userSecondary.length
+        : friendSecondary.length;
+    for (var i = 0; i < maxSecondaryLen; i++) {
+      if (i < userSecondary.length) types.add(userSecondary[i]);
+      if (i < friendSecondary.length) types.add(friendSecondary[i]);
+    }
+
+    // NOT (2026-06-28): Artık tüm type'lar TEK bir Places API isteğine
+    // gömüldüğü için (`includedTypes` dizisi) tip sayısı ekstra HTTP çağrısı
+    // YARATMIYOR — bu sınır artık sadece `includedTypes` dizisinin
+    // kişilik/ortak tip dengesini bozmaması için var. Round-robin sayesinde
+    // 5 sınırı kullanıcı/arkadaş dengesini bozuyordu (4 kendi tipi + 1 karşı
+    // taraf); adil bir 50/50 bölünme için sınırı 6'ya çıkardık.
+    return types.take(6).toList();
+  }
+}
