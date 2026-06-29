@@ -47,12 +47,11 @@ class _SplashPageState extends ConsumerState<SplashPage>
     if (!mounted) return;
     final auth = ref.read(authProvider);
 
+    // NOT: Email doğrulama ve kişilik testi artık burada ZORUNLU
+    // tetiklenmiyor — sadece kullanıcı "önemli" bir işlem denediğinde
+    // devreye giriyor (bkz. `important_action_guard.dart`).
     if (auth.isAuthenticated) {
-      if (auth.needsEmailVerification) {
-        context.go(AppRoutes.verification, extra: auth.user?.email ?? '');
-      } else {
-        context.go(auth.hasPersonality ? AppRoutes.main : AppRoutes.quiz);
-      }
+      context.go(AppRoutes.main);
     } else {
       context.go(AppRoutes.signIn);
     }

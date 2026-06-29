@@ -41,13 +41,12 @@ class SignInPage extends ConsumerWidget {
         );
       }
 
-      // Giriş başarılı → yönlendir
+      // Giriş başarılı → ana uygulamaya git. NOT: Email doğrulama ve
+      // kişilik testi artık burada ZORUNLU tetiklenmiyor — sadece
+      // kullanıcı "önemli" bir işlem denediğinde devreye giriyor (bkz.
+      // `important_action_guard.dart`).
       if (!previous!.isAuthenticated && next.isAuthenticated) {
-        if (next.needsEmailVerification) {
-          context.go(AppRoutes.verification, extra: next.user?.email ?? '');
-        } else {
-          context.go(next.hasPersonality ? AppRoutes.main : AppRoutes.quiz);
-        }
+        context.go(AppRoutes.main);
       }
     });
 

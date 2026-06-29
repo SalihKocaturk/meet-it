@@ -6,6 +6,7 @@ abstract class AppRoutes {
   static const signUp = '/signup';
   static const forgotPassword = '/forgot-password';
   static const verification = '/verification';
+  static const completeProfile = '/complete-profile';
   static const main = '/main';
 
   // Kişilik testi

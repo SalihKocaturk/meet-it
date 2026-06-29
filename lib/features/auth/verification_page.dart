@@ -9,16 +9,23 @@ import 'package:meetit/core/router/app_routes.dart';
 import 'package:meetit/core/widgets/app_alert.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 
-/// Hesap oluşturulduktan sonra (veya henüz doğrulamamış bir hesapla giriş
-/// yapıldığında) gösterilen email doğrulama sayfası.
+/// Email doğrulama sayfası.
+///
+/// NOT: Bu sayfa artık kayıt/giriş sonrası ZORUNLU olarak otomatik
+/// gösterilmiyor (kullanıcı şikayeti: doğrulamadan uygulamaya dair hiçbir
+/// şey görmüyordu). Artık SADECE `important_action_guard.dart`'taki
+/// `ensureEmailVerified()` tarafından, kullanıcı "önemli" bir işlem
+/// (arkadaş ekleme, buluşma/mekan arama) denediğinde PUSH edilir — bu
+/// yüzden geri tuşu (leading) eklendi: kullanıcı doğrulamak istemezse
+/// vazgeçip geri dönebilir, sadece o işlem gerçekleşmez.
 ///
 /// Akış:
 /// 1. `signUp()` zaten Firebase'e gerçek bir doğrulama maili gönderdi
 ///    (bkz. `AuthNotifier.signUp`). Bu sayfa o mailin tıklanmasını bekler.
 /// 2. "Doğruladım, Devam Et" → `checkEmailVerified()` ile Firebase'den taze
-///    durumu çeker; doğrulanmışsa router otomatik olarak quiz/ana sayfaya
-///    yönlendirir (bkz. `app_router.dart`'taki `needsEmailVerification`
-///    kontrolü), doğrulanmamışsa kullanıcıyı bilgilendirir.
+///    durumu çeker; doğrulanmışsa `pop(true)` ile çağıran tarafa
+///    ("doğrulandı, işleme devam et") haber verir, doğrulanmamışsa
+///    kullanıcıyı bilgilendirir.
 /// 3. "Tekrar Gönder" → gerçek `sendEmailVerification()` çağrısı, 30 saniye
 ///    bekleme süresiyle (spam/abuse'u önlemek için).
 class VerificationPage extends ConsumerStatefulWidget {
@@ -67,8 +74,17 @@ class _VerificationPageState extends ConsumerState<VerificationPage> {
     setState(() => _isChecking = false);
 
     if (isVerified) {
-      final hasPersonality = ref.read(authProvider).hasPersonality;
-      context.go(hasPersonality ? AppRoutes.main : AppRoutes.quiz);
+      // NOT: Artık her zaman go_router rotası olarak açılmıyor —
+      // `ensureEmailVerified` (bkz. important_action_guard.dart) bunu düz
+      // bir MaterialPageRoute ile PUSH ediyor. Pop edilebilirse
+      // `pop(true)` ile çağıran tarafa haber veriyoruz; pop edilecek bir
+      // şey yoksa (eski tek-rota senaryosu) ana sayfaya gidiyoruz.
+      final navigator = Navigator.of(context);
+      if (navigator.canPop()) {
+        navigator.pop(true);
+      } else {
+        context.go(AppRoutes.main);
+      }
     } else {
       showAppAlert(
         context: context,
@@ -122,7 +138,20 @@ class _VerificationPageState extends ConsumerState<VerificationPage> {
       appBar: AppBar(
         backgroundColor: context.colors.scaffold,
         elevation: 0,
-        automaticallyImplyLeading: false,
+        // NOT: Artık her zaman ZORUNLU/tek seçenekli bir sayfa değil —
+        // PUSH ile açıldığı için kullanıcı vazgeçip geri dönebilmeli
+        // (kullanıcı şikayeti: önceden geri tuşu yoktu). Pop edilecek bir
+        // şey yoksa (eski tek-rota senaryosu) geri tuşu zaten görünmez.
+        leading: Navigator.of(context).canPop()
+            ? IconButton(
+                icon: Icon(
+                  Icons.arrow_back_ios_new,
+                  color: context.colors.textPrimary,
+                  size: 20,
+                ),
+                onPressed: () => Navigator.of(context).pop(false),
+              )
+            : null,
         title: Text(
           'auth.verify_title'.tr(),
           style: TextStyle(

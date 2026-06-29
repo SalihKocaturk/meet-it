@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/utils/validators.dart';
 import 'package:meetit/core/widgets/app_alert.dart';
 import 'package:meetit/core/widgets/app_text_field.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
@@ -20,6 +21,18 @@ class ForgotPasswordPage extends ConsumerWidget {
         type: AppAlertType.warning,
         title: 'validation.missing_field'.tr(),
         text: 'auth.enter_email_warning'.tr(),
+        confirmBtnText: 'common.ok'.tr(),
+        confirmBtnColor: context.colors.primary,
+      );
+      return;
+    }
+
+    if (!Validators.isValidEmail(email)) {
+      showAppAlert(
+        context: context,
+        type: AppAlertType.error,
+        title: 'validation.invalid_email'.tr(),
+        text: 'validation.invalid_email_message'.tr(),
         confirmBtnText: 'common.ok'.tr(),
         confirmBtnColor: context.colors.primary,
       );

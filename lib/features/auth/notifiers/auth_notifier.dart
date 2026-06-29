@@ -51,6 +51,28 @@ class AuthState {
   bool get isAuthenticated => user != null;
   bool get hasPersonality => user?.personalityProfile != null;
 
+  /// Google ile ilk kez giriş yapan bir kullanıcının profili eksik kalır:
+  /// `signInWithGoogle()` sadece uid/isim/email/foto ile minimal bir
+  /// UserModel oluşturur — konum, yaş ve cinsiyet alanları boş kalır (bkz.
+  /// auth_notifier.signInWithGoogle). Email/şifre ile kayıt olan
+  /// kullanıcılarda bu alanlar sign_up formunda ZORUNLU olduğu için bu
+  /// getter onlar için her zaman false döner — yalnızca eksik-profilli
+  /// Google kullanıcılarını yakalar.
+  bool get needsProfileCompletion {
+    final u = user;
+    if (u == null) return false;
+    final locationMissing = u.location == null || u.location!.trim().isEmpty;
+    // NOT (bug fix): `gender` BİLEREK bu kontrole dahil EDİLMİYOR. Cinsiyet
+    // alanı tüm formlarda (sign_up, edit_profile, complete_profile) UI'da
+    // "opsiyonel" olarak etiketleniyor ve `UserModel.gender` nullable —
+    // ama bu getter eskiden gender boşsa da kullanıcıyı sürekli
+    // CompleteProfilePage'e geri yönlendiriyordu, bu da gerçekte opsiyonel
+    // olması gereken bir alanı fiilen ZORUNLU hale getiriyordu (kullanıcı
+    // cinsiyet seçmeden asla devam edemiyordu). Sadece gerçekten zorunlu
+    // olan location/age burada kontrol ediliyor.
+    return locationMissing || u.age == null;
+  }
+
   AuthState copyWith({
     UserModel? user,
     bool? isLoading,
@@ -372,6 +394,53 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<void> updateUser(UserModel updatedUser) async {
     await _saveSession(updatedUser);
     state = state.copyWith(user: updatedUser);
+  }
+
+  /// İlk kez Google ile giriş yapan ve profili eksik kalan (konum/yaş/
+  /// cinsiyet) kullanıcı için `CompleteProfilePage`'den çağrılır.
+  ///
+  /// `signInWithGoogle()` sadece minimal bir UserModel oluşturduğu için
+  /// (bkz. `needsProfileCompletion` getter'ı), router bu kullanıcıyı quiz/
+  /// ana sayfadan ÖNCE bu sayfaya yönlendirir. Burada eksik alanlar
+  /// tamamlanır, hem state'e hem Firestore'a yazılır — email doğrulama
+  /// adımı YOK (Google hesapları zaten doğrulanmış sayılır), bu yüzden
+  /// `needsEmailVerification` hiç set edilmiyor/dokunulmuyor.
+  Future<void> completeProfile({
+    required String location,
+    required int age,
+    String? gender,
+    double? lat,
+    double? lng,
+  }) async {
+    final user = state.user;
+    if (user == null) return;
+
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    final updatedUser = user.copyWith(
+      location: location,
+      age: age,
+      // Cinsiyet opsiyonel — kullanıcı seçmediyse mevcut (boş) değeri koru,
+      // var olan bir değeri sıfırlamayız.
+      gender: gender ?? user.gender,
+      lat: lat ?? user.lat,
+      lng: lng ?? user.lng,
+    );
+
+    try {
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .set(updatedUser.toMap(), SetOptions(merge: true));
+      await _saveSession(updatedUser);
+      state = state.copyWith(user: updatedUser, isLoading: false);
+    } catch (e) {
+      debugPrint('[completeProfile] error: $e');
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'auth.sign_up_failed',
+      );
+    }
   }
 
   /// Quiz bittikten sonra VEYA bir mekan ziyaretiyle (`evolvedWith`) profil

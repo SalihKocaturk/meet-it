@@ -6,6 +6,7 @@ import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/router/app_routes.dart';
 import 'package:meetit/core/widgets/app_alert.dart';
 import 'package:meetit/core/widgets/app_text_field.dart';
+import 'package:meetit/core/utils/validators.dart';
 import 'package:meetit/core/widgets/langauge_switcher.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/auth/providers/sign_up_form_provider.dart';
@@ -40,6 +41,22 @@ class SignUpPage extends ConsumerWidget {
         type: AppAlertType.warning,
         title: 'validation.missing_field'.tr(),
         text: 'validation.fill_required'.tr(),
+        confirmBtnText: 'common.ok'.tr(),
+        confirmBtnColor: context.colors.primary,
+      );
+      return;
+    }
+
+    // Format kontrolü: boş değil ama "asd@asd" gibi geçersiz bir adres
+    // girilmişse, Firebase'e hiç gitmeden burada durdur — aksi halde hesap
+    // oluşturma/doğrulama maili gönderme adımı anlaşılmaz bir hatayla
+    // başarısız oluyordu.
+    if (!Validators.isValidEmail(email)) {
+      showAppAlert(
+        context: context,
+        type: AppAlertType.error,
+        title: 'validation.invalid_email'.tr(),
+        text: 'validation.invalid_email_message'.tr(),
         confirmBtnText: 'common.ok'.tr(),
         confirmBtnColor: context.colors.primary,
       );
@@ -87,11 +104,12 @@ class SignUpPage extends ConsumerWidget {
       return;
     }
 
-    // Yeni kayıt olanlara önce email doğrulama sayfasına yönlendir —
-    // hesaba gönderilen onay mailini doğrulamadan quiz'e geçemezler
-    // (router'daki `needsEmailVerification` kontrolü de bunu zaten
-    // garanti eder, burada sadece doğru sayfaya gidiyoruz). "Devam Et"e
-    // basılınca yönlendirir.
+    // NOT: Kayıt sonrası artık ZORUNLU olarak email doğrulama sayfasına
+    // yönlendirmiyoruz (kullanıcı şikayeti: uygulamayı hiç görmeden
+    // doğrulamaya hapsoluyordu). Direkt ana uygulamaya gidiyoruz; email
+    // doğrulaması ve kişilik testi artık sadece kullanıcı "önemli" bir
+    // işlem denediğinde (arkadaş ekleme, mekan arama) devreye giriyor —
+    // bkz. `important_action_guard.dart`.
     showAppAlert(
       context: context,
       type: AppAlertType.success,
@@ -101,7 +119,7 @@ class SignUpPage extends ConsumerWidget {
       confirmBtnColor: context.colors.primary,
       onConfirmBtnTap: () {
         Navigator.of(context).pop();
-        context.go(AppRoutes.verification, extra: email);
+        context.go(AppRoutes.main);
       },
     );
   }
@@ -172,14 +190,7 @@ class SignUpPage extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
 
-              AppTextField(
-                controller: emailCtrl,
-                label: 'auth.email'.tr(),
-                hint: 'auth.email_hint'.tr(),
-                prefixIcon: Icons.mail_outline,
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-              ),
+              _SignUpEmailField(controller: emailCtrl),
               const SizedBox(height: 16),
 
               AppTextField(
@@ -330,6 +341,81 @@ class SignUpPage extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Canlı Email Format Doğrulaması ──────────────────────────────────────────
+//
+// Önceden email format hatası sadece "Kayıt Ol" tuşuna basılınca
+// gösteriliyordu (kullanıcı şikayeti: çok geç fark ediliyor). Artık alan
+// odaktan çıktığında (doldurduktan hemen sonra) bir kez kontrol edilir;
+// bu ilk kontrolden sonra her tuş vuruşunda hata mesajı canlı güncellenir
+// (yanlış email düzeltilince hata anında kaybolur). İlk kez dokunulmadan
+// (alana hiç girip çıkmadan) hata göstermiyoruz — kullanıcı daha yazmaya
+// başlamadan kırmızı uyarı görmesin diye.
+class _SignUpEmailField extends StatefulWidget {
+  const _SignUpEmailField({required this.controller});
+
+  final TextEditingController controller;
+
+  @override
+  State<_SignUpEmailField> createState() => _SignUpEmailFieldState();
+}
+
+class _SignUpEmailFieldState extends State<_SignUpEmailField> {
+  final FocusNode _focusNode = FocusNode();
+  bool _touched = false;
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    if (!_focusNode.hasFocus) {
+      setState(() {
+        _touched = true;
+        _validate();
+      });
+    }
+  }
+
+  void _validate() {
+    final text = widget.controller.text.trim();
+    if (text.isEmpty || Validators.isValidEmail(text)) {
+      _errorText = null;
+    } else {
+      _errorText = 'validation.invalid_email_message'.tr();
+    }
+  }
+
+  void _onChanged(String _) {
+    if (!_touched) return;
+    setState(_validate);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AppTextField(
+      controller: widget.controller,
+      focusNode: _focusNode,
+      label: 'auth.email'.tr(),
+      hint: 'auth.email_hint'.tr(),
+      prefixIcon: Icons.mail_outline,
+      keyboardType: TextInputType.emailAddress,
+      textInputAction: TextInputAction.next,
+      errorText: _errorText,
+      onChanged: _onChanged,
     );
   }
 }

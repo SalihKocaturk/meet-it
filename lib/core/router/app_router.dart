@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:meetit/features/auth/complete_profile_page.dart';
 import 'package:meetit/features/auth/forgot_password_page.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/auth/sign_in_page.dart';
@@ -30,20 +31,22 @@ import 'app_routes.dart';
 ///
 /// Çözüm: GoRouter'ı bir kez oluştur, `refreshListenable` ile SADECE
 /// routing'i gerçekten etkileyen alanlar (isSessionLoading, isAuthenticated,
-/// hasPersonality, needsEmailVerification) değiştiğinde haberdar ol. Diğer
-/// profil güncellemeleri router'ı hiç etkilemesin.
+/// hasPersonality, needsEmailVerification, needsProfileCompletion)
+/// değiştiğinde haberdar ol. Diğer profil güncellemeleri router'ı hiç
+/// etkilemesin.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final refreshNotifier = _RouterRefreshNotifier();
 
   // authProvider'ı sadece DİNLE (watch değil) — routing'i etkileyen alanlar
   // değişmediği sürece refreshNotifier'ı tetiklemiyoruz.
-  (bool, bool, bool, bool)? lastKey;
+  (bool, bool, bool, bool, bool)? lastKey;
   ref.listen(authProvider, (previous, next) {
     final key = (
       next.isSessionLoading,
       next.isAuthenticated,
       next.hasPersonality,
       next.needsEmailVerification,
+      next.needsProfileCompletion,
     );
     if (lastKey != null && lastKey == key) return;
     lastKey = key;
@@ -61,8 +64,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final authState = ref.read(authProvider);
       final isSessionLoading = authState.isSessionLoading;
       final isAuthenticated = authState.isAuthenticated;
-      final hasPersonality = authState.hasPersonality;
+      // NOT: hasPersonality artık burada kullanılmıyor — quiz zorunlu
+      // yönlendirmesi kaldırıldı (bkz. yukarıdaki not).
       final needsEmailVerification = authState.needsEmailVerification;
+      final needsProfileCompletion = authState.needsProfileCompletion;
       final location = state.matchedLocation;
 
       // Oturum henüz SharedPreferences'tan yükleniyor → splash'te kal
@@ -82,21 +87,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return AppRoutes.signIn;
       }
 
-      // Giriş yapmış ama email'i doğrulanmamış → doğrulama sayfasına git
-      // (quiz/ana uygulamadan ÖNCE gelir; kullanıcı doğrulamadan içeri
-      // giremesin).
-      if (isAuthenticated &&
-          needsEmailVerification &&
-          location != AppRoutes.verification) {
-        return AppRoutes.verification;
-      }
+      // NOT: Email doğrulama ve kişilik testi (quiz) ZORUNLU yönlendirmeleri
+      // BURADAN KALDIRILDI (kullanıcı şikayeti: kayıt olur olmaz uygulamayı
+      // hiç görmeden zorunlu ekranlara hapsoluyordu). Artık bu iki kontrol
+      // sadece kullanıcı "önemli" bir işlem denediğinde (arkadaş ekleme,
+      // mekan/buluşma arama) just-in-time olarak devreye giriyor —
+      // bkz. `lib/core/utils/important_action_guard.dart`
+      // (`ensureEmailVerified` / `ensurePersonalityReady`).
+      // `needsEmailVerification` ve `hasPersonality` değişkenleri yine de
+      // yukarıda okunuyor çünkü `needsProfileCompletion` kontrolü email
+      // doğrulama durumuna bakıyor (Google ile girişte doğrulama hiç
+      // gerekmiyor).
 
-      // Giriş yapmış ama quiz yok → quiz'e yönlendir
+      // Google ile ilk kez giriş yapan ve konum/yaş/cinsiyet alanları eksik
+      // kalan kullanıcı → profil tamamlama sayfasına git. Bu kontrol
+      // KASITLI OLARAK quiz kontrolünden ÖNCE gelir — kullanıcı önce
+      // temel bilgilerini girmeli, sonra kişilik testine geçmeli. Email
+      // doğrulamasından farklı olarak burada bekleme YOK; Google
+      // hesapları zaten doğrulanmış sayılıyor.
       if (isAuthenticated &&
-          !hasPersonality &&
-          location != AppRoutes.quiz &&
-          !publicRoutes.contains(location)) {
-        return AppRoutes.quiz;
+          !needsEmailVerification &&
+          needsProfileCompletion &&
+          location != AppRoutes.completeProfile) {
+        return AppRoutes.completeProfile;
       }
 
       return null;
@@ -127,6 +140,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final email = state.extra as String? ?? '';
           return VerificationPage(email: email);
         },
+      ),
+
+      // ── Google sign-in profil tamamlama ─────────────────────────────────
+      GoRoute(
+        path: AppRoutes.completeProfile,
+        builder: (context, state) => const CompleteProfilePage(),
       ),
 
       // ── Kişilik Testi ─────────────────────────────────────────────────────
