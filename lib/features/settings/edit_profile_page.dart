@@ -439,18 +439,11 @@ class EditProfilePage extends ConsumerWidget {
                   ),
                 ),
               ),
-              // Detaylı/uzun adres girilirse profil sayfasında taşma
-              // olabiliyor — yalnızca şehir/ilçe girilmesi öneriliyor.
-              Padding(
-                padding: const EdgeInsets.only(top: 4, left: 4),
-                child: Text(
-                  'edit_profile.location_helper'.tr(),
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: context.colors.hint.withOpacity(0.8),
-                  ),
-                ),
-              ),
+              // NOT: Buradaki "yalnızca şehir/ilçe yaz" yardımcı metni
+              // kaldırıldı (kullanıcı isteği) — konum zaten yukarıdaki
+              // alan üzerinden (readOnly + _pickLocation) harita seçici
+              // ile giriliyor, kullanıcının elle bir şey yazması söz
+              // konusu değil; metin artık anlamsız/gereksizdi.
               const SizedBox(height: 16),
 
               AppTextField(

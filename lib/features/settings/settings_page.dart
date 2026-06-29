@@ -6,13 +6,15 @@ import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/router/app_routes.dart';
+import 'package:meetit/core/widgets/app_alert.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/core/widgets/langauge_switcher.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friend_code_page.dart';
-import 'package:meetit/features/match/match_page.dart';
+import 'package:meetit/features/match/match_page.dart'
+    hide Expanded, SizedBox, Row;
 import 'package:meetit/features/match/providers/match_provider.dart';
-import 'package:meetit/core/widgets/app_alert.dart';
+import 'package:meetit/features/personality/providers/personality_provider.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -58,11 +60,14 @@ class SettingsPage extends ConsumerWidget {
               padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text('settings.title'.tr(),
-                    style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: context.colors.textPrimary)),
+                child: Text(
+                  'settings.title'.tr(),
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: context.colors.textPrimary,
+                  ),
+                ),
               ),
             ),
 
@@ -85,34 +90,50 @@ class SettingsPage extends ConsumerWidget {
                       currentUser?.photoUrl != null
                           ? CircleAvatar(
                               radius: 28,
-                              backgroundImage:
-                                  NetworkImage(currentUser!.photoUrl!),
+                              backgroundImage: NetworkImage(
+                                currentUser!.photoUrl!,
+                              ),
                             )
                           : CircularAvatar(
-                              name: currentUser?.name ?? 'K', radius: 28),
+                              name: currentUser?.name ?? 'K',
+                              radius: 28,
+                            ),
                       SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(currentUser?.name ?? 'common.user'.tr(),
-                                style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: context.colors.textPrimary)),
-                            Text(currentUser?.email ?? '',
-                                style: TextStyle(
-                                    fontSize: 13,
-                                    color: context.colors.textSecondary)),
+                            Text(
+                              currentUser?.name ?? 'common.user'.tr(),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: context.colors.textPrimary,
+                              ),
+                            ),
+                            Text(
+                              currentUser?.email ?? '',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: context.colors.textSecondary,
+                              ),
+                            ),
                             if (currentUser?.location != null)
                               Row(
                                 children: [
-                                  Icon(Icons.location_on_outlined,
-                                      size: 12, color: context.colors.hint),
+                                  Icon(
+                                    Icons.location_on_outlined,
+                                    size: 12,
+                                    color: context.colors.hint,
+                                  ),
                                   SizedBox(width: 2),
-                                  Text(currentUser!.location!,
-                                      style: TextStyle(
-                                          fontSize: 12, color: context.colors.hint)),
+                                  Text(
+                                    currentUser!.location!,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: context.colors.hint,
+                                    ),
+                                  ),
                                 ],
                               ),
                           ],
@@ -120,16 +141,21 @@ class SettingsPage extends ConsumerWidget {
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: context.colors.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Text('common.edit'.tr(),
-                            style: TextStyle(
-                                fontSize: 11,
-                                color: context.colors.primary,
-                                fontWeight: FontWeight.w600)),
+                        child: Text(
+                          'common.edit'.tr(),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: context.colors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -161,7 +187,16 @@ class SettingsPage extends ConsumerWidget {
                         icon: Icons.psychology_outlined,
                         title: 'settings.retake_quiz'.tr(),
                         subtitle: 'settings.retake_quiz_desc'.tr(),
-                        onTap: () => context.push(AppRoutes.quiz),
+                        // Ana sayfadaki eski "testi tekrar al" kartı kaldırıldı
+                        // (kullanıcı isteği: ana sayfada bu kadar görünür
+                        // olmaması gerekiyor) — artık tek giriş noktası burası.
+                        // Eski karttaki gibi quiz state'i sıfırlanmadan
+                        // AppRoutes.quiz'e gidilirse kullanıcı önceki
+                        // cevaplarıyla/sonuçla karşılaşabilir; reset() bunu önler.
+                        onTap: () {
+                          ref.read(quizProvider.notifier).reset();
+                          context.push(AppRoutes.quiz);
+                        },
                       ),
                       _SettingsItem(
                         icon: Icons.location_on_outlined,
@@ -169,16 +204,16 @@ class SettingsPage extends ConsumerWidget {
                         subtitle: ref.watch(userLocationProvider)?.text,
                         onTap: () async {
                           final current = ref.read(userLocationProvider);
-                          final result =
-                              await Navigator.of(context).push<UserLocation>(
-                            MaterialPageRoute(
-                              builder: (_) => MapLocationPickerPage(
-                                initial: current?.hasCoords == true
-                                    ? LatLng(current!.lat!, current.lng!)
-                                    : null,
-                              ),
-                            ),
-                          );
+                          final result = await Navigator.of(context)
+                              .push<UserLocation>(
+                                MaterialPageRoute(
+                                  builder: (_) => MapLocationPickerPage(
+                                    initial: current?.hasCoords == true
+                                        ? LatLng(current!.lat!, current.lng!)
+                                        : null,
+                                  ),
+                                ),
+                              );
                           if (result != null) {
                             ref.read(userLocationProvider.notifier).state =
                                 result;
@@ -191,7 +226,8 @@ class SettingsPage extends ConsumerWidget {
                         subtitle: 'settings.add_friend_code_desc'.tr(),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(
-                              builder: (_) => const FriendCodePage()),
+                            builder: (_) => const FriendCodePage(),
+                          ),
                         ),
                       ),
                     ],
@@ -214,7 +250,9 @@ class SettingsPage extends ConsumerWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              context.locale.languageCode == 'tr' ? '🇹🇷' : '🇬🇧',
+                              context.locale.languageCode == 'tr'
+                                  ? '🇹🇷'
+                                  : '🇬🇧',
                               style: const TextStyle(fontSize: 18),
                             ),
                             const SizedBox(width: 6),
@@ -223,8 +261,9 @@ class SettingsPage extends ConsumerWidget {
                                   ? 'Türkçe'
                                   : 'English',
                               style: TextStyle(
-                                  fontSize: 13,
-                                  color: context.colors.textSecondary),
+                                fontSize: 13,
+                                color: context.colors.textSecondary,
+                              ),
                             ),
                           ],
                         ),
@@ -257,10 +296,13 @@ class SettingsPage extends ConsumerWidget {
                     ),
                     child: ListTile(
                       leading: Icon(Icons.logout, color: context.colors.error),
-                      title: Text('settings.sign_out'.tr(),
-                          style: TextStyle(
-                              color: context.colors.error,
-                              fontWeight: FontWeight.w600)),
+                      title: Text(
+                        'settings.sign_out'.tr(),
+                        style: TextStyle(
+                          color: context.colors.error,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       onTap: () => _showLogoutAlert(context, ref),
                     ),
                   ),
@@ -289,12 +331,15 @@ class _SettingsSection extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
-          child: Text(title.toUpperCase(),
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: context.colors.textSecondary,
-                  letterSpacing: 0.8)),
+          child: Text(
+            title.toUpperCase(),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: context.colors.textSecondary,
+              letterSpacing: 0.8,
+            ),
+          ),
         ),
         Container(
           decoration: BoxDecoration(
@@ -306,13 +351,15 @@ class _SettingsSection extends StatelessWidget {
             children: items
                 .asMap()
                 .entries
-                .map((e) => Column(
-                      children: [
-                        e.value,
-                        if (e.key < items.length - 1)
-                          const Divider(height: 1, indent: 52, endIndent: 16),
-                      ],
-                    ))
+                .map(
+                  (e) => Column(
+                    children: [
+                      e.value,
+                      if (e.key < items.length - 1)
+                        const Divider(height: 1, indent: 52, endIndent: 16),
+                    ],
+                  ),
+                )
                 .toList(),
           ),
         ),
@@ -340,15 +387,23 @@ class _SettingsItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: Icon(icon, color: context.colors.primary, size: 22),
-      title: Text(title,
-          style: TextStyle(fontSize: 14, color: context.colors.textPrimary)),
+      title: Text(
+        title,
+        style: TextStyle(fontSize: 14, color: context.colors.textPrimary),
+      ),
       subtitle: subtitle != null
-          ? Text(subtitle!,
-              style: TextStyle(fontSize: 11, color: context.colors.textSecondary),
+          ? Text(
+              subtitle!,
+              style: TextStyle(
+                fontSize: 11,
+                color: context.colors.textSecondary,
+              ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis)
+              overflow: TextOverflow.ellipsis,
+            )
           : null,
-      trailing: trailing ??
+      trailing:
+          trailing ??
           Icon(Icons.arrow_forward_ios, size: 14, color: context.colors.hint),
       onTap: onTap,
     );
