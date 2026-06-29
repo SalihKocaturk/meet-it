@@ -1,0 +1,71 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && request.auth.uid == uid;
+
+      match /saved_venues/{placeId} {
+        allow read, write: if isSignedIn() && request.auth.uid == uid;
+      }
+
+      match /navigated_venues/{placeId} {
+        allow read, write: if isSignedIn() && request.auth.uid == uid;
+      }
+    }
+
+    match /friendships/{docId} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn() &&
+        request.resource.data.fromUid == request.auth.uid;
+
+      allow update: if isSignedIn() && (
+        resource.data.fromUid == request.auth.uid ||
+        resource.data.toUid == request.auth.uid
+      );
+
+      allow delete: if isSignedIn() && (
+        resource.data.fromUid == request.auth.uid ||
+        resource.data.toUid == request.auth.uid
+      );
+    }
+
+    match /venue_reviews/{reviewId} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn() &&
+        request.resource.data.authorUid == request.auth.uid;
+
+      allow update: if isSignedIn() && (
+        resource.data.authorUid == request.auth.uid ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy'])
+      );
+
+      allow delete: if isSignedIn() && resource.data.authorUid == request.auth.uid;
+    }
+
+    match /venuePhotoCache/{placeId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /venueSearchCache/{key} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /appConfig/{document=**} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
