@@ -208,6 +208,8 @@
     "already_exists_desc": "You already have a friend request with this person.",
     "request_sent": "Request Sent!",
     "request_sent_desc": "Friend request sent to {name}.",
+    "matched": "You're Friends Now!",
+    "matched_desc": "{name} had already sent you a request, so since it was mutual you're now friends.",
     "share_info": "Share your code to invite friends to the app.",
     "search_error": "An error occurred during search.",
     "add": "Add"

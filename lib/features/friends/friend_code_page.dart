@@ -94,23 +94,55 @@ class _FriendCodePageState extends ConsumerState<FriendCodePage> {
     final currentUid = ref.read(authProvider).user?.uid;
     if (currentUid == null) return;
 
-    // Zaten arkadaş veya bekleyen istek var mı?
+    // Zaten arkadaş, bekleyen istek var mı, yoksa KARŞI TARAF ZATEN BANA
+    // istek mi göndermiş (mutual match) — üç durumu da ayırt ediyoruz.
+    //
+    // 🐛 BUG FIX (2026-06-29): Önceden doküman varlığı tek başına
+    // "already_exists" uyarısı için yeterliydi — bu, karşı tarafın bana
+    // zaten istek gönderdiği (mutual) durumu da kapsıyordu ve bu yüzden
+    // sendFriendRequest hiç çağrılmıyor, karşılıklı istek asla arkadaşlığa
+    // dönüşmüyordu. Artık sadece "zaten arkadaşsınız" veya "ben zaten
+    // istek atmışım" durumlarında uyarı gösteriyoruz; karşı taraftan
+    // gelen pending bir istek varsa sendFriendRequest'i çağırıyoruz —
+    // notifier artık bu durumu kendi içinde algılayıp otomatik kabul
+    // ediyor (bkz. friends_notifier.dart).
     final docId = FriendshipModel.docId(currentUid, targetUser.uid);
-    final existing = await FirebaseFirestore.instance
+    final existingSnap = await FirebaseFirestore.instance
         .collection('friendships')
         .doc(docId)
         .get();
 
-    if (existing.exists) {
-      if (!mounted) return;
-      showAppAlert(
-        context: context,
-        type: AppAlertType.warning,
-        title: 'friend_code.already_exists'.tr(),
-        text: 'friend_code.already_exists_desc'.tr(),
-        confirmBtnColor: context.colors.primary,
-      );
-      return;
+    var mutualMatch = false;
+    if (existingSnap.exists) {
+      final existing = FriendshipModel.fromMap(docId, existingSnap.data()!);
+      if (existing.status == FriendshipStatus.accepted) {
+        if (!mounted) return;
+        showAppAlert(
+          context: context,
+          type: AppAlertType.warning,
+          title: 'friend_code.already_exists'.tr(),
+          text: 'friend_code.already_exists_desc'.tr(),
+          confirmBtnColor: context.colors.primary,
+        );
+        return;
+      }
+      if (existing.status == FriendshipStatus.pending &&
+          existing.fromUid == currentUid) {
+        if (!mounted) return;
+        showAppAlert(
+          context: context,
+          type: AppAlertType.warning,
+          title: 'friend_code.already_exists'.tr(),
+          text: 'friend_code.already_exists_desc'.tr(),
+          confirmBtnColor: context.colors.primary,
+        );
+        return;
+      }
+      // existing.fromUid == targetUser.uid && status == pending →
+      // karşı taraf bana zaten istek göndermiş, devam et (mutual match).
+      if (existing.status == FriendshipStatus.pending) {
+        mutualMatch = true;
+      }
     }
 
     await ref.read(friendsProvider.notifier).sendFriendRequest(targetUser.uid);
@@ -119,8 +151,12 @@ class _FriendCodePageState extends ConsumerState<FriendCodePage> {
     showAppAlert(
       context: context,
       type: AppAlertType.success,
-      title: 'friend_code.request_sent'.tr(),
-      text: 'friend_code.request_sent_desc'.tr(namedArgs: {'name': targetUser.name}),
+      title: mutualMatch
+          ? 'friend_code.matched'.tr()
+          : 'friend_code.request_sent'.tr(),
+      text: mutualMatch
+          ? 'friend_code.matched_desc'.tr(namedArgs: {'name': targetUser.name})
+          : 'friend_code.request_sent_desc'.tr(namedArgs: {'name': targetUser.name}),
       confirmBtnColor: context.colors.primary,
       onConfirmBtnTap: () {
         Navigator.pop(context);
@@ -402,63 +438,4 @@ class _FriendCodePageState extends ConsumerState<FriendCodePage> {
                         padding: const EdgeInsets.symmetric(
                           horizontal: 14,
                           vertical: 10,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        'friend_code.add'.tr(),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
-            SizedBox(height: 32),
-
-            // Bilgi notu
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: context.colors.primary.withOpacity(0.06),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: context.colors.primary.withOpacity(0.2),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 16,
-                    color: context.colors.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'friend_code.share_info'.tr(),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: context.colors.textSecondary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
-    );
-  }
-}
+              

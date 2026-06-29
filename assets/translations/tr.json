@@ -208,6 +208,8 @@
     "already_exists_desc": "Bu kişiyle zaten bir arkadaşlık isteğin var.",
     "request_sent": "İstek Gönderildi!",
     "request_sent_desc": "{name} kişisine arkadaşlık isteği gönderildi.",
+    "matched": "Artık Arkadaşsınız!",
+    "matched_desc": "{name} sana zaten istek göndermişti, karşılıklı olduğu için doğrudan arkadaş oldunuz.",
     "share_info": "Kodunu paylaşarak arkadaşlarını uygulamaya davet edebilirsin.",
     "search_error": "Arama sırasında bir hata oluştu.",
     "add": "Ekle"

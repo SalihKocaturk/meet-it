@@ -168,29 +168,95 @@ class FriendsNotifier extends Notifier<FriendsState> {
   // ── Actions ───────────────────────────────────────────────────────────────
 
   /// Arkadaşlık isteği gönder
+  ///
+  /// 🐛 BUG FIX (2026-06-29): Daha önce burada doğrudan `.set()` ile
+  /// dokümanın üzerine yazılıyordu. Karşı taraf ZATEN bana istek
+  /// göndermişse (yani aynı `docId`'de `fromUid == targetUid` olan
+  /// `pending` bir kayıt varsa), bu `.set()` o kaydın üzerine
+  /// `fromUid`/`toUid`'i TERSİNE çevirip yeniden `pending` yazıyordu —
+  /// hiçbir zaman `accepted`'a dönüşmüyordu. Sonuç: iki taraf da
+  /// birbirine istek atınca arkadaşlık asla kurulmuyor, pending/sent
+  /// listeleri sürekli birbirine karışıyordu (kullanıcının bildirdiği
+  /// "bug").
+  ///
+  /// Çözüm: yazmadan ÖNCE mevcut dokümanı oku. Eğer karşı taraf zaten
+  /// bana `pending` istek göndermişse, yeni bir istek YOLLAMA — direkt
+  /// `accepted` yap (karşılıklı istek = otomatik eşleşme). Aksi halde
+  /// eskisi gibi yeni bir `pending` istek oluştur. Race condition'a karşı
+  /// hepsi bir transaction içinde.
   Future<void> sendFriendRequest(String targetUid) async {
     final currentUid = ref.read(authProvider).user?.uid;
     if (currentUid == null) return;
 
     final docId = FriendshipModel.docId(currentUid, targetUid);
+    final docRef = _db.collection('friendships').doc(docId);
 
     try {
-      final friendship = FriendshipModel(
-        id: docId,
-        fromUid: currentUid,
-        toUid: targetUid,
-        status: FriendshipStatus.pending,
-        createdAt: DateTime.now(),
-      );
+      var mutualMatch = false;
 
-      await _db.collection('friendships').doc(docId).set(friendship.toMap());
+      await _db.runTransaction((tx) async {
+        final snap = await tx.get(docRef);
 
-      // Yerel state güncelle — suggestions'dan çıkar, sentRequests'e ekle
-      final sent = state.suggestions.firstWhere((f) => f.uid == targetUid);
-      state = state.copyWith(
-        suggestions: state.suggestions.where((f) => f.uid != targetUid).toList(),
-        sentRequests: [...state.sentRequests, sent],
-      );
+        if (snap.exists) {
+          final existing = FriendshipModel.fromMap(docId, snap.data()!);
+
+          if (existing.status == FriendshipStatus.accepted) {
+            // Zaten arkadaşlar — tekrar istek atmaya çalışmanın anlamı yok.
+            return;
+          }
+
+          if (existing.status == FriendshipStatus.pending &&
+              existing.fromUid == targetUid) {
+            // Karşı taraf bana ZATEN istek göndermiş — benim de ona istek
+            // atmam, bu karşılıklı isteği doğrudan kabul etmek demektir.
+            tx.update(docRef, {'status': FriendshipStatus.accepted.name});
+            mutualMatch = true;
+            return;
+          }
+
+          // Reddedilmiş ya da benim daha önce attığım pending bir istek
+          // varsa, yeniden (benim adıma) pending olarak yaz.
+        }
+
+        final friendship = FriendshipModel(
+          id: docId,
+          fromUid: currentUid,
+          toUid: targetUid,
+          status: FriendshipStatus.pending,
+          createdAt: DateTime.now(),
+        );
+        tx.set(docRef, friendship.toMap());
+      });
+
+      // Yerel state güncelle — suggestions/pendingInvitations'dan çıkar,
+      // mutualMatch ise direkt connections'a, değilse sentRequests'e ekle.
+      final fromSuggestions =
+          state.suggestions.where((f) => f.uid == targetUid).toList();
+      final fromPendingInvitations =
+          state.pendingInvitations.where((f) => f.uid == targetUid).toList();
+      final friend = (fromSuggestions + fromPendingInvitations).firstOrNull;
+
+      if (friend == null) return;
+
+      if (mutualMatch) {
+        state = state.copyWith(
+          suggestions:
+              state.suggestions.where((f) => f.uid != targetUid).toList(),
+          pendingInvitations: state.pendingInvitations
+              .where((f) => f.uid != targetUid)
+              .toList(),
+          connections: [
+            ...state.connections,
+            friend.copyWith(status: FriendStatus.accepted),
+          ],
+        );
+      } else {
+        state = state.copyWith(
+          suggestions:
+              state.suggestions.where((f) => f.uid != targetUid).toList(),
+          sentRequests: [...state.sentRequests, friend],
+        );
+      }
     } catch (e) {
       state = state.copyWith(errorMessage: 'friends.error_send'.tr());
     }
@@ -272,71 +338,4 @@ class FriendsNotifier extends Notifier<FriendsState> {
 
   /// Arkadaşı çıkar
   Future<void> removeFriend(String targetUid) async {
-    final currentUid = ref.read(authProvider).user?.uid;
-    if (currentUid == null) return;
-
-    final docId = FriendshipModel.docId(currentUid, targetUid);
-
-    try {
-      await _db.collection('friendships').doc(docId).delete();
-
-      final removed = state.connections.firstWhere((f) => f.uid == targetUid);
-      state = state.copyWith(
-        connections: state.connections.where((f) => f.uid != targetUid).toList(),
-        suggestions: [...state.suggestions, removed.copyWith(status: FriendStatus.pending)],
-      );
-    } catch (e) {
-      state = state.copyWith(errorMessage: 'Arkadaş çıkarılırken hata oluştu.');
-    }
-  }
-
-  /// Bir öneriyi listeden kapat (henüz arkadaş olunmadığı için
-  /// Firestore'da silinecek bir friendship dokümanı yok — sadece
-  /// yerel state'ten çıkarılır).
-  void dismissSuggestion(String targetUid) {
-    state = state.copyWith(
-      suggestions: state.suggestions.where((f) => f.uid != targetUid).toList(),
-    );
-  }
-
-  void updateSearchQuery(String query) =>
-      state = state.copyWith(searchQuery: query);
-
-  /// Bir arkadaşla "Buluş" butonuna basıldığında çağrılır (home_page.dart ve
-  /// friends_page.dart'taki bağlantı kartlarından). Sayaç, friendship
-  /// dokümanı üzerinde tutuluyor — bu sayede yön (kim arkadaş isteği
-  /// gönderdi) önemsiz, iki taraf da aynı sayacı paylaşıyor ve ana
-  /// sayfadaki "Arkadaşların" listesi en sık buluşulan kişiye göre
-  /// sıralanabiliyor (bkz. home_page.dart).
-  ///
-  /// Firestore tarafı FieldValue.increment ile atomik artırılıyor; yerel
-  /// state ise optimistic olarak güncelleniyor ki kullanıcı butona basar
-  /// basmaz sıralama değişikliğini (varsa) hemen görsün — bir sonraki
-  /// snapshot zaten gerçek değeri getirip üzerine yazacak.
-  Future<void> incrementMeetCount(String targetUid) async {
-    final currentUid = ref.read(authProvider).user?.uid;
-    if (currentUid == null) return;
-
-    final docId = FriendshipModel.docId(currentUid, targetUid);
-
-    // Optimistic local update — connections listesindeki ilgili arkadaşın
-    // meetCount'unu hemen bir artır.
-    final idx = state.connections.indexWhere((f) => f.uid == targetUid);
-    if (idx != -1) {
-      final updated = List<UserFriendModel>.from(state.connections);
-      updated[idx] =
-          updated[idx].copyWith(meetCount: updated[idx].meetCount + 1);
-      state = state.copyWith(connections: updated);
-    }
-
-    try {
-      await _db
-          .collection('friendships')
-          .doc(docId)
-          .update({'meetCount': FieldValue.increment(1)});
-    } catch (_) {
-      // Sessizce yut — bu sadece bir sıralama/öncelik sinyali, kullanıcının
-      // asıl işlemi (buluşma akışına geçiş) bundan etkilenmemeli.
-    }
-  }
-}
+    final currentUid = ref.re
