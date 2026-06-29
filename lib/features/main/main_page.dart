@@ -5,7 +5,7 @@ import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friends_page.dart';
 import 'package:meetit/features/home/home_page.dart';
-import 'package:meetit/features/match/match_page.dart';
+import 'package:meetit/features/match/match_page.dart' hide SizedBox;
 import 'package:meetit/features/profile/profile_page.dart';
 
 final mainTabIndexProvider = StateProvider<int>((ref) => 0);
@@ -29,10 +29,7 @@ class MainPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: context.colors.scaffold,
-      body: IndexedStack(
-        index: currentIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: currentIndex, children: _pages),
       bottomNavigationBar: _MainBottomNavBar(currentIndex: currentIndex),
     );
   }
@@ -70,8 +67,7 @@ class _MainBottomNavBar extends ConsumerWidget {
                 activeIcon: Icons.home,
                 label: 'nav.home'.tr(),
                 isSelected: currentIndex == 0,
-                onTap: () =>
-                    ref.read(mainTabIndexProvider.notifier).state = 0,
+                onTap: () => ref.read(mainTabIndexProvider.notifier).state = 0,
               ),
               // Buluşma
               _NavItem(
@@ -79,8 +75,7 @@ class _MainBottomNavBar extends ConsumerWidget {
                 activeIcon: Icons.location_on,
                 label: 'nav.meetup'.tr(),
                 isSelected: currentIndex == 1,
-                onTap: () =>
-                    ref.read(mainTabIndexProvider.notifier).state = 1,
+                onTap: () => ref.read(mainTabIndexProvider.notifier).state = 1,
               ),
               // Arkadaşlar
               _NavItem(
@@ -88,8 +83,7 @@ class _MainBottomNavBar extends ConsumerWidget {
                 activeIcon: Icons.people,
                 label: 'nav.friends'.tr(),
                 isSelected: currentIndex == 2,
-                onTap: () =>
-                    ref.read(mainTabIndexProvider.notifier).state = 2,
+                onTap: () => ref.read(mainTabIndexProvider.notifier).state = 2,
               ),
               // Profil — fotoğraf veya ikon
               Expanded(
@@ -106,14 +100,17 @@ class _MainBottomNavBar extends ConsumerWidget {
                           shape: BoxShape.circle,
                           border: currentIndex == 3
                               ? Border.all(
-                                  color: context.colors.primary, width: 2)
+                                  color: context.colors.primary,
+                                  width: 2,
+                                )
                               : null,
                         ),
                         child: currentUser?.photoUrl != null
                             ? CircleAvatar(
                                 radius: 13,
-                                backgroundImage:
-                                    NetworkImage(currentUser!.photoUrl!),
+                                backgroundImage: NetworkImage(
+                                  currentUser!.photoUrl!,
+                                ),
                               )
                             : Icon(
                                 currentIndex == 3
@@ -184,9 +181,10 @@ class _NavItem extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 10,
-                color: isSelected ? context.colors.primary : context.colors.hint,
-                fontWeight:
-                    isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected
+                    ? context.colors.primary
+                    : context.colors.hint,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
           ],

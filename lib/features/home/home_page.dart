@@ -5,9 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:meetit/core/constants/app_colors.dart';
-import 'package:meetit/core/router/app_routes.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friend_profile_page.dart';
@@ -18,7 +16,6 @@ import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/match/providers/saved_venues_provider.dart';
 import 'package:meetit/features/personality/friend_compatibility_page.dart';
 import 'package:meetit/features/personality/personality_analysis_page.dart';
-import 'package:meetit/features/personality/providers/personality_provider.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
@@ -100,13 +97,36 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
     final connections = ref.watch(connectionsProvider);
+    // "Arkadaşların" listesi en çok "Buluş" butonuna basılan kişiden en aza
+    // doğru sıralanır (sağdan sola en çok buluşulan en başta) — bu, en sık
+    // buluştuğumuz arkadaşlara öncelik verir (kullanıcı isteği). connections
+    // immutable kalsın diye kopya üzerinde sıralanıyor.
+    final sortedConnections = [...connections]
+      ..sort((a, b) => b.meetCount.compareTo(a.meetCount));
     final topReviewsAsync = ref.watch(topReviewsProvider);
 
     return Scaffold(
       backgroundColor: context.colors.scaffold,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
+        child: RefreshIndicator(
+          color: context.colors.primary,
+          backgroundColor: context.colors.card,
+          // Friends sayfasındaki aşağı çekip yenileme davranışıyla aynı:
+          // arkadaş listesi + yakınınızdaki beğenilen mekanlar (yorumlar)
+          // tazelenir. Min. 700ms bekleme, gerçek istek çok hızlı dönse
+          // bile kullanıcıya "yenilendi" hissi versin diye (friends_page'le
+          // aynı UX tutarlılığı).
+          onRefresh: () async {
+            final uid = ref.read(currentUserProvider)?.uid ?? '';
+            await Future.wait([
+              if (uid.isNotEmpty)
+                ref.read(friendsProvider.notifier).loadAll(uid),
+              Future(() => ref.invalidate(topReviewsProvider)),
+              Future.delayed(const Duration(milliseconds: 700)),
+            ]);
+          },
+          child: CustomScrollView(
+            slivers: [
             // ── Üst bar: başlık + sağ üstte profil avatarı ─────────────────
             SliverToBoxAdapter(
               child: Padding(
@@ -204,15 +224,18 @@ class _HomePageState extends ConsumerState<HomePage> {
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         padding: const EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: connections.length,
+                        itemCount: sortedConnections.length,
                         separatorBuilder: (_, _) => const SizedBox(width: 12),
                         itemBuilder: (_, i) =>
-                            _HomeFriendCard(friend: connections[i]),
+                            _HomeFriendCard(friend: sortedConnections[i]),
                       ),
                     ),
             ),
 
-            // ── Öne Çıkan Mekanlar ve Yorumlar ─────────────────────────────
+            // ── Yakınınızdaki Beğenilen Mekanlar ────────────────────────────
+            // (eski adıyla "Öne Çıkan Mekanlar ve Yorumlar" — artık
+            // topReviewsProvider, kullanıcının konumuna 10km'den uzak
+            // yorumları göstermiyor, bkz. review_notifier.dart)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
@@ -326,32 +349,18 @@ class _HomePageState extends ConsumerState<HomePage> {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: 3,
+                  // NOT: "Testi tekrar al" kartı buradan kaldırıldı — ana
+                  // sayfada bu kadar göz önünde olmaması gerekiyordu
+                  // (kullanıcı isteği). O eylem artık Ayarlar sayfasında
+                  // (settings_page.dart -> settings.retake_quiz) tek giriş
+                  // noktası olarak duruyor. Kalan 2 kart, kullanıcının
+                  // isteğiyle yeniden sıralandı: önce arkadaşlarla uyum,
+                  // sonra kişilik analizi.
+                  itemCount: 2,
                   separatorBuilder: (_, _) => const SizedBox(width: 12),
                   itemBuilder: (_, i) {
                     switch (i) {
                       case 0:
-                        return _PersonalityActionCard(
-                          icon: Icons.refresh_rounded,
-                          title: 'quiz.retake_test'.tr(),
-                          subtitle: 'home.retake_quiz_desc'.tr(),
-                          onTap: () {
-                            ref.read(quizProvider.notifier).reset();
-                            context.push(AppRoutes.quiz);
-                          },
-                        );
-                      case 1:
-                        return _PersonalityActionCard(
-                          icon: Icons.insights_rounded,
-                          title: 'home.view_analysis'.tr(),
-                          subtitle: 'home.view_analysis_desc'.tr(),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const PersonalityAnalysisPage(),
-                            ),
-                          ),
-                        );
-                      default:
                         return _PersonalityActionCard(
                           icon: Icons.diversity_3_rounded,
                           title: 'home.friend_compat'.tr(),
@@ -362,6 +371,17 @@ class _HomePageState extends ConsumerState<HomePage> {
                             ),
                           ),
                         );
+                      default:
+                        return _PersonalityActionCard(
+                          icon: Icons.insights_rounded,
+                          title: 'home.view_analysis'.tr(),
+                          subtitle: 'home.view_analysis_desc'.tr(),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const PersonalityAnalysisPage(),
+                            ),
+                          ),
+                        );
                     }
                   },
                 ),
@@ -369,7 +389,8 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -588,6 +609,9 @@ class _HomeFriendCard extends ConsumerWidget {
               // arkadaşı seç + Match sekmesine geç.
               ref.read(selectedFriendUidProvider.notifier).state = friend.uid;
               ref.read(mainTabIndexProvider.notifier).state = 1;
+              // Buluş sayısını artır — ana sayfadaki "Arkadaşların" listesi
+              // bu sayıma göre en çok buluşulan kişiye öncelik verir.
+              ref.read(friendsProvider.notifier).incrementMeetCount(friend.uid);
             },
             child: Container(
               width: double.infinity,
