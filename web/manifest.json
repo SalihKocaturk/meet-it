@@ -1,6 +1,6 @@
 {
-    "name": "meetit",
-    "short_name": "meetit",
+    "name": "MeetIt",
+    "short_name": "MeetIt",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
