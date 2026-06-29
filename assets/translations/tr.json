@@ -92,14 +92,20 @@
     "verify_not_yet_title": "Henüz Doğrulanmadı",
     "verify_not_yet_desc": "Email adresiniz henüz doğrulanmamış görünüyor. Linke tıkladıktan sonra tekrar deneyin.",
     "verify_checking": "Kontrol ediliyor...",
-    "verify_change_account": "Farklı bir hesapla giriş yap"
+    "verify_change_account": "Farklı bir hesapla giriş yap",
+    "complete_profile_title": "Profilini Tamamla",
+    "complete_profile_heading": "Az kaldı!",
+    "complete_profile_desc": "Google hesabınla giriş yaptın. Sana ve eşleştiğin kişiye uygun mekanlar önerebilmemiz için aşağıdaki bilgileri tamamlar mısın?",
+    "complete_profile_button": "Devam Et"
   },
   "validation": {
     "missing_field": "Eksik Alan",
     "fill_required": "Lütfen zorunlu alanları doldurun.",
     "invalid_age": "Geçersiz Yaş",
     "must_be_18": "18 yaşından büyük olmalısınız.",
-    "email_empty": "Email ve şifre alanları boş bırakılamaz."
+    "email_empty": "Email ve şifre alanları boş bırakılamaz.",
+    "invalid_email": "Geçersiz Email",
+    "invalid_email_message": "Lütfen geçerli bir email adresi girin (örn. ornek@email.com)."
   },
   "time": {
     "just_now": "az önce",
@@ -223,6 +229,13 @@
     "compatibility": "Uyumluluk",
     "activity_types": "Aktivite Türü (Birden Fazla Seçebilirsin)",
     "price_level": "Fiyat Aralığı",
+    "max_distance": "Maksimum Mesafe",
+    "distance_unlimited": "Sınırsız",
+    "distance_all": "Tümü",
+    "distance_3km": "3 km",
+    "distance_5km": "5 km",
+    "distance_10km": "10 km",
+    "distance_30km": "30 km",
     "no_friends": "Henüz arkadaşın yok",
     "no_friends_desc": "Buluşma yeri bulmak için önce arkadaş ekle!",
     "add_friend": "Arkadaş Ekle",
@@ -338,7 +351,6 @@
     "title": "Profili Düzenle",
     "section_personal": "KİŞİSEL BİLGİLER",
     "email_locked": "Email adresi değiştirilemez.",
-    "location_helper": "Yalnızca şehir ve ilçe yazman yeterli, detaylı adres girme.",
     "save_changes": "Değişiklikleri Kaydet",
     "saved": "Kaydedildi",
     "profile_updated": "Profilin başarıyla güncellendi.",
@@ -380,22 +392,29 @@
     "retake_test": "Testi Tekrar Al",
     "finish_quiz": "Testi Bitir"
   },
+  "quiz_intro": {
+    "title": "Önce Seni Tanıyalım",
+    "desc": "Sana ve buluşacağın kişiye en uygun mekanları önerebilmemiz için kısa bir kişilik testi yapman gerekiyor. Sadece birkaç soru, çok sürmez.",
+    "start_btn": "Teste Başla",
+    "later_btn": "Daha Sonra"
+  },
   "map_picker": {
     "title": "Konum Seç",
     "confirm": "Bu Konumu Kullan",
     "searching": "Konum aranıyor...",
     "drag_hint": "Pini sürükleyerek konumu ayarlayın",
-    "location_error": "Konum alınamadı"
+    "location_error": "Konum alınamadı",
+    "out_of_scope_warning": "Uygulama şimdilik sadece İstanbul içinde kullanılabiliyor. Lütfen İstanbul sınırları içinde bir konum seçin."
   },
   "home": {
     "greeting": "Merhaba, {name}!",
     "subtitle": "Arkadaşlarınla buluşmaya hazır mısın?",
     "friends_section": "Arkadaşların",
-    "featured_section": "Öne Çıkan Mekanlar ve Yorumlar",
+    "featured_section": "Yakınınızdaki Beğenilen Mekanlar",
     "no_friends_hint": "Henüz arkadaşın yok.",
     "no_friends_cta": "Arkadaş eklediğinde burada görünecekler. Hemen bir arkadaşını davet et veya ekle!",
     "add_friend_button": "Arkadaş Ekle",
-    "no_reviews_hint": "Henüz yorum yok. İlk yorumu sen ekle!",
+    "no_reviews_hint": "Yakınında henüz yorum yok. İlk yorumu sen ekle!",
     "personality_section": "Kişiliğini Yönet",
     "retake_quiz_desc": "Mekan önerilerini güncelle",
     "view_analysis": "Kişilik Analizini İncele",

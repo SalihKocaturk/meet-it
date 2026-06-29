@@ -92,14 +92,20 @@
     "verify_not_yet_title": "Not Verified Yet",
     "verify_not_yet_desc": "Your email doesn't appear to be verified yet. Please click the link in the email and try again.",
     "verify_checking": "Checking...",
-    "verify_change_account": "Sign in with a different account"
+    "verify_change_account": "Sign in with a different account",
+    "complete_profile_title": "Complete Your Profile",
+    "complete_profile_heading": "Almost there!",
+    "complete_profile_desc": "You signed in with Google. Please complete the info below so we can recommend the right venues for you and your match.",
+    "complete_profile_button": "Continue"
   },
   "validation": {
     "missing_field": "Missing Field",
     "fill_required": "Please fill in the required fields.",
     "invalid_age": "Invalid Age",
     "must_be_18": "You must be 18 or older.",
-    "email_empty": "Email and password fields cannot be empty."
+    "email_empty": "Email and password fields cannot be empty.",
+    "invalid_email": "Invalid Email",
+    "invalid_email_message": "Please enter a valid email address (e.g. example@email.com)."
   },
   "time": {
     "just_now": "just now",
@@ -223,6 +229,13 @@
     "compatibility": "Compatibility",
     "activity_types": "Activity Types (Multi-select)",
     "price_level": "Price Range",
+    "max_distance": "Maximum Distance",
+    "distance_unlimited": "Unlimited",
+    "distance_all": "All",
+    "distance_3km": "3 km",
+    "distance_5km": "5 km",
+    "distance_10km": "10 km",
+    "distance_30km": "30 km",
     "no_friends": "No friends yet",
     "no_friends_desc": "Add a friend first to find a meetup spot!",
     "add_friend": "Add Friend",
@@ -338,7 +351,6 @@
     "title": "Edit Profile",
     "section_personal": "PERSONAL INFO",
     "email_locked": "Email cannot be changed.",
-    "location_helper": "Just your city and district is enough, no need for a detailed address.",
     "save_changes": "Save Changes",
     "saved": "Saved",
     "profile_updated": "Your profile has been updated.",
@@ -380,22 +392,29 @@
     "retake_test": "Retake Test",
     "finish_quiz": "Finish Test"
   },
+  "quiz_intro": {
+    "title": "Let's Get to Know You First",
+    "desc": "To recommend the best places for you and the person you're meeting, we need a short personality test. Just a few questions, won't take long.",
+    "start_btn": "Start the Test",
+    "later_btn": "Later"
+  },
   "map_picker": {
     "title": "Select Location",
     "confirm": "Use This Location",
     "searching": "Searching location...",
     "drag_hint": "Drag the pin to set your location",
-    "location_error": "Could not get location"
+    "location_error": "Could not get location",
+    "out_of_scope_warning": "The app currently only works within Istanbul. Please choose a location inside Istanbul."
   },
   "home": {
     "greeting": "Hi, {name}!",
     "subtitle": "Ready to meet up with your friends?",
     "friends_section": "Your Friends",
-    "featured_section": "Featured Venues and Reviews",
+    "featured_section": "Liked Venues Near You",
     "no_friends_hint": "You don't have any friends yet.",
     "no_friends_cta": "Friends you add will show up here. Invite or add one now!",
     "add_friend_button": "Add Friend",
-    "no_reviews_hint": "No reviews yet. Add the first one!",
+    "no_reviews_hint": "No reviews near you yet. Add the first one!",
     "personality_section": "Manage Your Personality",
     "retake_quiz_desc": "Update your venue recommendations",
     "view_analysis": "View Personality Analysis",
