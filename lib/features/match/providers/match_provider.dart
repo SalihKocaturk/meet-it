@@ -60,6 +60,19 @@ final userLocationProvider = StateProvider<UserLocation?>((ref) {
 // null = tümü, 0 = ücretsiz, 1 = ucuz, 2 = orta, 3 = pahalı, 4 = çok pahalı
 final selectedPriceLevelProvider = StateProvider.autoDispose<int?>((ref) => null);
 
+// ── Maksimum mesafe filtresi (km) ──────────────────────────────────────────────
+// null = sınırsız. Kullanıcı bir slider ile seçiyor (bkz. _DistanceFilter).
+//
+// NOT: İki kişi varken bu mesafe ORTA NOKTADAN (searchLat/searchLng) ölçülür,
+// tek başına modda kullanıcının kendi konumundan ölçülür — ikisi de zaten
+// `VenueSearchNotifier.searchVenues()` içinde "searchLat/searchLng" olarak
+// kullanılan aynı nokta. Arkadaşın gerçek ulaşım süresi/mesafesi ayrıca
+// hesaplanmıyor (bunun için Distance Matrix'i arkadaşın konumundan da
+// çağırmak gerekirdi — ek maliyet/karmaşıklık, şimdilik kapsam dışı
+// tutuldu); bu yüzden filtre kuş uçuşu mesafeye göre çalışıyor.
+final selectedMaxDistanceKmProvider =
+    StateProvider.autoDispose<double?>((ref) => null);
+
 // ── Seçili arkadaş modeli ──────────────────────────────────────────────────────
 final selectedFriendProvider = Provider.autoDispose<UserFriendModel?>((ref) {
   final uid = ref.watch(selectedFriendUidProvider);

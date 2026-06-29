@@ -4,6 +4,9 @@ import 'dart:math' as math;
 import 'package:http/http.dart' as http;
 import 'package:meetit/core/constants/app_config.dart';
 import 'package:meetit/features/match/models/place_result.dart';
+import 'package:meetit/features/match/services/places_api_version_service.dart';
+import 'package:meetit/features/match/services/venue_photo_cache_service.dart';
+import 'package:meetit/features/match/services/venue_search_cache_service.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 
 /// Google Places Nearby Search API wrapper.
@@ -14,17 +17,38 @@ import 'package:meetit/features/personality/models/personality_model.dart';
 ///   - Aynı kişi aynı aramayı 3 kez yapınca hep aynı ilk sonuçlar çıkmaz
 ///     (ama düşük kaliteli/garip yerler asla öne çıkmaz — havuz zaten
 ///     kalite + isim filtresinden geçmiş yerlerden oluşur).
-///   - Sonuç sayısı sayfalama için 10 ile sınırlandırılır (5'lik
-///     sayfalarla 2 sayfa).
+///   - Sonuç sayısı `AppConfig.maxVenueResults` (5) ile sınırlandırılır —
+///     sayfalama yok, kullanıcı talebi üzerine tek seferde en fazla 5 mekan.
 ///   - Aynı tür mekanlardan (pizza, burger, kebap vb.) birden fazlası
 ///     final listede yan yana/aynı anda çıkmaz — çeşitlilik korunur.
 class PlacesService {
   const PlacesService._();
 
-  /// Sayfalama için döndürülecek maksimum mekan sayısı.
-  /// `venue_search_notifier.dart`'taki `_pageSize` (5) ile birlikte
-  /// tam 2 sayfa oluşturur.
-  static const int _maxResultCount = 10;
+  /// Döndürülecek maksimum mekan sayısı — `AppConfig.maxVenueResults`'a
+  /// eşit tutuluyor (tek kaynak) — filtreleme/skorlama sonrası kullanıcıya
+  /// gösterilecek NİHAİ mekan sayısı bu sabitle sınırlanıyor.
+  ///
+  /// 📍 API ÇAĞRI TASARRUFU (2026-06-28): Önceden 20'ye kadar çekilip
+  /// sayfalama ile 4 sayfaya bölünüyordu ("10 bile çok fazla, 5 mekan
+  /// göster" talebi üzerine sıkıştırıldı).
+  static const int _maxResultCount = AppConfig.maxVenueResults;
+
+  /// Google'a atılan TEK istekteki `maxResultCount` alanı — yani Google'dan
+  /// istenen HAM (filtrelenmemiş) sonuç sayısı. Bu, [_maxResultCount]'tan
+  /// (nihai gösterim sayısı, 5) BİLE BİLE AYRI ve daha YÜKSEK tutuluyor.
+  ///
+  /// 📍 NEDEN AYRI (2026-06-28): Artık tüm tip'ler (`includedTypes`) TEK bir
+  /// istekte birleştiriliyor (bkz. `searchVenues()`), yani örn. kişilik
+  /// modunda 6 farklı tipin sonuçları artık TEK bir `maxResultCount`
+  /// havuzunu paylaşıyor — önceden her tip kendi 5'lik payını alıyordu.
+  /// Eğer bu sayıyı 5'te bıraksaydık, 6 tipe bölüşülen sadece 5 ham sonuç
+  /// sonradan uygulanan ağır filtreleme/skorlama zincirinden (yorum sayısı,
+  /// kara liste, kişilik eşleşmesi vb.) geçtikten sonra muhtemelen BOŞ ya da
+  /// çok seyrek bir liste üretirdi. Google'ın `searchNearby` (New) endpoint'i
+  /// tek istekte en fazla 20 ham sonuç dönebiliyor — o tavanı kullanıyoruz,
+  /// ekstra bir API ÇAĞRISI eklemeden (hâlâ tek çağrı), sadece o tek
+  /// çağrının döndürdüğü ham sonuç sayısını artırarak.
+  static const int _rawFetchCount = 20;
 
   /// Bir mekanın gösterilebilmesi için sahip olması gereken minimum
   /// yorum (review) sayısı. Az yorumlu yerler genelde yanlış
@@ -255,12 +279,175 @@ class PlacesService {
     return places.where((p) => !_hasSuspiciousName(p.name)).toList();
   }
 
-  /// Yorum sayısı `_minReviewCount`'tan az olan (veya yorumu hiç olmayan)
-  /// mekanları eler. Az yorumlu yerler genelde güvenilir bir kalite
-  /// sinyali vermiyor (yanlış kategorize edilmiş, terk edilmiş, vb. olabilir).
+  // ── Üniversite kütüphaneleri filtresi ─────────────────────────────────────
+  //
+  // Örnek: "Bahçeşehir Üniversitesi Kütüphanesi" sonuçlarda çıkıyordu. Bir
+  // üniversitenin kütüphanesi, halk kütüphanesi gibi herkese açık bir mekan
+  // DEĞİL — genelde sadece o üniversitenin öğrenci/personel kartı olanlar
+  // girebiliyor. "library" type'ı Google Places'te hem halka açık halk
+  // kütüphanelerini hem de üniversite kütüphanelerini aynı şekilde
+  // etiketlediğinden, type filtresi bunları ayıramıyor. Bu yüzden isim bazlı
+  // ek bir kontrol: ismi "üniversite(si)" + "kütüphane(si)" kombinasyonunu
+  // (veya "üni kütüphanesi" gibi kısaltmasını) içeren bir mekan, type'ı
+  // "library" olsa bile elenir — gerçek halk kütüphaneleri (örn. "Beşiktaş
+  // Belediyesi Kütüphanesi", "Atatürk Kitaplığı") bu kelimeleri içermediği
+  // için etkilenmez.
+  static const List<String> _universityKeywords = [
+    'üniversite', 'üniv ', 'üniv.', 'university',
+  ];
+
+  static bool _isUniversityLibrary(PlaceResult place) {
+    if (!place.types.contains('library')) return false;
+    final lower = place.name.toLowerCase();
+    final mentionsUniversity = _universityKeywords.any(lower.contains);
+    final mentionsLibrary =
+        lower.contains('kütüphane') || lower.contains('library');
+    return mentionsUniversity && mentionsLibrary;
+  }
+
+  static List<PlaceResult> _filterUniversityLibraries(
+    List<PlaceResult> places,
+  ) {
+    return places.where((p) => !_isUniversityLibrary(p)).toList();
+  }
+
+  // ── Genel "giriş kısıtlı" mekan filtresi (isim bazlı) ─────────────────────
+  //
+  // Üniversite kütüphanesi sorununun genel hali: Google Places type sistemi
+  // SADECE mekanın KATEGORİSİNİ bilir ("park", "restaurant", "gym"...), kime
+  // AÇIK olduğunu bilmez. Bir mekanın type'ı "park" olsa da, ismi "... Sitesi
+  // Yeşil Alanı" ise bu site sakinleri dışında kimsenin giremeyeceği özel bir
+  // alandır — type filtresi bunu hiçbir zaman yakalayamaz, çünkü Google'a
+  // göre ikisi de aynı kategoridedir. Bu yüzden isim bazlı, type'tan bağımsız
+  // (her type'a uygulanan) bir kontrol katmanı: isimde aşağıdaki kalıplardan
+  // biri geçiyorsa mekan, type'ı ne olursa olsun elenir.
+  //
+  // ÖNEMLİ TASARIM PRENSİBİ: isimden veya type'tan kesin bir "kısıtlı erişim"
+  // sinyali çıkaramıyorsak hiçbir şey yapmıyoruz — yani şüphe durumunda
+  // Google'ın verdiği type'a güvenip mekanı göstermeye devam ediyoruz. Bu
+  // yüzden buradaki kelimeler kasıtlı olarak DAR ve net tutuldu (örn. sadece
+  // "kulüp" değil, "üyelere özel" gibi gerçekten kısıtlı erişimi ifade eden
+  // ifadeler) — aksi halde gerçekten herkese açık, halka açık mekanları da
+  // yanlışlıkla eleme riski olurdu.
+  static const List<String> _restrictedAccessNameKeywords = [
+    // Öğrenci yurtları — sadece o yurtta kalan öğrenciler girebilir.
+    // " yurdu " kelime sınırlarıyla aranır (bkz. _hasRestrictedAccessName'in
+    // isme boşluk eklemesi) — bu sayede "Anayurt Restaurant" gibi içinde
+    // "yurt" geçen ama alakasız isimler yanlışlıkla elenmez.
+    ' yurdu ', 'lojman',
+    // Askeri / polis sosyal tesisleri — sadece personel + yakınları.
+    'orduevi', 'ordu evi', 'polisevi', 'polis evi', 'kışla',
+    'askeri tesis', 'garnizon',
+    // Açıkça "üyelere özel" / "özel üyelik" belirtilen sosyal tesisler.
+    'üyelere özel', 'özel üyelik', 'sadece üyeler',
+    // Fabrika/şirket personeline özel sosyal tesisler.
+    'personel lokali', 'personele özel', 'fabrika sosyal tesisi',
+    // Üniversiteye özel (kütüphane dışındaki) tesisler — kantin/yemekhane/
+    // sosyal tesis. Halka açık restoranlar bu kombinasyonu içermez.
+    'üniversite kantini', 'üniversite yemekhanesi',
+    'fakülte kantini', 'kampüs içi',
+    // Site / apartman sakinlerine özel ortak alanlar.
+    'site sakinlerine özel', 'sitesi yeşil alanı', 'sitesi sosyal tesisi',
+  ];
+
+  static bool _hasRestrictedAccessName(String name) {
+    // Baş/son boşluk eklenerek " yurdu " gibi kelime-sınırlı kalıpların
+    // ismin başında/sonunda olsa bile eşleşmesi sağlanıyor.
+    final lower = ' ${name.toLowerCase()} ';
+    return _restrictedAccessNameKeywords.any(lower.contains);
+  }
+
+  static List<PlaceResult> _filterRestrictedAccessVenues(
+    List<PlaceResult> places,
+  ) {
+    return places.where((p) => !_hasRestrictedAccessName(p.name)).toList();
+  }
+
+  // ── Gece hayatı / kişilik uyumsuzluğu filtresi ────────────────────────────
+  //
+  // Kök sebep: Google Places, "lounge" gibi hibrit mekanları genelde aynı
+  // anda birden fazla type ile etiketler (örn. ['bar','cafe','restaurant']).
+  // _personalityMatch eşleşen HER type için ayrı ayrı puan topladığından,
+  // sosyalKelebek/gurme eğilimi olmayan bir kullanıcı çifti (örn.
+  // maceraperest + entelektüel + sakin ruh) için bile 'bar'/'night_club'
+  // etiketli bir mekan, yüksek rating/yorum sayısıyla birleşince toplam
+  // skorda öne çıkabiliyordu — _personalityScores tablosundaki düzeltme
+  // (maceraperest'ten bar/night_club ağırlığının kaldırılması) tek başına
+  // yeterli değil, çünkü Google bazen bir mekanı GERÇEKTEN sadece
+  // 'bar'/'night_club' olarak etiketleyip kalan type listesi boş bırakabilir.
+  // Bu yüzden ikinci, bağımsız bir güvenlik ağı: ikisinden BİRİ bile gece
+  // hayatına anlamlı bir eğilim (sosyalKelebek veya gurme oranı ≥ %25)
+  // taşımıyorsa, ne kişilik skoruna ne de Google'ın type etiketine güvenip
+  // doğrudan bar/night_club karakterli (kafe/restoran gibi sakin bir type'ı
+  // OLMAYAN) ve/veya ismi gece hayatı kelimeleri içeren mekanları eler.
+  static const double _nightlifeIntentThreshold = 0.25;
+
+  static const Set<String> _nightlifeOnlyTypes = {'bar', 'night_club'};
+
+  // Bir mekan bar/night_club olsa da BU type'lardan birini de taşıyorsa
+  // (örn. gerçekten bir "cafe-bar" hibrit), tamamen elenmez — sadece skor
+  // hâlâ kişilik tablosundan geliyor, burada yalnızca SAF gece hayatı
+  // mekanları (başka hiçbir sakin/nötr type'ı olmayanlar) hedefleniyor.
+  static const Set<String> _calmCoTypes = {
+    'cafe', 'restaurant', 'bakery', 'library', 'museum', 'art_gallery',
+    'park', 'movie_theater', 'tourist_attraction', 'bowling_alley',
+    'amusement_park', 'gym',
+  };
+
+  static const List<String> _nightlifeNameKeywords = [
+    'lounge', 'pub', 'meyhane', 'gece kulübü', 'night club', 'disko',
+    ' club', 'kulüp',
+  ];
+
+  static List<PlaceResult> _filterNightlifeMismatch(
+    List<PlaceResult> places,
+    PersonalityProfile userProfile,
+    PersonalityProfile friendProfile,
+  ) {
+    double nightlifeRatio(PersonalityProfile profile) {
+      final total = profile.scores.values.fold<double>(0, (a, b) => a + b);
+      if (total <= 0) return 0;
+      final intent = (profile.scores[PersonalityType.sosyalKelebek] ?? 0) +
+          (profile.scores[PersonalityType.gurme] ?? 0);
+      return intent / total;
+    }
+
+    // İkisinden biri bile gece hayatına gerçekten yatkınsa (sosyalKelebek
+    // veya gurme baskınsa) filtre devre dışı — o zaman bar/lounge önerisi
+    // meşru bir kişilik eşleşmesi, eleme yapılmamalı.
+    if (nightlifeRatio(userProfile) >= _nightlifeIntentThreshold ||
+        nightlifeRatio(friendProfile) >= _nightlifeIntentThreshold) {
+      return places;
+    }
+
+    return places.where((p) {
+      final isNightlifeOnlyType = p.types.any(_nightlifeOnlyTypes.contains) &&
+          !p.types.any(_calmCoTypes.contains);
+      final lowerName = p.name.toLowerCase();
+      final hasNightlifeName =
+          _nightlifeNameKeywords.any((kw) => lowerName.contains(kw));
+      return !(isNightlifeOnlyType || hasNightlifeName);
+    }).toList();
+  }
+
+  /// Yorum sayısı `_minReviewCount`'tan az olan mekanları eler. Az yorumlu
+  /// yerler genelde güvenilir bir kalite sinyali vermiyor (yanlış
+  /// kategorize edilmiş, terk edilmiş, vb. olabilir).
+  ///
+  /// NOT (Foursquare geçişi): Google her zaman bir `user_ratings_total`
+  /// değeri dönerdi (0 dahil), bu yüzden eskiden `?? 0` ile eksik veri de
+  /// "az yorumlu" sayılıp elenebiliyordu. Foursquare'in ücretsiz katmanı
+  /// `stats.total_ratings` alanını HER ZAMAN doldurmuyor — yani burada
+  /// `null` "yorumu az" anlamına gelmiyor, "bu bilgi bu API yanıtında
+  /// mevcut değildi" anlamına geliyor. Bu yüzden `null` durumunda mekan
+  /// ELENMİYOR (rating/isim/type filtreleri zaten kaliteyi koruyor);
+  /// sadece SAYI bilinip de `_minReviewCount`'un altındaysa elenir.
   static List<PlaceResult> _filterMinimumReviews(List<PlaceResult> places) {
     return places
-        .where((p) => (p.userRatingsTotal ?? 0) >= _minReviewCount)
+        .where(
+          (p) => p.userRatingsTotal == null ||
+              p.userRatingsTotal! >= _minReviewCount,
+        )
         .toList();
   }
 
@@ -272,6 +459,119 @@ class PlacesService {
   ) {
     if (minRating == null) return places;
     return places.where((p) => (p.rating ?? 0) >= minRating).toList();
+  }
+
+  // ── Spor salonu kısıtı: sadece "spor" aktivitesi seçiliyse göster ────────
+  //
+  // İstek: "spesifik olarak spor seçilmediği sürece gym çıkmaması daha iyi
+  // olur". `_personalityTypes`'tan gym zaten çıkarıldı (MOD 2 / kişilik-
+  // sadece tarama bu type'ı hiç Google'a sormuyor), ama MOD 1'de ("spor"
+  // aktivitesi seçildiğinde) gym hâlâ aranıyor ve dönebiliyor — bu doğru.
+  // Burada ek bir güvenlik ağı var: her ihtimale karşı (örn. Google bir
+  // mekanı birden fazla type ile etiketleyip başka bir aramadan sızdırırsa)
+  // 'spor' aktivitesi seçili DEĞİLSE gym type'lı sonuçlar tamamen elenir.
+  static List<PlaceResult> _filterGymRequiresActivity(
+    List<PlaceResult> places,
+    List<String> selectedActivities,
+  ) {
+    final sportSelected =
+        selectedActivities.any((a) => a.toLowerCase().contains('spor'));
+    if (sportSelected) return places;
+    return places.where((p) => !p.types.contains('gym')).toList();
+  }
+
+  // ── Gym marka bonusu: tanınmış bir zincir (Mac Fit) öne çıksın ────────────
+  //
+  // İstek: "gymlerde de bir tane mac fit gösterebilirsin" — spor aktivitesi
+  // seçildiğinde rastgele/az tanınan bir spor salonu yerine, kullanıcının
+  // bilip güvendiği büyük bir zincir öncelikli görünsün.
+  static double _gymBrandBonus(PlaceResult place) {
+    if (!place.types.contains('gym')) return 0.0;
+    final lower = place.name.toLowerCase();
+    if (lower.contains('mac fit') || lower.contains('macfit')) return 0.3;
+    return 0.0;
+  }
+
+  // ── İstanbul'da yaygın bilinen / çok ziyaret edilen mekanlar ──────────────
+  //
+  // İstek: "yıldız parkı, maçka demokrasi parkı, emirgan korusu gibi yerleri
+  // sakin ruh/maceraperest karşısına; bebek sahili/beşiktaş sahili sakin
+  // ruh/sosyal kelebek karşısına; deniz müzesi/dolmabahçe sarayı/sultanahmet
+  // camii entelektüel karşısına daha sık çıksın" + genel olarak "İstanbul'da
+  // çok bilinen/gidilen mekanların çıkma ihtimalini artır".
+  //
+  // Bu harita, mekan ADINDA geçen anahtar kelimeye göre hangi kişilik
+  // tiplerine ekstra bonus verileceğini tanımlar. Puanlama zaten kişilik +
+  // kalite skoruna dayandığı için bu sadece KÜÇÜK bir ek ağırlık — tamamen
+  // alakasız bir profile sahip kullanıcılara bu mekanlar yine de zorla
+  // gösterilmez, sadece eşit/yakın skorlu adaylar arasında öne geçer.
+  static const Map<String, Set<PersonalityType>> _landmarkPersonalityAffinity = {
+    // Parklar / doğa — sakin ruh + maceraperest (yürüyüş/doğa = hafif aktif)
+    'yıldız parkı': {PersonalityType.sakinRuh, PersonalityType.maceraperest},
+    'maçka demokrasi parkı': {PersonalityType.sakinRuh, PersonalityType.maceraperest},
+    'emirgan korusu': {PersonalityType.sakinRuh, PersonalityType.maceraperest},
+    'gülhane parkı': {PersonalityType.sakinRuh, PersonalityType.maceraperest},
+    'göztepe 60. yıl parkı': {PersonalityType.sakinRuh, PersonalityType.maceraperest},
+    'fethi paşa korusu': {PersonalityType.sakinRuh, PersonalityType.maceraperest},
+    'belgrad ormanı': {PersonalityType.sakinRuh, PersonalityType.maceraperest},
+    'çamlıca': {PersonalityType.sakinRuh, PersonalityType.maceraperest},
+
+    // Sahiller — sakin ruh + sosyal kelebek
+    'bebek sahili': {PersonalityType.sakinRuh, PersonalityType.sosyalKelebek},
+    'beşiktaş sahili': {PersonalityType.sakinRuh, PersonalityType.sosyalKelebek},
+    'moda sahili': {PersonalityType.sakinRuh, PersonalityType.sosyalKelebek},
+    'kuruçeşme': {PersonalityType.sakinRuh, PersonalityType.sosyalKelebek},
+    'ortaköy': {PersonalityType.sakinRuh, PersonalityType.sosyalKelebek},
+
+    // Müze / saray / tarihi-dini yapılar — entelektüel
+    'deniz müzesi': {PersonalityType.entelektuel},
+    'dolmabahçe sarayı': {PersonalityType.entelektuel},
+    'sultanahmet camii': {PersonalityType.entelektuel},
+    'topkapı sarayı': {PersonalityType.entelektuel},
+    'ayasofya': {PersonalityType.entelektuel},
+    'rahmi koç müzesi': {PersonalityType.entelektuel},
+    'pera müzesi': {PersonalityType.entelektuel},
+    'istanbul modern': {PersonalityType.entelektuel},
+    'yerebatan sarnıcı': {PersonalityType.entelektuel},
+    'süleymaniye camii': {PersonalityType.entelektuel},
+    'çamlıca camii': {PersonalityType.entelektuel},
+    'küçüksu kasrı': {PersonalityType.entelektuel},
+    'beylerbeyi sarayı': {PersonalityType.entelektuel},
+
+    // Genel olarak çok bilinen/turistik — herkese hafif bonus (entelektuel +
+    // sosyal kelebek ağırlıklı, çünkü hem gezilecek hem sosyalleşilecek yer)
+    'galata kulesi': {PersonalityType.entelektuel, PersonalityType.sosyalKelebek},
+    'kız kulesi': {PersonalityType.sosyalKelebek, PersonalityType.sakinRuh},
+    'istiklal caddesi': {PersonalityType.sosyalKelebek},
+    'bağdat caddesi': {PersonalityType.sosyalKelebek, PersonalityType.gurme},
+  };
+
+  /// Mekan adı [_landmarkPersonalityAffinity]'deki bir anahtar kelimeyi
+  /// içeriyorsa ve eşleşen kişilik tipi kullanıcı/arkadaş profilinde
+  /// (her iki tarafın ortalaması olarak) belirgin bir ağırlığa sahipse küçük
+  /// bir bonus döner. Hem genel "bilinen mekan" katkısı (sabit, küçük) hem
+  /// de kişilik-spesifik katkı (profil ağırlığıyla orantılı) içerir.
+  static double _landmarkBonus(
+    PlaceResult place,
+    PersonalityProfile userProfile,
+    PersonalityProfile friendProfile,
+  ) {
+    final lowerName = place.name.toLowerCase();
+    for (final entry in _landmarkPersonalityAffinity.entries) {
+      if (!lowerName.contains(entry.key)) continue;
+
+      // Genel "iyi bilinen mekan" katkısı — kişilik eşleşmesi zayıf olsa
+      // bile bu mekanların gösterilme ihtimalini biraz artırır.
+      double bonus = 0.1;
+
+      for (final type in entry.value) {
+        final userWeight = userProfile.scores[type] ?? 0;
+        final friendWeight = friendProfile.scores[type] ?? 0;
+        bonus += ((userWeight + friendWeight) / 2) * 0.3;
+      }
+      return bonus;
+    }
+    return 0.0;
   }
 
   // ── İsim bazlı çeşitlilik grupları ────────────────────────────────────────
@@ -366,10 +666,16 @@ class PlacesService {
   //   meal_delivery → eve servis odaklı
   // Geniş kapsam için hepsini birlikte arıyoruz.
 
+  // NOT: 'gym' kasıtlı olarak maceraperest listesinden ÇIKARILDI. Kişilik-
+  // sadece (aktivite seçilmemiş) tarama modunda (MOD 2, bkz. `_resolveTypes`)
+  // bu liste doğrudan Google Places'e atılan type listesine dönüştüğü için
+  // gym burada kalırsa, "spor" aktivitesi hiç seçilmemiş olsa bile sonuçlarda
+  // spor salonu çıkabiliyordu. Artık gym SADECE kullanıcı açıkça "spor"
+  // aktivitesini seçtiğinde aranıyor (bkz. `_activityToTypes['spor']`).
   static const Map<PersonalityType, List<String>> _personalityTypes = {
     PersonalityType.sosyalKelebek: ['bar', 'night_club', 'restaurant', 'meal_takeaway'],
     PersonalityType.sakinRuh:      ['cafe', 'park', 'library', 'bakery'],
-    PersonalityType.maceraperest:  ['gym', 'park', 'bowling_alley', 'amusement_park'],
+    PersonalityType.maceraperest:  ['park', 'bowling_alley', 'amusement_park'],
     PersonalityType.entelektuel:   ['museum', 'art_gallery', 'library', 'movie_theater', 'tourist_attraction'],
     PersonalityType.gurme:         ['restaurant', 'meal_takeaway', 'bakery', 'cafe'],
   };
@@ -399,8 +705,16 @@ class PlacesService {
       'bowling_alley': 1.0,
       'amusement_park': 1.0,
       'park': 0.9,
-      'night_club': 0.5,
-      'bar': 0.4,
+      // NOT (bug fix): 'night_club':0.5 ve 'bar':0.4 buradan kasıtlı
+      // olarak çıkarıldı. "Maceraperest" tipi fiziksel/aktif deneyimi
+      // ifade ediyor (spor, bowling, lunapark) — gece hayatı/bar bununla
+      // anlamsal olarak ilgisiz. Bu iki ağırlık burada dururken, maceraperest
+      // + entelektüel + sakin ruh gibi sosyalKelebek/gurme'siz bir profil
+      // kombinasyonunda bile bar/night_club tagli ("lounge" gibi) mekanlar
+      // _personalityMatch'te küçük ama sıfırdan farklı bir puan kazanıp,
+      // yüksek rating/yorum sayısıyla birleşince kaliteli ama tamamen
+      // alakasız bir öneri olarak öne çıkabiliyordu. Gece hayatı sadece
+      // sosyalKelebek (ve hafifçe gurme) tiplerine ait olmalı.
     },
     PersonalityType.entelektuel: {
       'museum': 1.0,
@@ -460,7 +774,8 @@ class PlacesService {
   // ── Ana Arama Metodu ───────────────────────────────────────────────────────
 
   /// Yakındaki mekanları çeker, kişilik + rating skoruna göre sıralar.
-  /// Sayfalama için en fazla [_maxResultCount] (10) mekan döner.
+  /// En fazla [_maxResultCount] (`AppConfig.maxVenueResults`) mekan döner —
+  /// sayfalama yok, tek seferde nihai liste budanır.
   static Future<List<PlaceResult>> searchVenues({
     required double lat,
     required double lng,
@@ -487,19 +802,46 @@ class PlacesService {
     print('🔍 PlacesService types: $types  lodgingSearch=$searchingForLodging '
         'radius=$searchRadius minRating=$minRating');
 
+    // 📍 API ÇAĞRI TASARRUFU (2026-06-28): Önceden her type için AYRI bir
+    // `_fetchNearbyNew` çağrısı yapılıyordu (5 type → 5 HTTP çağrısı). Google
+    // Places API (New) `searchNearby`'ın `includedTypes` alanı aslında BİR
+    // İSTEKTE 50'ye kadar type kabul ediyor (OR mantığıyla — herhangi biri
+    // eşleşen mekanları döner). Bu yüzden artık tüm type'lar TEK bir
+    // isteğe gömülüyor — arama başına HER ZAMAN tam olarak 1 Places API
+    // çağrısı atılıyor, type sayısı kaç olursa olsun.
+    //
+    // 💸 MALİYET DÜŞÜRME (2026-06-28): Bu TEK çağrı bile her arama için
+    // tekrar tekrar ödeniyordu. Şimdi Google'a gitmeden ÖNCE konum+tip
+    // bazlı kısa süreli (6 saat) bir önbelleğe (VenueSearchCacheService)
+    // bakılıyor — aynı civarda aynı tip kombinasyonuyla yapılan tekrar
+    // aramalar (örn. aynı çift "Tekrar Ara"ya bastığında, ya da farklı
+    // kullanıcılar aynı bölgede benzer kişilik tipiyle arama yaptığında)
+    // Google'a HİÇ gitmeden cevaplanır. Önbelleğe alınan şey HAM havuz
+    // (filtrelenmemiş ~20 mekan) olduğu için filtreleme/skorlama/rastgele
+    // seçim adımları AYNEN çalışıyor — kullanıcı hâlâ her aramada biraz
+    // farklı sonuçlar görüyor, sadece Google'a gidilen adım atlanıyor.
+    final rawResults = types.isEmpty
+        ? <PlaceResult>[]
+        : await VenueSearchCacheService.getCached(
+              lat: lat,
+              lng: lng,
+              types: types,
+              radius: searchRadius,
+            ) ??
+            await _fetchAndCacheNearby(
+              lat: lat,
+              lng: lng,
+              types: types,
+              priceLevel: priceLevel,
+              radius: searchRadius,
+            );
+
     final seen = <String>{};
     final results = <PlaceResult>[];
-
-    // Her type için fetch et — daha fazla sonuç için limit'i yükselt
-    for (final type in types) {
-      final batch = await _fetchNearby(
-          lat: lat, lng: lng, type: type, priceLevel: priceLevel, radius: searchRadius);
-
-      for (final place in batch) {
-        if (!seen.contains(place.placeId)) {
-          seen.add(place.placeId);
-          results.add(place);
-        }
+    for (final place in rawResults) {
+      if (!seen.contains(place.placeId)) {
+        seen.add(place.placeId);
+        results.add(place);
       }
     }
 
@@ -520,20 +862,45 @@ class PlacesService {
     // ── Adım 3: Garip/şüpheli isimli mekanları ele ────────────────────────
     final nameFiltered = _filterSuspiciousNames(filtered);
 
+    // ── Adım 3.2: Üniversite kütüphanelerini ele ──────────────────────────
+    // Örn. "Bahçeşehir Üniversitesi Kütüphanesi" — bu mekanlara sadece o
+    // üniversitenin öğrenci/personeli girebiliyor, halka açık bir buluşma
+    // mekanı değil. Gerçek halk kütüphaneleri etkilenmez (bkz. yorum).
+    final libraryFiltered = _filterUniversityLibraries(nameFiltered);
+
+    // ── Adım 3.3: Genel giriş-kısıtlı mekan filtresi ────────────────────────
+    // Üniversite kütüphanesi filtresinin genel hali — yurt, orduevi/polisevi,
+    // "üyelere özel" tesisler gibi type'tan bağımsız, isimden anlaşılan
+    // kısıtlı-erişim sinyalleri (bkz. yorum bloğu yukarıda).
+    final restrictedFiltered = _filterRestrictedAccessVenues(libraryFiltered);
+
+    // ── Adım 3.5: Gece hayatı / kişilik uyumsuzluğu filtresi ───────────────
+    // Hiçbir taraf sosyalKelebek/gurme eğilimi taşımıyorsa (örn. maceraperest
+    // + entelektüel + sakin ruh kombinasyonu), saf bar/night_club karakterli
+    // veya ismi "lounge"/"pub" gibi gece hayatı kelimeleri içeren mekanları ele.
+    final nightlifeFiltered =
+        _filterNightlifeMismatch(restrictedFiltered, userProfile, friendProfile);
+
     // ── Adım 4: Yorum sayısı çok az olan (güvenilmez) mekanları ele ───────
-    final reviewFiltered = _filterMinimumReviews(nameFiltered);
+    final reviewFiltered = _filterMinimumReviews(nightlifeFiltered);
 
     // ── Adım 5: (varsa) minimum puan şartı — orta nokta dar çap aramasında
     // sadece kaliteli (4.0+) yerleri göster.
     final ratingFiltered = _filterMinimumRating(reviewFiltered, minRating);
 
+    // ── Adım 5.5: "spor" aktivitesi seçilmediyse gym sonuçlarını ele ───────
+    final gymFiltered = _filterGymRequiresActivity(ratingFiltered, selectedActivities);
+
     // ignore: avoid_print
     print('🔍 PlacesService: raw=${results.length} '
         'excl=${excludeFiltered.length} req=${filtered.length} '
-        'name=${nameFiltered.length} review=${reviewFiltered.length} '
-        'rating=${ratingFiltered.length}');
+        'name=${nameFiltered.length} uniLib=${libraryFiltered.length} '
+        'restricted=${restrictedFiltered.length} '
+        'nightlife=${nightlifeFiltered.length} '
+        'review=${reviewFiltered.length} rating=${ratingFiltered.length} '
+        'gym=${gymFiltered.length}');
 
-    if (ratingFiltered.isEmpty) return [];
+    if (gymFiltered.isEmpty) return [];
 
     // ── Adım 6: Az önce (aynı kişiyle) gösterilen mekanları kısa süreli
     // hariç tut ─────────────────────────────────────────────────────────────
@@ -547,23 +914,28 @@ class PlacesService {
     // tutuyor ve burada havuzdan çıkarmamızı istiyor. Havuzda yeterli
     // alternatif yoksa (örn. çok dar bir bölgede arama), sonuç sayısı
     // düşmesin diye hariç tutma uygulanmıyor.
-    var pool = ratingFiltered;
+    var pool = gymFiltered;
     if (excludePlaceIds.isNotEmpty) {
       final withoutRecent =
-          ratingFiltered.where((p) => !excludePlaceIds.contains(p.placeId)).toList();
+          gymFiltered.where((p) => !excludePlaceIds.contains(p.placeId)).toList();
       if (withoutRecent.length >= _maxResultCount) {
         pool = withoutRecent;
       }
     }
 
     // ── Kişilik + rating kombinasyon skoru ─────────────────────────────────
+    // + İstanbul landmark bonusu (bilinen/turistik mekanlar daha sık çıksın)
+    // + gym marka bonusu (Mac Fit gibi tanınmış bir zincir öne çıksın).
     final scored = pool.map((place) {
       final personalityScore = _personalityMatch(
         place, userProfile, friendProfile, selectedActivities,
       );
       final ratingScore = _qualityScore(place);
       // %60 kişilik uyumu + %40 kalite (rating + yorum sayısı)
-      final total = personalityScore * 0.6 + ratingScore * 0.4;
+      final total = personalityScore * 0.6 +
+          ratingScore * 0.4 +
+          _landmarkBonus(place, userProfile, friendProfile) +
+          _gymBrandBonus(place);
       return (place, total);
     }).toList();
 
@@ -572,9 +944,69 @@ class PlacesService {
     // her aramada öne çıkan mekanlar biraz farklılaşır.
     final finalList = _weightedDiverseSample(scored, _maxResultCount);
 
+    // 💸 MALİYET DÜŞÜRME (2026-06-28): Kart önizlemesi (İLK foto) VE bu
+    // mekan ileride "Kaydet"/"Tarif Al" ile kalıcı listelere eklenirse
+    // (bkz. saved_venues_provider.dart) galeri olarak kullanılabilecek en
+    // fazla 3 fotoğrafı (bkz. _maxGalleryPhotos), Google'dan değil
+    // paylaşımlı global önbellekten (VenuePhotoCacheService) çözümle — aynı
+    // mekanı gören FARKLI kullanıcılar için Google'a tekrar tekrar ödeme
+    // yapılmasın. Sadece nihai ≤5 sonuç için yapılıyor (havuzun tamamı için
+    // DEĞİL). Böylece bu mekan daha sonra kaydedilir/tarif alınırsa kalıcı
+    // kayda ZATEN çözümlenmiş URL'ler yazılır — o kullanıcı profilini her
+    // açtığında Google'a tekrar gidilmez.
+    // 📍 KOTA HATASI / ARAMA SONUCU KORUMA (2026-06-29): Kullanıcı talebi —
+    // Photo Media API'sine günlük manuel bir kota (300/gün) koyulduğunda,
+    // bu kota aşılsa bile mekan arama sonuçları (zaten bulunmuş/filtrelenmiş
+    // ${_maxResultCount} mekan) HİÇBİR KOŞULDA kaybolmamalı — sadece o
+    // mekanların fotoğrafı gösterilmesin (cache'de varsa cache'den
+    // gösterilsin). Önceden bu blok tek bir mekanın foto çözümlemesi
+    // başarısız/exception fırlatırsa TÜM `Future.wait`'i (ve dolayısıyla
+    // searchVenues()'in tamamını) patlatabiliyordu — yani arama sonucu
+    // komple kayboluyordu. Artık HER mekan kendi try-catch'i içinde işleniyor:
+    // bir mekanın fotoları çözümlenemezse o mekan SADECE fotosuz (boş
+    // photoReferences) olarak listede kalır, diğer mekanlar etkilenmez.
+    final cachedList = await Future.wait(finalList.map((place) async {
+      final namesToCache =
+          place.photoReferences.isNotEmpty
+              ? place.photoReferences.take(_maxGalleryPhotos).toList()
+              : (place.photoReference != null ? [place.photoReference!] : <String>[]);
+      if (namesToCache.isEmpty) return place;
+      try {
+        final cachedUrls = await VenuePhotoCacheService.resolvePhotoUrls(
+          placeId: place.placeId,
+          photoNames: namesToCache,
+        );
+        // Kota hatası yüzünden TÜM fotoğraflar elenmiş olabilir (bkz.
+        // VenuePhotoCacheService.resolvePhotoUrl — kota hatasında '' döner,
+        // resolvePhotoUrls bunları filtreler). Bu durumda mekanı fotosuz
+        // bırak (UI zaten "fotoğraf yok" placeholder'ını gösteriyor),
+        // ASLA `.first` ile boş listeye erişip exception fırlatma.
+        if (cachedUrls.isEmpty) {
+          // NOT: `copyWith` standart `?? this.field` deseni kullanıyor —
+          // yani `null` geçmek eski (kotaya tabi, henüz çözümlenmemiş ham
+          // Google foto adı içeren) değeri TEMİZLEMEZ. Bu yüzden burada
+          // BOŞ STRING ('') geçiyoruz — `'' ?? eski` ifadesinde '' geçerli
+          // bir değer olduğundan eski değerin üzerine yazılır ve gerçekten
+          // temizlenir (UI artık "fotoğraf yok" durumuna düşer).
+          return place.copyWith(photoReference: '', photoReferences: []);
+        }
+        return place.copyWith(
+          photoReference: cachedUrls.first,
+          photoReferences: cachedUrls,
+        );
+      } catch (e) {
+        // ignore: avoid_print
+        print(
+          '[PlacesService] ⚠️ ${place.name} için foto çözümleme hatası '
+          '(kota/ağ) — mekan fotosuz gösterilecek: $e',
+        );
+        return place.copyWith(photoReference: '', photoReferences: []);
+      }
+    }));
+
     // ignore: avoid_print
-    print('🔍 PlacesService final: ${finalList.length} mekan');
-    return finalList;
+    print('🔍 PlacesService final: ${cachedList.length} mekan');
+    return cachedList;
   }
 
   static final math.Random _rng = math.Random();
@@ -668,19 +1100,176 @@ class PlacesService {
     return (combined + activityBonus).clamp(0.0, 1.0);
   }
 
-  // ── Places Nearby Search HTTP ─────────────────────────────────────────────
+  // ── Google Places API (New) — Nearby Search HTTP ─────────────────────────
+  //
+  // NOT (Foursquare'den geri dönüş, 2026-06-27): Foursquare'in `rating`/
+  // `hours`/`photos`/`stats` alanları "Premium" olup hiç ücretsiz kotası
+  // olmadığından (ilk çağrıdan itibaren ücretli) geri Google'a dönüldü —
+  // ama eski Legacy GET endpoint'i değil, yeni POST tabanlı `searchNearby`
+  // (New API) kullanılıyor (bkz. app_config.dart'taki not). `includedTypes`
+  // parametresi doğrudan bizim `type` değerlerimizi kabul ediyor — Google'ın
+  // New API Place Type taksonomisi (Table A) Legacy ile AYNI string'leri
+  // kullanıyor (örn. 'restaurant', 'cafe', 'museum'), bu yüzden Foursquare
+  // döneminde gerekli olan kategori-adı→içsel-tip çevirme katmanı artık
+  // tamamen GEREKSİZ — `types` API'den geldiği gibi kullanılabiliyor.
+  static const String _searchFieldMask =
+      'places.id,places.displayName,places.formattedAddress,'
+      'places.location,places.types,places.rating,places.userRatingCount,'
+      'places.priceLevel,places.regularOpeningHours.openNow,places.photos';
 
-  static Future<List<PlaceResult>> _fetchNearby({
+  /// 💸 MALİYET DÜŞÜRME (2026-06-28): `_fetchNearbyNew`/`_fetchNearbyLegacy`
+  /// (aktif API'ye göre) ile Google'dan TAZE ham
+  /// sonuç havuzunu çeker, ardından bu havuzu `VenueSearchCacheService`
+  /// üzerinden 6 saatliğine önbelleğe yazar. Çağıran taraf (searchVenues)
+  /// önce cache'e bakıp burayı SADECE cache miss durumunda çağırıyor —
+  /// yani bu fonksiyon çalıştığında kesinlikle Google'a 1 istek gidecek,
+  /// ama bir DAHAKİ aynı konum+tip aramasında (TTL içinde) hiç gidilmeyecek.
+  static Future<List<PlaceResult>> _fetchAndCacheNearby({
     required double lat,
     required double lng,
-    required String type,
+    required List<String> types,
+    int? priceLevel,
+    required int radius,
+  }) async {
+    // 📍 DUAL API SWITCH (2026-06-28): Hangi API'nin kullanılacağı
+    // Firestore'dan okunuyor (bkz. PlacesApiVersionService) — alan yoksa/
+    // okunamazsa New API'ye düşülür. Bu sayede New ve Legacy'nin AYRI
+    // ücretsiz aylık kotaları, kod değiştirip yeniden derlemeye gerek
+    // kalmadan, Firestore'daki tek bir alan çevrilerek birleştirilebiliyor.
+    final apiVersion = await PlacesApiVersionService.getActiveVersion();
+
+    final fetched = apiVersion == PlacesApiVersion.legacy
+        ? await _fetchNearbyLegacy(
+            lat: lat,
+            lng: lng,
+            types: types,
+            priceLevel: priceLevel,
+            radius: radius,
+          )
+        : await _fetchNearbyNew(
+            lat: lat,
+            lng: lng,
+            types: types,
+            priceLevel: priceLevel,
+            radius: radius,
+          );
+
+    // Sonucu kullanıcıya döndürmeyi bloklamamak için cache yazımı
+    // beklenebilir (zaten Firestore yazımı hızlı ve hatada sessizce
+    // yutuluyor) — burada await edip tutarlılığı garanti ediyoruz.
+    await VenueSearchCacheService.setCached(
+      lat: lat,
+      lng: lng,
+      types: types,
+      radius: radius,
+      places: fetched,
+    );
+
+    return fetched;
+  }
+
+  static Future<List<PlaceResult>> _fetchNearbyNew({
+    required double lat,
+    required double lng,
+    required List<String> types,
     int? priceLevel,
     int? radius,
   }) async {
+    final body = jsonEncode({
+      'includedTypes': types,
+      'maxResultCount': _rawFetchCount,
+      'locationRestriction': {
+        'circle': {
+          'center': {'latitude': lat, 'longitude': lng},
+          'radius': (radius ?? AppConfig.defaultSearchRadius).toDouble(),
+        },
+      },
+    });
+
+    try {
+      final response = await http
+          .post(
+            Uri.parse(AppConfig.placesNearbySearchUrl),
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Goog-Api-Key': AppConfig.googleMapsApiKey,
+              'X-Goog-FieldMask': _searchFieldMask,
+            },
+            body: body,
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        // ignore: avoid_print
+        print(
+          '[PlacesService] ❌ Google Places yetkilendirme hatası '
+          '(${response.statusCode}) — GOOGLE_MAPS_API_KEY doğru mu ve '
+          '"Places API (New)" Cloud Console\'da aktif mi kontrol et.',
+        );
+        return [];
+      }
+      if (response.statusCode != 200) {
+        // ignore: avoid_print
+        print('[PlacesService] ⚠️ Google Places status=${response.statusCode} body=${response.body}');
+        return [];
+      }
+
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final rawResults = decoded['places'] as List<dynamic>? ?? [];
+
+      // ignore: avoid_print
+      print('[PlacesService] types=$types count=${rawResults.length}');
+
+      var places = rawResults
+          .map((p) => PlaceResult.fromJson(p as Map<String, dynamic>))
+          .toList();
+
+      // ⚠️ Places API (New) `searchNearby`, Legacy'nin min_price/max_price
+      // parametrelerinin karşılığını DESTEKLEMİYOR — fiyat filtresi bu
+      // yüzden istek değil, yanıt üzerinde uygulanıyor.
+      if (priceLevel != null) {
+        places = places.where((p) => p.priceLevel == priceLevel).toList();
+      }
+
+      return places;
+    } catch (e) {
+      // ignore: avoid_print
+      print('[PlacesService] fetch error: $e');
+      return [];
+    }
+  }
+
+  // ── Legacy Places API — Nearby Search HTTP ────────────────────────────────
+  //
+  // 📍 DUAL API SWITCH (2026-06-28): Bu metod SADECE Firestore'daki
+  // `appConfig/placesApi.activeVersion` alanı `"legacy"` olduğunda
+  // çağrılır (bkz. PlacesApiVersionService, _fetchAndCacheNearby). Amaç,
+  // New API'nin ücretsiz aylık kotası dolmaya yaklaştığında, Legacy'nin
+  // KENDİ AYRI ücretsiz kotasına manuel olarak geçip iki kotayı toplamda
+  // kullanabilmek.
+  //
+  // ⚠️ ÖNEMLİ KISIT: Legacy `nearbysearch` endpoint'i TEK bir `type`
+  // parametresi kabul eder — New API'nin `includedTypes` dizisi gibi
+  // birden fazla type'ı OR mantığıyla TEK istekte birleştiremez. Burada
+  // listenin EN ÖNCELİKLİ type'ı (`types.first` — `_resolveTypes`'ın zaten
+  // ortak/baskın tipleri öne aldığı sıralama) kullanılıyor, böylece
+  // "1 arama = 1 API çağrısı" dengesi New API ile aynı kalıyor (aksi halde
+  // her type için ayrı bir çağrı yapmak, Legacy moduna geçilme amacı olan
+  // kota tasarrufunu tersine çevirirdi).
+  static Future<List<PlaceResult>> _fetchNearbyLegacy({
+    required double lat,
+    required double lng,
+    required List<String> types,
+    int? priceLevel,
+    int? radius,
+  }) async {
+    if (types.isEmpty) return [];
+    final primaryType = types.first;
+
     final params = <String, String>{
       'location': '$lat,$lng',
       'radius': '${radius ?? AppConfig.defaultSearchRadius}',
-      'type': type,
+      'type': primaryType,
       'language': 'tr',
       'key': AppConfig.googleMapsApiKey,
     };
@@ -689,86 +1278,122 @@ class PlacesService {
       params['maxprice'] = '$priceLevel';
     }
 
-    final uri = Uri.parse(AppConfig.placesNearbyUrl)
+    final uri = Uri.parse(AppConfig.placesNearbySearchUrlLegacy)
         .replace(queryParameters: params);
 
     try {
       final response =
           await http.get(uri).timeout(const Duration(seconds: 10));
 
-      if (response.statusCode != 200) return [];
+      if (response.statusCode != 200) {
+        // ignore: avoid_print
+        print(
+          '[PlacesService] ⚠️ Legacy status=${response.statusCode} '
+          'body=${response.body}',
+        );
+        return [];
+      }
 
       final body = jsonDecode(response.body) as Map<String, dynamic>;
       final status = body['status'] as String?;
 
-      // ignore: avoid_print
-      print('[PlacesService] type=$type status=$status');
-
-      if (status == 'REQUEST_DENIED') {
-        final msg = body['error_message'] ?? 'API key sorunu veya Maps/Places API etkin değil';
+      if (status == 'REQUEST_DENIED' || status == 'OVER_QUERY_LIMIT') {
         // ignore: avoid_print
-        print('[PlacesService] ❌ REQUEST_DENIED: $msg');
-        return [];
-      }
-      if (status == 'OVER_QUERY_LIMIT') {
-        // ignore: avoid_print
-        print('[PlacesService] ❌ OVER_QUERY_LIMIT: Günlük kota dolmuş');
+        print(
+          '[PlacesService] ❌ Legacy Places yetkilendirme/kota hatası '
+          '(status=$status) — GOOGLE_MAPS_API_KEY için "Places API" '
+          '(Legacy) Cloud Console\'da aktif mi ve kotası dolmuş mu kontrol et.',
+        );
         return [];
       }
       if (status != 'OK' && status != 'ZERO_RESULTS') {
         // ignore: avoid_print
-        print('[PlacesService] ⚠️ status=$status body=${response.body}');
+        print('[PlacesService] ⚠️ Legacy status=$status body=${response.body}');
         return [];
       }
 
       final rawResults = body['results'] as List<dynamic>? ?? [];
-      // API'dan gelen tüm sonuçları al (max 20)
-      return rawResults
-          .map((r) => PlaceResult.fromJson(r as Map<String, dynamic>))
+
+      // ignore: avoid_print
+      print(
+        '[PlacesService] (Legacy) type=$primaryType '
+        'count=${rawResults.length}',
+      );
+
+      var places = rawResults
+          .map((r) => PlaceResult.fromLegacyJson(r as Map<String, dynamic>))
           .toList();
+
+      if (priceLevel != null) {
+        places = places.where((p) => p.priceLevel == priceLevel).toList();
+      }
+
+      return places;
     } catch (e) {
       // ignore: avoid_print
-      print('[PlacesService] fetch error: $e');
+      print('[PlacesService] Legacy fetch error: $e');
       return [];
     }
   }
 
   // ── Mekanın TÜM fotoğraflarını placeId ile çek ───────────────────────────
   //
-  // Nearby/Text Search yanıtı bir mekan için genelde sadece İLK fotoğrafı
-  // (veya hiç) içeriyor — galeri tek fotoya düşmesin diye Place Details
-  // endpoint'inden 'photo' alanı istenip mekanın tüm foto referansları
-  // çekiliyor. VenueDetailPage; placeId ne yoldan gelmiş olursa olsun
-  // (arama sonucu, yorum, kaydedilenler, vb.) bu sayede gerçek galeriye
+  // Nearby Search (New) yanıtı zaten her mekan için birden fazla foto
+  // referansı döndürüyor (bkz. PlaceResult.photoReferences), ama placeId
+  // başka bir yoldan (kaydedilenler, yorumlar) gelip foto listesi
+  // önbelleğe alınmamış olabilir — bu durumda Place Details (New)
+  // endpoint'inden SADECE `photos` alanı istenerek mekanın TÜM fotoğrafları
+  // ayrıca çekilebiliyor. VenueDetailPage bu sayede gerçek galeriye
   // ulaşabiliyor.
+  /// Mekan başına önbelleğe alınan/gösterilen MAKSİMUM galeri fotoğrafı.
+  /// 💸 MALİYET DÜŞÜRME (2026-06-28): Önceden 8'di — "3 foto yeterli, daha
+  /// fazlası gereksiz maliyet" talebi üzerine düşürüldü (her foto ayrıca
+  /// faturalanan bir Google indirme/Storage yükleme işlemi yaratıyor).
+  static const int _maxGalleryPhotos = 3;
+
   static Future<List<String>> fetchPhotoUrls(String placeId) async {
     if (placeId.isEmpty) return [];
+
+    // 💸 MALİYET DÜŞÜRME (2026-06-28): ÖNCE sadece Firestore'a bak — bu
+    // mekanın fotoları daha önce (bir yorum eklenmesi veya başka bir
+    // kullanıcının ziyareti sonucu) zaten önbelleğe alınmışsa, Google'ın
+    // "Place Details" endpoint'ine HİÇ gidilmez. Bu endpoint kendi başına
+    // faturalanıyor — yani sadece foto indirmeyi değil, "bu mekanın foto
+    // listesi ne?" sorusunun KENDİSİNİ de ücretsiz hale getiriyoruz.
+    final cached =
+        await VenuePhotoCacheService.getCachedPhotoUrls(placeId: placeId);
+    if (cached.isNotEmpty) return cached;
+
     try {
-      final uri = Uri.parse(AppConfig.placesDetailsUrl).replace(
-        queryParameters: {
-          'place_id': placeId,
-          'fields': 'photo',
-          'language': 'tr',
-          'key': AppConfig.googleMapsApiKey,
-        },
-      );
-      final response =
-          await http.get(uri).timeout(const Duration(seconds: 10));
+      final uri = Uri.parse('${AppConfig.placesDetailsUrl}/$placeId');
+
+      final response = await http
+          .get(
+            uri,
+            headers: {
+              'X-Goog-Api-Key': AppConfig.googleMapsApiKey,
+              'X-Goog-FieldMask': 'photos',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) return [];
 
-      final body = jsonDecode(response.body) as Map<String, dynamic>;
-      if (body['status'] != 'OK') return [];
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final photos = decoded['photos'] as List<dynamic>? ?? [];
 
-      final result = body['result'] as Map<String, dynamic>?;
-      final photos = result?['photos'] as List<dynamic>?;
-      if (photos == null) return [];
-
-      return photos
-          .map((p) => (p as Map<String, dynamic>)['photo_reference'] as String?)
+      final photoNames = photos
+          .map((p) => (p as Map<String, dynamic>)['name'] as String?)
           .whereType<String>()
-          .take(8)
-          .map(PlaceResult.buildPhotoUrl)
+          .take(_maxGalleryPhotos)
           .toList();
+
+      // Galeri fotoğrafları paylaşımlı global önbellekten çözümleniyor —
+      // `PlaceResult.buildPhotoUrl` ile HER kullanıcı için ayrı ayrı
+      // faturalanan ham Google URL'i üretmek yerine.
+      return VenuePhotoCacheService.resolvePhotoUrls(
+        placeId: placeId,
+        photoNames: photoNames,
+      );
     } catch (e) {
       // ignore: avoid_print
       print('[PlacesService] fetchPhotoUrls error: $e');
@@ -873,10 +1498,12 @@ class PlacesService {
       if (i < friendSecondary.length) types.add(friendSecondary[i]);
     }
 
-    // Tip sayısı arttıkça Google Places'e atılan istek sayısı da artıyor
-    // (her type için 1 ayrı çağrı, bkz. `_fetchNearby` döngüsü). Round-robin
-    // sayesinde artık 5 sınırı kullanıcı/arkadaş dengesini bozuyordu (4 kendi
-    // tipi + 1 karşı taraf); adil bir 50/50 bölünme için sınırı 6'ya çıkardık.
+    // NOT (2026-06-28): Artık tüm type'lar TEK bir Places API isteğine
+    // gömüldüğü için (`includedTypes` dizisi) tip sayısı ekstra HTTP çağrısı
+    // YARATMIYOR — bu sınır artık sadece `includedTypes` dizisinin
+    // kişilik/ortak tip dengesini bozmaması için var. Round-robin sayesinde
+    // 5 sınırı kullanıcı/arkadaş dengesini bozuyordu (4 kendi tipi + 1 karşı
+    // taraf); adil bir 50/50 bölünme için sınırı 6'ya çıkardık.
     return types.take(6).toList();
   }
 }

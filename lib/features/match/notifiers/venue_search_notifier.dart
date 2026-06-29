@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:meetit/core/constants/app_config.dart';
+import 'package:meetit/core/services/distance_matrix_service.dart';
+import 'package:meetit/core/utils/travel_time_estimator.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/services/places_service.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
@@ -39,6 +41,15 @@ class VenueSearchState {
   final double? friendLat;
   final double? friendLng;
 
+  /// Mekan kartlarında gösterilecek ulaşım süreleri — placeId → [TravelEstimate].
+  ///
+  /// Bu artık Google Distance Matrix API'den GERÇEK (trafik tahminli) veriyle
+  /// dolduruluyor (bkz. `DistanceMatrixService`); API'ye ulaşılamazsa otomatik
+  /// olarak kuş uçuşu tahminine düşer (`TravelEstimate.isApproximate == true`).
+  /// Kullanıcının "kuş uçuşu mesafe saçma, API'den al" geri bildirimi üzerine
+  /// eklendi.
+  final Map<String, TravelEstimate> travelEstimates;
+
   const VenueSearchState({
     this.midpointVenues = const [],
     this.allVenues = const [],
@@ -53,6 +64,7 @@ class VenueSearchState {
     this.myLng,
     this.friendLat,
     this.friendLng,
+    this.travelEstimates = const {},
   });
 
   List<PlaceResult> get venues {
@@ -81,6 +93,7 @@ class VenueSearchState {
     double? myLng,
     double? friendLat,
     double? friendLng,
+    Map<String, TravelEstimate>? travelEstimates,
     bool clearError = false,
     bool clearAll = false,
     bool clearDistanceWarning = false,
@@ -102,6 +115,9 @@ class VenueSearchState {
       myLng: myLng ?? this.myLng,
       friendLat: friendLat ?? this.friendLat,
       friendLng: friendLng ?? this.friendLng,
+      travelEstimates: clearAll
+          ? const {}
+          : (travelEstimates ?? this.travelEstimates),
     );
   }
 }
@@ -149,6 +165,12 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
     int? priceLevel,
     double? userLat,
     double? userLng,
+    // Kullanıcının "en fazla bu kadar uzağa giderim" filtresi (km).
+    // null = sınırsız. Orta nokta varsa ORTA NOKTADAN, yoksa kullanıcının
+    // kendi konumundan kuş uçuşu mesafeye bakılır (bkz. aşağıdaki filtre
+    // bloğu) — arkadaşın ayrı bir mesafe sınırı YOKTUR, kullanıcının
+    // talebi üzerine bilinçli olarak basit tutuldu.
+    double? maxVenueDistanceKm,
   }) async {
     state = state.copyWith(
       isLoading: true,
@@ -237,51 +259,98 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
         (_recentlyShownIds[_historyKey(friendUid)] ?? const <String>[])
             .toSet();
 
-    try {
-      List<PlaceResult> results;
+    // Arama yarıçapı: kullanıcı bir mesafe filtresi seçtiyse onu (km→m)
+    // kullan, seçmediyse `AppConfig.defaultSearchRadius` (5km) varsayılan
+    // olarak uygulanır.
+    //
+    // 📍 API ÇAĞRI TASARRUFU (2026-06-28): Önceden orta nokta modunda
+    // `[2500, 5000, 8000, 12000]` adımlarında kademeli olarak TEKRAR TEKRAR
+    // arama yapılıyordu (yeterli sonuç çıkmazsa otomatik daha geniş çapa
+    // geçiliyordu) — bu, tek bir kullanıcı aramasının arka planda 4 katına
+    // kadar Places API çağrısına yol açıyordu. Kullanıcı talebi üzerine
+    // ("tek arama yap") bu tamamen kaldırıldı: artık HER arama TEK bir
+    // çapta, TEK seferde yapılıyor.
+    final searchRadius = maxVenueDistanceKm != null
+        ? (maxVenueDistanceKm * 1000).round()
+        : AppConfig.defaultSearchRadius;
 
-      if (usingMidpoint) {
-        // İki kullanıcı arasında arama: önce DAR bir çapta sadece kaliteli
-        // (4.0+ puan) mekanlara bak — böylece ikisinin GERÇEKTEN arasında
-        // bir yer bulunur, uzak bir mahalledeki rastgele bir mekan değil.
-        // Yeterli sonuç çıkmazsa çapı kademeli büyüt; en son adımda puan
-        // şartını da kaldır ki hiçbir zaman boş dönülmesin.
-        results = await _searchMidpointWithExpandingRadius(
-          searchLat: searchLat,
-          searchLng: searchLng,
-          userProfile: userProfile,
-          friendProfile: friendProfile,
-          selectedActivities: selectedActivities,
-          priceLevel: priceLevel,
-          excludePlaceIds: excludeIds,
+    try {
+      // Orta nokta modunda (arkadaşla buluşma), ikisinin GERÇEKTEN arasında
+      // kaliteli bir yer bulma şansını artırmak için taban bir puan şartı
+      // (`AppConfig.midpointMinRating`) uygulanıyor; solo modda şart yok.
+      var results = await PlacesService.searchVenues(
+        lat: searchLat,
+        lng: searchLng,
+        userProfile: userProfile,
+        friendProfile: friendProfile,
+        selectedActivities: selectedActivities,
+        priceLevel: priceLevel,
+        radius: searchRadius,
+        minRating: usingMidpoint ? AppConfig.midpointMinRating : null,
+        excludePlaceIds: excludeIds,
+      );
+
+      // ── Maksimum mesafe filtresi (kullanıcı talebi) ───────────────────────
+      // searchLat/searchLng zaten yukarıda hesaplanan nokta — iki kişi
+      // varsa ORTA NOKTA, tek başına modda kullanıcının kendi konumu.
+      // Bu sınırı aşan mekanlar TAMAMEN sonuçlardan çıkarılıyor (kullanıcı
+      // tercihi: alta itmek değil, doğrudan filtrelemek).
+      //
+      // NOT: Kullanıcı kuş uçuşu (Haversine) mesafesinin yanlış sonuç
+      // verdiğini belirtti (örn. boğaz/köprü araya girince düz çizgi
+      // mesafe gerçek yol mesafesinden çok kısa kalıyordu) — bu yüzden
+      // filtre artık Google Distance Matrix'in GERÇEK (driving) rota
+      // mesafesini kullanıyor. Bu, ulaşım süresi chip'leri için yapılan
+      // ayrı çağrıdan (myLat/myLng kaynaklı, aşağıda) BAĞIMSIZ bir istek —
+      // o çağrı kullanıcının kendi konumundan, bu filtre ise arama
+      // noktasından (orta nokta/kendi konum) mesafe ölçüyor. API
+      // başarısız olursa otomatik olarak kuş uçuşuna düşülür (bkz.
+      // `DistanceMatrixService.fetchDistancesKm` içindeki fallback).
+      if (maxVenueDistanceKm != null) {
+        final realDistancesKm = await DistanceMatrixService.fetchDistancesKm(
+          originLat: searchLat,
+          originLng: searchLng,
+          destinations: results,
         );
-      } else {
-        results = await PlacesService.searchVenues(
-          lat: searchLat,
-          lng: searchLng,
-          userProfile: userProfile,
-          friendProfile: friendProfile,
-          selectedActivities: selectedActivities,
-          priceLevel: priceLevel,
-          excludePlaceIds: excludeIds,
-        );
+        results = results.where((p) {
+          final km = realDistancesKm[p.placeId] ??
+              _haversineKm(searchLat, searchLng, p.lat, p.lng);
+          return km <= maxVenueDistanceKm;
+        }).toList();
       }
 
       if (results.isEmpty) {
         state = state.copyWith(
           isLoading: false,
-          errorMessage:
-              'Yakında uygun mekan bulunamadı. Farklı aktivite veya fiyat seç.',
+          errorMessage: maxVenueDistanceKm != null
+              ? 'Seçtiğin mesafe aralığında uygun mekan bulunamadı. '
+                  'Mesafe sınırını artırmayı veya farklı aktivite/fiyat '
+                  'seçmeyi deneyebilirsin.'
+              : 'Yakında uygun mekan bulunamadı. Farklı aktivite veya fiyat seç.',
         );
         return;
       }
 
       if (usingMidpoint) {
-        // Orta noktaya en yakın 3 mekan ayrı gösterilir
+        // Orta noktaya en yakın 3 mekan ayrı gösterilir.
+        //
+        // Sadece HAM mesafeye göre sıralamak, orta noktaya en yakın yerin
+        // (örn. Beşiktaş/Kadıköy'de tonla bulunan genel bir burgerci/
+        // lahmacuncu zinciri) gerçekte birlikte zaman geçirilebilecek bir
+        // yer olup olmadığını hiç dikkate almıyordu. Bunu düzeltmek için
+        // gerçek mesafeye küçük bir "uygunluk ayarı" (km) ekliyoruz: kafe/
+        // restoran/park/müze gibi oturup zaman geçirilebilecek type'lar
+        // sanki biraz daha yakınmış gibi öne çekiliyor, isminden anlaşılan
+        // hızlı/ayaküstü tüketim yerleri (büfe, fast food, lahmacuncu vb.)
+        // sanki biraz daha uzakmış gibi geriye itiliyor. Mesafe hâlâ ana
+        // belirleyici — bu sadece eşit/yakın mesafelerdeki sıralamayı
+        // mantıklı hale getiren küçük bir düzeltme.
         final sorted = List<PlaceResult>.from(results)
           ..sort((a, b) {
-            final dA = _haversineKm(searchLat, searchLng, a.lat, a.lng);
-            final dB = _haversineKm(searchLat, searchLng, b.lat, b.lng);
+            final dA = _haversineKm(searchLat, searchLng, a.lat, a.lng) +
+                _hangoutAdjustmentKm(a);
+            final dB = _haversineKm(searchLat, searchLng, b.lat, b.lng) +
+                _hangoutAdjustmentKm(b);
             return dA.compareTo(dB);
           });
         final midpoint = sorted.take(3).toList();
@@ -295,6 +364,12 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
           currentPage: 0,
           isLoading: false,
         );
+
+        // Ulaşım süreleri her zaman bu kullanıcının GERÇEK konumundan
+        // (myLat/myLng) hesaplanır — orta noktadan değil. Orta nokta sadece
+        // mekan ARAMASI için kullanılıyor; kullanıcı "buraya kaç dakikada
+        // giderim" diye sorduğunda kendi konumundan süre görmek ister.
+        _fetchTravelEstimates(myLat: myLat, myLng: myLng, venues: sorted);
       } else {
         _recordShown(friendUid, results.take(3).toList());
 
@@ -303,6 +378,8 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
           currentPage: 0,
           isLoading: false,
         );
+
+        _fetchTravelEstimates(myLat: myLat, myLng: myLng, venues: results);
       }
     } catch (e) {
       state = state.copyWith(
@@ -312,52 +389,30 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
     }
   }
 
-  /// İki kullanıcının orta noktasında, dar çaptan başlayıp kademeli
-  /// büyüyen bir aramayla mekan bulur.
+  /// Mekan listesi ekrana çıktıktan SONRA ulaşım sürelerini arka planda
+  /// çeker (`await` EDİLMİYOR — kullanıcı mekanları hemen görsün, süreler
+  /// Distance Matrix API'den (veya fallback'ten) gelince kartlara eklenir).
   ///
-  /// Mantık: ilk adımlarda hem dar bir yarıçap (örn. 2.5km) hem de yüksek
-  /// puan şartı (4.0+) uygulanır — bu, gerçekten ikisinin arasında ve
-  /// kaliteli bir yer bulma şansını artırır (geniş çapta arayıp uzak bir
-  /// mahalleden rastgele bir mekan döndürmek yerine). Yeterli sonuç
-  /// (`AppConfig.midpointMinResultsPerStep`) çıkmazsa bir sonraki adıma
-  /// (daha büyük çap) geçilir; son adımda puan şartı tamamen kaldırılır ki
-  /// hiçbir koşulda boş sonuç dönülmesin.
-  Future<List<PlaceResult>> _searchMidpointWithExpandingRadius({
-    required double searchLat,
-    required double searchLng,
-    required PersonalityProfile userProfile,
-    required PersonalityProfile friendProfile,
-    required List<String> selectedActivities,
-    int? priceLevel,
-    Set<String> excludePlaceIds = const {},
+  /// Bilinçli olarak `searchVenues()` akışını bloklamıyor: API isteği
+  /// birkaç yüz ms sürebilir, mekan listesini bu kadar geciktirmenin
+  /// kullanıcı deneyimine bir faydası yok.
+  Future<void> _fetchTravelEstimates({
+    required double myLat,
+    required double myLng,
+    required List<PlaceResult> venues,
   }) async {
-    final steps = AppConfig.midpointSearchRadiusSteps;
-    List<PlaceResult> best = [];
-
-    for (var i = 0; i < steps.length; i++) {
-      final isLastStep = i == steps.length - 1;
-      final results = await PlacesService.searchVenues(
-        lat: searchLat,
-        lng: searchLng,
-        userProfile: userProfile,
-        friendProfile: friendProfile,
-        selectedActivities: selectedActivities,
-        priceLevel: priceLevel,
-        radius: steps[i],
-        // Son adımda puan şartını kaldır — bir şey bulunsun, hiç olmasın.
-        minRating: isLastStep ? null : AppConfig.midpointMinRating,
-        excludePlaceIds: excludePlaceIds,
+    if (venues.isEmpty) return;
+    try {
+      final estimates = await DistanceMatrixService.fetchTravelEstimates(
+        originLat: myLat,
+        originLng: myLng,
+        destinations: venues,
       );
-
-      if (results.length > best.length) best = results;
-
-      if (results.length >= AppConfig.midpointMinResultsPerStep) {
-        return results; // Bu çapta yeterince kaliteli mekan bulundu, dur.
-      }
+      state = state.copyWith(travelEstimates: estimates);
+    } catch (_) {
+      // Sessizce yut — ulaşım süresi gösterilmemesi kritik bir hata değil,
+      // mekan kartları her hâlükârda görünür kalmalı.
     }
-
-    // Hiçbir adım yeterli sayıda sonuç vermedi — en çok sonuç veren adımı kullan.
-    return best;
   }
 
   void nextPage() {
@@ -387,6 +442,38 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
   }
 
   double _deg2rad(double deg) => deg * pi / 180;
+
+  // ── Buluşma noktasına yakınlık önceliği: "zaman geçirilebilecek yer" mi? ────
+  //
+  // Oturup sohbet edilebilecek/zaman geçirilebilecek type'lar — bunlar orta
+  // nokta sıralamasında hafifçe öne çekilir.
+  static const Set<String> _hangoutFriendlyTypes = {
+    'cafe', 'restaurant', 'park', 'museum', 'art_gallery', 'library',
+    'bar', 'night_club', 'movie_theater', 'tourist_attraction', 'bakery',
+  };
+
+  // İsminden anlaşılan hızlı/ayaküstü tüketim yerleri — "cafe"/"restaurant"
+  // gibi oturmaya uygun bir type'ı da YOKSA hafifçe geriye itilir (tamamen
+  // elenmez, sadece eşit mesafede gerçek bir "mekan"ın önüne geçmesin).
+  static const List<String> _quickServiceNameKeywords = [
+    'büfe', 'fast food', 'lahmacun', 'dürüm', 'kebapçı', 'tost ', 'çorbacı',
+    'döner ',
+  ];
+
+  double _hangoutAdjustmentKm(PlaceResult place) {
+    final lowerName = place.name.toLowerCase();
+    final isQuickServiceName =
+        _quickServiceNameKeywords.any(lowerName.contains) &&
+            !place.types.contains('cafe') &&
+            !place.types.contains('restaurant');
+    if (isQuickServiceName) return 0.35; // ~350m geriye it
+
+    final isHangoutFriendly =
+        place.types.any(_hangoutFriendlyTypes.contains);
+    if (isHangoutFriendly) return -0.2; // ~200m öne çek
+
+    return 0.0;
+  }
 
   Future<Position?> _getLocation() async {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
