@@ -17,7 +17,8 @@ class VenueReviewModel {
   final String? venueAddress;
   final String? venuePhotoUrl;
 
-  /// Google Places `photo_reference` token'ı — VARSA, gösterimde her zaman
+  /// Places foto referans token'ı (Google Places API (New) foto "name"
+  /// alanı, örn. "places/ChIJ.../photos/AUf1Q..") — VARSA, gösterimde her zaman
   /// bu tercih edilir. SEBEP: [venuePhotoUrl] içine API key GÖMÜLÜ olarak
   /// kaydediliyordu (bkz. PlaceResult.buildPhotoUrl); key bir gün
   /// iptal edilip yenisiyle değiştirilirse (örn. sızıntı sonrası rotasyon),

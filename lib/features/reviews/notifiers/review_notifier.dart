@@ -1,10 +1,14 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:meetit/core/constants/app_config.dart';
+import 'package:meetit/core/utils/geo_utils.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/match/models/place_result.dart';
+import 'package:meetit/features/match/services/places_service.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 
 /// Belirli bir mekana ait yorumların durumu (yüklenen/yükleniyor/hata).
@@ -162,6 +166,25 @@ class ReviewNotifier extends Notifier<ReviewState> {
       final docRef = _db.collection('venue_reviews').doc();
       await docRef.set(review.toMap());
 
+      // 💸 MALİYET DÜŞÜRME (2026-06-28): Bir mekana yorum yapıldı demek, bu
+      // mekan ARTIK görece "popüler"/tekrar görüntülenecek bir mekan demektir
+      // (kendi profilinde, arkadaşların feed'inde, yorum listesinde vb. defalarca
+      // gösterilecek). Bu yüzden fotoğraflarını burada PROAKTİF olarak
+      // önbelleğe alıyoruz (en fazla 3 — bkz. PlacesService._maxGalleryPhotos):
+      // `fetchPhotoUrls` zaten cache-first çalıştığı için bu çağrı, mekan
+      // daha önce hiç ziyaret edilmemişse SADECE BİR KERE Google'a gidecek;
+      // bundan sonra bu mekanın fotoğrafları için (yorum kartları, detay
+      // sayfası, kart önizlemeleri) bir DAHA Google'a gidilmeyecek.
+      // `await` edilmiyor — yorum ekleme akışını bu arka plan işine
+      // bağlamak istemediğimiz için "fire and forget" + sessiz hata yutma.
+      unawaited(
+        PlacesService.fetchPhotoUrls(venue.placeId).catchError((e) {
+          // ignore: avoid_print
+          print('[ReviewNotifier] proaktif foto önbellekleme hatası: $e');
+          return <String>[];
+        }),
+      );
+
       // ── Kişilik profilini ziyaret edilen mekana göre evrilt ──────────────
       //
       // Statik quiz sonucu yerine, kullanıcı bir mekana yorum bıraktıkça
@@ -257,12 +280,22 @@ final myReviewsProvider =
   return ref.read(reviewProvider.notifier).loadMyReviews(uid);
 });
 
-// ── Ana sayfa carousel'i için en yüksek puanlı yorumlar ──────────────────────
+// ── Ana sayfa carousel'i için "yakınınızdaki beğenilen mekanlar" ─────────────
 //
 // SADECE gerçek kullanıcı yorumları gösterilir — sahte/bot yorum YOK.
 // Henüz hiç yorum yoksa liste boş döner; home_page.dart bu durumda
 // 'home.no_reviews_hint' mesajını gösteriyor (carousel'i sahte içerikle
 // doldurmak yerine dürüstçe "henüz yorum yok" demek tercih edildi).
+//
+// NOT (konum filtresi): Önceden bu bölüm TÜM kullanıcıların TÜM yorumlarını
+// konumdan bağımsız, sadece puana göre sıralayıp gösteriyordu — bu yüzden
+// örn. İstanbul'da yaşayan birine Kocaeli'deki bir mekanın yorumu "öne
+// çıkan" olarak gösterilebiliyordu (kullanıcının gerçekte gidemeyeceği bir
+// mesafe). Artık kullanıcının kayıtlı konumu (UserModel.lat/lng) biliniyorsa
+// sadece [AppConfig.nearbyLikedVenuesRadiusKm] (10km) çapındaki yorumlar
+// dikkate alınıyor — konum henüz kayıtlı değilse (örn. profil tamamlanmadan
+// önce), boş bir carousel göstermek yerine eski davranışa (filtresiz) geri
+// dönülüyor.
 //
 // NOT: orderBy('rating',...).orderBy('createdAt',...) çift sıralaması
 // Firestore'da composite index gerektiriyor; index oluşturulmadığı için
@@ -275,14 +308,27 @@ final topReviewsProvider = FutureProvider<List<VenueReviewModel>>((ref) async {
         .collection('venue_reviews')
         .limit(50)
         .get();
-    final reviews = snap.docs
+    var reviews = snap.docs
         .map((d) => VenueReviewModel.fromMap(d.id, d.data()))
-        .toList()
-      ..sort((a, b) {
-        final ratingCmp = b.rating.compareTo(a.rating);
-        if (ratingCmp != 0) return ratingCmp;
-        return b.createdAt.compareTo(a.createdAt);
-      });
+        .toList();
+
+    final me = ref.watch(currentUserProvider);
+    final myLat = me?.lat;
+    final myLng = me?.lng;
+    if (myLat != null && myLng != null) {
+      reviews = reviews.where((r) {
+        if (r.lat == null || r.lng == null) return false;
+        final distanceKm =
+            GeoUtils.haversineKm(myLat, myLng, r.lat!, r.lng!);
+        return distanceKm <= AppConfig.nearbyLikedVenuesRadiusKm;
+      }).toList();
+    }
+
+    reviews.sort((a, b) {
+      final ratingCmp = b.rating.compareTo(a.rating);
+      if (ratingCmp != 0) return ratingCmp;
+      return b.createdAt.compareTo(a.createdAt);
+    });
     return reviews.take(15).toList();
   } catch (e) {
     return [];
