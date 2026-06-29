@@ -787,54 +787,58 @@ class PlacesService {
     double? minRating,
     Set<String> excludePlaceIds = const {},
   }) async {
-    final types = _resolveTypes(
+    final typeGroups = _resolveTypeGroups(
       userProfile: userProfile,
       friendProfile: friendProfile,
       selectedActivities: selectedActivities,
     );
 
     // Kullanıcı otel mi arıyor? (lodging filtresi bypass edilsin mi?)
-    final searchingForLodging = types.contains('lodging');
+    final allTypes = typeGroups.expand((g) => g).toSet();
+    final searchingForLodging = allTypes.contains('lodging');
 
     final searchRadius = radius ?? AppConfig.defaultSearchRadius;
 
     // ignore: avoid_print
-    print('🔍 PlacesService types: $types  lodgingSearch=$searchingForLodging '
+    print('🔍 PlacesService typeGroups: $typeGroups '
+        'lodgingSearch=$searchingForLodging '
         'radius=$searchRadius minRating=$minRating');
 
-    // 📍 API ÇAĞRI TASARRUFU (2026-06-28): Önceden her type için AYRI bir
-    // `_fetchNearbyNew` çağrısı yapılıyordu (5 type → 5 HTTP çağrısı). Google
-    // Places API (New) `searchNearby`'ın `includedTypes` alanı aslında BİR
-    // İSTEKTE 50'ye kadar type kabul ediyor (OR mantığıyla — herhangi biri
-    // eşleşen mekanları döner). Bu yüzden artık tüm type'lar TEK bir
-    // isteğe gömülüyor — arama başına HER ZAMAN tam olarak 1 Places API
-    // çağrısı atılıyor, type sayısı kaç olursa olsun.
+    // 📍 API ÇAĞRI TASARRUFU (2026-06-28, güncelleme 2026-06-29): Her type
+    // grubu için AYRI bir `searchNearby` isteği atılıyor (tek aktivite
+    // seçiliyse bu hâlâ TEK çağrı — eskisiyle aynı). Google'ın
+    // `includedTypes` alanı tek istekte 50'ye kadar type kabul etse de,
+    // dönen ham sonuç sayısı istek başına en fazla 20 (`_rawFetchCount`) —
+    // birden fazla aktivitenin type'ları AYNI isteğe gömülürse bu 20'lik
+    // bütçe hepsi arasında relevansa göre paylaşılıyor ve yoğun bir
+    // kategori (örn. restoran) diğerini (örn. kafe) tamamen ekarte
+    // edebiliyordu — "kafe + restoran seçilince bazı bölgelerde mekan
+    // çıkmıyor" hatasının kök sebebi buydu.
     //
-    // 💸 MALİYET DÜŞÜRME (2026-06-28): Bu TEK çağrı bile her arama için
-    // tekrar tekrar ödeniyordu. Şimdi Google'a gitmeden ÖNCE konum+tip
-    // bazlı kısa süreli (6 saat) bir önbelleğe (VenueSearchCacheService)
-    // bakılıyor — aynı civarda aynı tip kombinasyonuyla yapılan tekrar
-    // aramalar (örn. aynı çift "Tekrar Ara"ya bastığında, ya da farklı
-    // kullanıcılar aynı bölgede benzer kişilik tipiyle arama yaptığında)
-    // Google'a HİÇ gitmeden cevaplanır. Önbelleğe alınan şey HAM havuz
-    // (filtrelenmemiş ~20 mekan) olduğu için filtreleme/skorlama/rastgele
-    // seçim adımları AYNEN çalışıyor — kullanıcı hâlâ her aramada biraz
-    // farklı sonuçlar görüyor, sadece Google'a gidilen adım atlanıyor.
-    final rawResults = types.isEmpty
-        ? <PlaceResult>[]
-        : await VenueSearchCacheService.getCached(
-              lat: lat,
-              lng: lng,
-              types: types,
-              radius: searchRadius,
-            ) ??
-            await _fetchAndCacheNearby(
-              lat: lat,
-              lng: lng,
-              types: types,
-              priceLevel: priceLevel,
-              radius: searchRadius,
-            );
+    // 💸 MALİYET DÜŞÜRME: Aktivite başına ekstra bir HTTP çağrısı oluşsa da
+    // (örn. 2 aktivite → 2 çağrı), her grup AYRICA kalıcı/TTL'siz önbelleğe
+    // (VenueSearchCacheService) giriyor — yani bölge+aktivite kombinasyonu
+    // başına Google'a ÖMÜR BOYU en fazla 1 kez gidiliyor, sonraki aynı
+    // kombinasyonlu aramalar (tek başına ya da başka bir aktiviteyle
+    // birlikte) hep önbellekten karşılanıyor.
+    final rawResults = <PlaceResult>[];
+    for (final group in typeGroups) {
+      if (group.isEmpty) continue;
+      final groupResults = await VenueSearchCacheService.getCached(
+            lat: lat,
+            lng: lng,
+            types: group,
+            radius: searchRadius,
+          ) ??
+          await _fetchAndCacheNearby(
+            lat: lat,
+            lng: lng,
+            types: group,
+            priceLevel: priceLevel,
+            radius: searchRadius,
+          );
+      rawResults.addAll(groupResults);
+    }
 
     final seen = <String>{};
     final results = <PlaceResult>[];
@@ -1403,32 +1407,71 @@ class PlacesService {
 
   // ── Type Çözümleme ─────────────────────────────────────────────────────────
 
-  static List<String> _resolveTypes({
+  /// Aramada Google'a atılacak "type grupları"nı döner — her grup KENDİ
+  /// `searchNearby` isteğinde ayrı ayrı gönderilir (bkz. `searchVenues`).
+  ///
+  /// 🐛 BUG FİX (2026-06-29): "Kafe ve Restoran birlikte seçilince bazı
+  /// bölgelerde mekan çıkmıyor" — kök sebep: önceden TÜM seçili aktivitelerin
+  /// type'ları (örn. kafe: cafe/bakery + restoran: restaurant/meal_takeaway/
+  /// meal_delivery) TEK bir `includedTypes` listesine birleştirilip TEK bir
+  /// istekte gönderiliyordu. Google'ın `searchNearby`'ı istek başına en fazla
+  /// 20 ham sonuç döndürüyor (`_rawFetchCount`) — bu 20 sonuç, OR'lanan TÜM
+  /// type'lar arasında relevans sırasına göre paylaşılıyor. Yoğun restoranlı
+  /// bir bölgede 20 sonucun hepsi restoran çıkabiliyor, kafe için HİÇ pay
+  /// kalmıyor — sonradan uygulanan whitelist filtresi (`_filterByRequiredTypes`)
+  /// kafe'yi doğru şekilde aradığı için suçlu görünmüyor, ama ham havuzda kafe
+  /// hiç yoktu. Çözüm: her aktiviteye AYRI bir istek (ayrı 20'lik bütçe)
+  /// ayrılıyor — birden fazla aktivite seçilince ekstra API çağrısı oluşur,
+  /// ama bu çağrılar da diğerleri gibi KALICI önbelleğe (VenueSearchCacheService)
+  /// giriyor, yani bölge+aktivite kombinasyonu başına ömür boyu en fazla 1 kez.
+  static List<List<String>> _resolveTypeGroups({
     required PersonalityProfile userProfile,
     required PersonalityProfile friendProfile,
     required List<String> selectedActivities,
   }) {
-    // ── MOD 1: Aktivite seçilmişse SADECE o tipler ───────────────────────────
+    // ── MOD 1: Aktivite seçilmişse SADECE o tipler, AKTİVİTE BAŞINA bir grup ──
     // Kullanıcı ne seçtiyse onu göster, kişilik karıştırma.
     // _activityToTypes bir aktivite için birden fazla type döndürür:
     //   "restoran" → ['restaurant', 'food', 'meal_takeaway', 'meal_delivery']
-    // Bu sayede kebapçı, dönerci vb. de kapsama girer.
+    // Bu sayede kebapçı, dönerci vb. de kapsama girer — ama bu liste KENDİ
+    // aktivitesinin grubunda kalır, başka bir aktivitenin type'larıyla
+    // karışıp aynı 20'lik bütçeyi paylaşmaz.
     if (selectedActivities.isNotEmpty) {
-      final types = <String>{};
+      final groups = <List<String>>[];
+      // Aynı eşleşme (örn. "kahve" + "kafe" ikisi de cafe/bakery'e düşüyor)
+      // iki kez ayrı istek olarak tekrarlanmasın — kanonik (sıralı) bir
+      // anahtar string'i ile karşılaştırılıyor (Set/List == identity bazlı
+      // olduğundan doğrudan koleksiyon karşılaştırması güvenilir değil).
+      final addedKeys = <String>{};
       for (final activity in selectedActivities) {
         final lower = activity.toLowerCase();
         for (final entry in _activityToTypes.entries) {
           if (lower.contains(entry.key)) {
-            types.addAll(entry.value); // tüm type'ları ekle
+            final key = ([...entry.value]..sort()).join(',');
+            if (addedKeys.add(key)) {
+              groups.add(entry.value);
+            }
             break;
           }
         }
       }
       // Eşleşen type yoksa (tanımsız aktivite) kişiliğe geri dön
-      if (types.isNotEmpty) return types.toList();
+      if (groups.isNotEmpty) return groups;
     }
 
-    // ── MOD 2: Aktivite seçilmemişse SADECE kişiliğe göre ────────────────────
+    // ── MOD 2: Aktivite seçilmemişse SADECE kişiliğe göre, TEK grup ──────────
+    return [
+      _resolvePersonalityTypes(
+        userProfile: userProfile,
+        friendProfile: friendProfile,
+      ),
+    ];
+  }
+
+  static List<String> _resolvePersonalityTypes({
+    required PersonalityProfile userProfile,
+    required PersonalityProfile friendProfile,
+  }) {
     //
     // BUG FİX: Önceden `types.addAll(userTypes); types.addAll(friendTypes);`
     // şeklinde art arda ekleniyordu. Dart Set'i ekleme sırasını koruduğundan
@@ -1461,49 +1504,4 @@ class PlacesService {
 
     // Secondary tipler — daha geniş havuz.
     //
-    // NOT: `secondaryType` getter'ı %10 gibi düşük bir eşikte bile ikincil
-    // tip döndürüyor (UI'da "ikincil eğilim" göstermek için makul bir eşik).
-    // Ama burada, arama havuzuna YENİ bir mekan kategorisi eklemek için bu
-    // çok düşük: "sakin ruh" kullanıcının %12 gibi zayıf bir "maceraperest"
-    // eğilimi olması, sonuçlara spor salonu/stadyum sokulmasına yol açıyordu.
-    // Bu yüzden burada daha sıkı, yerel bir eşik kullanıyoruz: ikincil eğilim
-    // gerçekten belirgin değilse (≥ %25) arama havuzuna katılmasın.
-    const secondaryPoolThreshold = 0.25;
-
-    final userSecondary = <String>[];
-    final friendSecondary = <String>[];
-    void collectSecondaryPool(
-      PersonalityProfile profile,
-      List<String> sink,
-    ) {
-      final ranked = profile.rankedTypes;
-      if (ranked.length < 2) return;
-      final second = ranked[1];
-      if (second.value >= secondaryPoolThreshold) {
-        sink.addAll(_personalityTypes[second.key] ?? []);
-      }
-    }
-
-    collectSecondaryPool(userProfile, userSecondary);
-    collectSecondaryPool(friendProfile, friendSecondary);
-
-    // İkincil havuzlar da aynı round-robin mantığıyla ekleniyor — aksi halde
-    // burada da kullanıcının ikincil tipi, arkadaşın ikincil tipinin önüne
-    // geçip aynı adaletsizliği ikincil seviyede tekrarlardı.
-    final maxSecondaryLen = userSecondary.length > friendSecondary.length
-        ? userSecondary.length
-        : friendSecondary.length;
-    for (var i = 0; i < maxSecondaryLen; i++) {
-      if (i < userSecondary.length) types.add(userSecondary[i]);
-      if (i < friendSecondary.length) types.add(friendSecondary[i]);
-    }
-
-    // NOT (2026-06-28): Artık tüm type'lar TEK bir Places API isteğine
-    // gömüldüğü için (`includedTypes` dizisi) tip sayısı ekstra HTTP çağrısı
-    // YARATMIYOR — bu sınır artık sadece `includedTypes` dizisinin
-    // kişilik/ortak tip dengesini bozmaması için var. Round-robin sayesinde
-    // 5 sınırı kullanıcı/arkadaş dengesini bozuyordu (4 kendi tipi + 1 karşı
-    // taraf); adil bir 50/50 bölünme için sınırı 6'ya çıkardık.
-    return types.take(6).toList();
-  }
-}
+    // NOT: `se
