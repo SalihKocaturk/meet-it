@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:meetit/core/services/notification_service.dart';
 import 'package:meetit/features/auth/models/user_model.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/personality/providers/personality_provider.dart';
@@ -194,6 +195,8 @@ class AuthNotifier extends Notifier<AuthState> {
       }
 
       await _saveSession(user);
+      // FCM token'ı Firestore'a kaydet (push bildirimleri için)
+      NotificationService.saveFcmToken(user.uid).ignore();
       state = state.copyWith(
         user: user,
         isLoading: false,
@@ -263,6 +266,8 @@ class AuthNotifier extends Notifier<AuthState> {
 
       await _firestore.collection('users').doc(user.uid).set(user.toMap());
       await _saveSession(user);
+      // FCM token'ı Firestore'a kaydet (push bildirimleri için)
+      NotificationService.saveFcmToken(user.uid).ignore();
       state = state.copyWith(
         user: user,
         isLoading: false,
@@ -315,6 +320,8 @@ class AuthNotifier extends Notifier<AuthState> {
       final savedUser = await _upsertFirestoreUser(userModel);
 
       await _saveSession(savedUser);
+      // FCM token'ı Firestore'a kaydet (push bildirimleri için)
+      NotificationService.saveFcmToken(savedUser.uid).ignore();
       state = state.copyWith(user: savedUser, isLoading: false);
     } on FirebaseAuthException catch (e) {
       // TEŞHİS: Gerçek hata kodu görünür olsun (geçici debug log — sorun
@@ -514,6 +521,11 @@ class AuthNotifier extends Notifier<AuthState> {
   // ── Çıkış ────────────────────────────────────────────────────────────────
 
   Future<void> signOut() async {
+    // FCM token'ı temizle — bu cihaza artık bildirim gönderilmesin
+    final uid = state.user?.uid;
+    if (uid != null) {
+      NotificationService.clearFcmToken(uid).ignore();
+    }
     await _auth.signOut();
     await _googleSignIn.signOut();
     await _clearSession();

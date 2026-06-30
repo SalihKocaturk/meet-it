@@ -347,7 +347,8 @@
     "about_text": "Versiyon 1.0.0\nBuluşmak hiç bu kadar kolay olmamıştı.",
     "language_select": "Dil Seçin",
     "dark_mode": "Koyu Tema",
-    "light_mode": "Açık Tema"
+    "light_mode": "Açık Tema",
+    "section_legal": "YASAL"
   },
   "edit_profile": {
     "title": "Profili Düzenle",
@@ -477,6 +478,36 @@
     "history_title": "Zaman İçinde Değişim",
     "history_subtitle": "Son {count} kayıt — soldaki çizgiler her tipin skorunu, sağdaki liste ilk kayıttan bu yana değişimi gösterir.",
     "history_empty": "Henüz birden fazla kayıt yok. Mekanlara yorum yazmaya başladığında profilin zamanla değişecek ve burada bir grafik oluşacak."
+  },
+  "legal": {
+    "terms_title": "Kullanım Koşulları",
+    "privacy_title": "Gizlilik Politikası",
+    "terms_last_updated": "Son güncelleme: Haziran 2025",
+    "privacy_last_updated": "Son güncelleme: Haziran 2025",
+    "terms_s1_title": "1. Kabul ve Kapsam",
+    "terms_s1_body": "MeetIt uygulamasını kullanarak bu Kullanım Koşulları'nı kabul etmiş olursunuz. Bu koşullar, uygulamayı kullanımınızı düzenler ve sizinle MeetIt arasındaki yasal ilişkiyi belirler. Uygulamayı kullanmaya devam ederek bu koşulları kabul ettiğinizi onaylamış sayılırsınız.",
+    "terms_s2_title": "2. Hesap Oluşturma ve Güvenlik",
+    "terms_s2_body": "Hesap oluştururken doğru ve güncel bilgiler sağlamakla yükümlüsünüz. Hesabınızın güvenliğinden ve şifrenizin gizliliğinden siz sorumlusunuz. Hesabınızda yetkisiz bir erişim fark ederseniz derhal bize bildirmeniz gerekmektedir. 18 yaşından küçükler uygulamayı kullanamaz.",
+    "terms_s3_title": "3. Kullanım Kuralları",
+    "terms_s3_body": "Uygulama yalnızca yasal ve etik amaçlarla kullanılabilir. Diğer kullanıcılara zarar verici, taciz edici veya yanıltıcı içerik paylaşmak yasaktır. Başkalarının kişisel bilgilerini izinsiz paylaşmak, spam göndermek veya uygulamayı kötüye kullanmak hesabınızın askıya alınmasına neden olabilir.",
+    "terms_s4_title": "4. İçerik ve Fikri Mülkiyet",
+    "terms_s4_body": "Uygulama üzerinden paylaştığınız içeriklerin (fotoğraf, yorum vb.) hukuki sorumluluğu size aittir. MeetIt markası, logosu ve uygulama içeriği fikri mülkiyet hakları kapsamında korunmaktadır. Uygulama içeriği izinsiz kopyalanamaz, dağıtılamaz veya ticari amaçlarla kullanılamaz.",
+    "terms_s5_title": "5. Sorumluluk Sınırlaması",
+    "terms_s5_body": "MeetIt, kullanıcıların birbirleriyle olan etkileşimlerinden doğan zararlardan sorumlu tutulamaz. Uygulama \"olduğu gibi\" sunulmaktadır; kesintisiz veya hatasız çalışacağına dair garanti verilmemektedir. Üçüncü taraf hizmetleri (Google Haritalar, Firebase vb.) kullanımından kaynaklanan sorunlar için MeetIt sorumluluk kabul etmez.",
+    "terms_s6_title": "6. Değişiklikler ve Fesih",
+    "terms_s6_body": "Bu koşullar zaman zaman güncellenebilir. Önemli değişiklikler uygulama üzerinden bildirilecektir. Hesabınızı istediğiniz zaman silebilirsiniz. MeetIt, koşulları ihlal eden kullanıcıların hesaplarını önceden bildirim yapmaksızın askıya alma veya silme hakkını saklı tutar.",
+    "privacy_s1_title": "1. Topladığımız Bilgiler",
+    "privacy_s1_body": "Hesap oluştururken sağladığınız ad, e-posta, yaş ve cinsiyet bilgileri; kullandığınız cihaz bilgileri; konum verisi (izin vermeniz halinde); uygulama içi etkileşimleriniz ve tercihleriniz kayıt altına alınmaktadır.",
+    "privacy_s2_title": "2. Bilgilerinizi Nasıl Kullanıyoruz",
+    "privacy_s2_body": "Kişilik analizinize göre size özel mekan önerileri sunmak, arkadaşlık özelliklerini çalıştırmak, uygulama güvenliğini sağlamak, destek taleplerinizi yanıtlamak ve hizmetlerimizi geliştirmek amacıyla kullanılmaktadır.",
+    "privacy_s3_title": "3. Bilgi Paylaşımı",
+    "privacy_s3_body": "Kişisel bilgileriniz üçüncü taraflarla satılmaz veya kiralanmaz. Hizmetlerimizi sağlamamıza yardımcı olan iş ortaklarıyla (Firebase, Google Maps) yalnızca gerekli ölçüde paylaşılır. Yasal zorunluluk durumunda yetkili makamlarla paylaşım yapılabilir.",
+    "privacy_s4_title": "4. Konum Verisi",
+    "privacy_s4_body": "Konum veriniz yalnızca yakınızdaki mekanları önermek ve buluşma noktası hesaplamak amacıyla kullanılır. Konum iznini istediğiniz zaman cihaz ayarlarından geri alabilirsiniz. Konumunuz diğer kullanıcılarla yalnızca sizin onayınızla paylaşılır.",
+    "privacy_s5_title": "5. Veri Güvenliği",
+    "privacy_s5_body": "Verileriniz endüstri standardı şifreleme yöntemleriyle korunmaktadır. Firebase altyapısı üzerinden güvenli biçimde saklanmaktadır. Bununla birlikte hiçbir sistem %100 güvenli değildir; şüpheli bir durum fark etmeniz halinde lütfen bize bildirin.",
+    "privacy_s6_title": "6. Haklarınız ve İletişim",
+    "privacy_s6_body": "Verilerinize erişme, düzeltme veya silme talebinde bulunma hakkına sahipsiniz. Hesabınızı sildiğinizde kişisel verileriniz 30 gün içinde sistemlerimizden kaldırılır. Gizlilik ile ilgili sorularınız için meetit.support@gmail.com adresine ulaşabilirsiniz."
   },
   "friend_compat": {
     "title": "Arkadaş Uyumu",

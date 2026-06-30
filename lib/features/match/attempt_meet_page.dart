@@ -310,11 +310,17 @@ class AttemptMeetPage extends ConsumerWidget {
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.12),
-                              blurRadius: 6,
+                              blurRadius: 8,
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.arrow_back),
+                        child: Icon(
+                          Icons.arrow_back_ios_new,
+                          size: 16,
+                          color: Theme.of(context).brightness != Brightness.dark
+                              ? Colors.black87
+                              : Colors.white70,
+                        ),
                       ),
                     ),
                     // Harita/liste görünümü TEK butonla yönetiliyor: burada

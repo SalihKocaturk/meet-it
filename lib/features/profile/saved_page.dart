@@ -41,6 +41,15 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
     return user.providerData.any((p) => p.providerId == 'password');
   }
 
+  void _showLegalSheet(BuildContext context, {required bool isTerms}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _LegalBottomSheet(isTerms: isTerms),
+    );
+  }
+
   void _showLogoutAlert(BuildContext context) {
     showAppAlert(
       context: context,
@@ -312,6 +321,16 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                                 confirmBtnText: 'common.ok'.tr(),
                                 confirmBtnColor: context.colors.primary,
                               ),
+                            ),
+                            _MenuItem(
+                              icon: Icons.description_outlined,
+                              title: 'legal.terms_title'.tr(),
+                              onTap: () => _showLegalSheet(context, isTerms: true),
+                            ),
+                            _MenuItem(
+                              icon: Icons.privacy_tip_outlined,
+                              title: 'legal.privacy_title'.tr(),
+                              onTap: () => _showLegalSheet(context, isTerms: false),
                             ),
                           ],
                         ),
@@ -659,6 +678,133 @@ class _ReviewListPage extends StatelessWidget {
     );
   }
 }
+
+// ── Legal Bottom Sheet ────────────────────────────────────────────────────────
+
+class _LegalBottomSheet extends StatelessWidget {
+  final bool isTerms;
+  const _LegalBottomSheet({required this.isTerms});
+
+  @override
+  Widget build(BuildContext context) {
+    final sections = isTerms ? _termsSections : _privacySections;
+    final title = isTerms ? 'legal.terms_title'.tr() : 'legal.privacy_title'.tr();
+    final lastUpdated = isTerms ? 'legal.terms_last_updated'.tr() : 'legal.privacy_last_updated'.tr();
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.85,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (_, controller) => Container(
+        decoration: BoxDecoration(
+          color: context.colors.scaffold,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Handle
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: context.colors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Başlık
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: context.colors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: context.colors.border),
+            // İçerik
+            Expanded(
+              child: ListView(
+                controller: controller,
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                children: [
+                  ...sections.map((s) => _LegalSection(title: s[0], body: s[1])),
+                  const SizedBox(height: 8),
+                  Text(
+                    lastUpdated,
+                    style: TextStyle(fontSize: 12, color: context.colors.hint),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LegalSection extends StatelessWidget {
+  final String title;
+  final String body;
+  const _LegalSection({required this.title, required this.body});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: context.colors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            body,
+            style: TextStyle(
+              fontSize: 13,
+              color: context.colors.textSecondary,
+              height: 1.6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+List<List<String>> get _termsSections => [
+  ['legal.terms_s1_title'.tr(), 'legal.terms_s1_body'.tr()],
+  ['legal.terms_s2_title'.tr(), 'legal.terms_s2_body'.tr()],
+  ['legal.terms_s3_title'.tr(), 'legal.terms_s3_body'.tr()],
+  ['legal.terms_s4_title'.tr(), 'legal.terms_s4_body'.tr()],
+  ['legal.terms_s5_title'.tr(), 'legal.terms_s5_body'.tr()],
+  ['legal.terms_s6_title'.tr(), 'legal.terms_s6_body'.tr()],
+];
+
+List<List<String>> get _privacySections => [
+  ['legal.privacy_s1_title'.tr(), 'legal.privacy_s1_body'.tr()],
+  ['legal.privacy_s2_title'.tr(), 'legal.privacy_s2_body'.tr()],
+  ['legal.privacy_s3_title'.tr(), 'legal.privacy_s3_body'.tr()],
+  ['legal.privacy_s4_title'.tr(), 'legal.privacy_s4_body'.tr()],
+  ['legal.privacy_s5_title'.tr(), 'legal.privacy_s5_body'.tr()],
+  ['legal.privacy_s6_title'.tr(), 'legal.privacy_s6_body'.tr()],
+];
 
 class _GridPlaceholder extends StatelessWidget {
   final VenueReviewModel review;

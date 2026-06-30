@@ -16,4 +16,8 @@ abstract class AppRoutes {
   static const editProfile = '/edit-profile';
   static const changePassword = '/change-password';
   static const settings = '/settings';
+
+  // Yasal
+  static const terms = '/terms';
+  static const privacyPolicy = '/privacy-policy';
 }

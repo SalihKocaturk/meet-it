@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:meetit/core/services/notification_service.dart';
 import 'package:meetit/features/auth/models/user_model.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/models/friendship_model.dart';
@@ -238,7 +239,17 @@ class FriendsNotifier extends Notifier<FriendsState> {
 
       if (friend == null) return;
 
+      // Bildirim gönder
+      final myName = ref.read(authProvider).user?.name ?? '';
       if (mutualMatch) {
+        // Karşılıklı istek = her iki taraf da arkadaş oldu
+        // targetUid zaten kendi isteğini gönderdiği için ona "accepted" bildirimi
+        NotificationService.sendNotification(
+          toUid: targetUid,
+          type: 'friend_accepted',
+          fromName: myName,
+          fromUid: currentUid,
+        ).ignore();
         state = state.copyWith(
           suggestions:
               state.suggestions.where((f) => f.uid != targetUid).toList(),
@@ -251,6 +262,13 @@ class FriendsNotifier extends Notifier<FriendsState> {
           ],
         );
       } else {
+        // Normal arkadaşlık isteği — hedef kullanıcıya bildir
+        NotificationService.sendNotification(
+          toUid: targetUid,
+          type: 'friend_request',
+          fromName: myName,
+          fromUid: currentUid,
+        ).ignore();
         state = state.copyWith(
           suggestions:
               state.suggestions.where((f) => f.uid != targetUid).toList(),
@@ -274,6 +292,15 @@ class FriendsNotifier extends Notifier<FriendsState> {
           .collection('friendships')
           .doc(docId)
           .update({'status': FriendshipStatus.accepted.name});
+
+      // İsteği gönderen kişiye "kabul edildi" bildirimi gönder
+      final myName = ref.read(authProvider).user?.name ?? '';
+      NotificationService.sendNotification(
+        toUid: fromUid,
+        type: 'friend_accepted',
+        fromName: myName,
+        fromUid: currentUid,
+      ).ignore();
 
       final friend = state.pendingInvitations.firstWhere((f) => f.uid == fromUid);
       state = state.copyWith(

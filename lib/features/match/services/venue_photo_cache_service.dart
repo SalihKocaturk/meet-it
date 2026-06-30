@@ -26,7 +26,9 @@ class VenuePhotoCacheService {
   VenuePhotoCacheService._();
 
   static final _firestore = FirebaseFirestore.instance;
-  static final _storage = FirebaseStorage.instance;
+  static final _storage = FirebaseStorage.instanceFor(
+    bucket: 'gs://meetit-497814.firebasestorage.app',
+  );
 
   static const String _collection = 'venuePhotoCache';
 

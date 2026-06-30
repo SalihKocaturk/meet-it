@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:meetit/core/constants/app_config.dart';
 import 'package:meetit/core/services/distance_matrix_service.dart';
+import 'package:meetit/core/services/notification_service.dart';
 import 'package:meetit/core/utils/travel_time_estimator.dart';
+import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/services/places_service.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
@@ -253,6 +255,17 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
       friendLat: friendLat,
       friendLng: friendLng,
     );
+
+    // Arkadaşla buluşma araması yapıldığında arkadaşa bildirim gönder
+    if (friendUid != null) {
+      final myName = ref.read(currentUserProvider)?.name ?? '';
+      NotificationService.sendNotification(
+        toUid: friendUid,
+        type: 'meetup_invite',
+        fromName: myName,
+        fromUid: ref.read(authProvider).user?.uid,
+      ).ignore();
+    }
 
     // ── Places API ────────────────────────────────────────────────────────
     final excludeIds =

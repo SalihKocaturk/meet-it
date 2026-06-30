@@ -61,6 +61,10 @@ dependencies:
   awesome_snackbar_content: ^0.1.8
   quickalert: ^1.1.0
 
+  # Notifications
+  firebase_messaging: ^15.1.4
+  flutter_local_notifications: ^18.0.1
+
   # Localization
   easy_localization: ^3.0.7
 

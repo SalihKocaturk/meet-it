@@ -12,7 +12,9 @@ import 'package:meetit/features/main/main_page.dart';
 import 'package:meetit/features/personality/quiz_page.dart';
 import 'package:meetit/features/settings/change_password_page.dart';
 import 'package:meetit/features/settings/edit_profile_page.dart';
+import 'package:meetit/features/settings/privacy_policy_page.dart';
 import 'package:meetit/features/settings/settings_page.dart';
+import 'package:meetit/features/settings/terms_page.dart';
 
 import 'app_routes.dart';
 
@@ -172,6 +174,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.settings,
         builder: (context, state) => const SettingsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.terms,
+        builder: (context, state) => const TermsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.privacyPolicy,
+        builder: (context, state) => const PrivacyPolicyPage(),
       ),
     ],
   );

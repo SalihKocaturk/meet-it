@@ -6,12 +6,16 @@ import 'package:meetit/core/constants/app_theme.dart';
 import 'package:meetit/core/providers/theme_provider.dart';
 import 'package:meetit/core/router/app_router.dart';
 import 'package:meetit/core/services/firestore_seed_service.dart';
+import 'package:meetit/core/services/notification_service.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Push bildirim servisini başlat (FCM token + izin + ön plan handler)
+  await NotificationService.initialize();
 
   // Firestore boşsa mock kullanıcılar ekle
   await FirestoreSeedService.seedIfEmpty();

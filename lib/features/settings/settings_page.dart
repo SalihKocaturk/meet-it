@@ -11,6 +11,8 @@ import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/core/widgets/langauge_switcher.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friend_code_page.dart';
+import 'package:meetit/features/settings/privacy_policy_page.dart';
+import 'package:meetit/features/settings/terms_page.dart';
 import 'package:meetit/features/match/match_page.dart'
     hide Expanded, SizedBox, Row;
 import 'package:meetit/features/match/providers/match_provider.dart';
@@ -282,6 +284,28 @@ class SettingsPage extends ConsumerWidget {
                             confirmBtnColor: context.colors.primary,
                           );
                         },
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: 16),
+
+                  _SettingsSection(
+                    title: 'settings.section_legal'.tr(),
+                    items: [
+                      _SettingsItem(
+                        icon: Icons.description_outlined,
+                        title: 'legal.terms_title'.tr(),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const TermsPage()),
+                        ),
+                      ),
+                      _SettingsItem(
+                        icon: Icons.privacy_tip_outlined,
+                        title: 'legal.privacy_title'.tr(),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const PrivacyPolicyPage()),
+                        ),
                       ),
                     ],
                   ),

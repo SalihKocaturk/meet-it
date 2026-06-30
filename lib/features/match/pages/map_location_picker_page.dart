@@ -177,7 +177,9 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
   void _onCameraIdle() {
     final outOfScope = !_IstanbulBounds.contains(_center);
     setState(() {
-      _outOfScopeWarning = outOfScope ? 'map_picker.out_of_scope_warning'.tr() : null;
+      _outOfScopeWarning = outOfScope
+          ? 'map_picker.out_of_scope_warning'.tr()
+          : null;
     });
     if (!outOfScope) {
       _fetchAddress(_center);
@@ -270,15 +272,17 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.12),
+                            color: Colors.black.withValues(alpha: 0.12),
                             blurRadius: 8,
                           ),
                         ],
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.arrow_back_ios_new,
                         size: 16,
-                        color: Colors.black87,
+                        color: Theme.of(context).brightness != Brightness.dark
+                            ? Colors.black87
+                            : Colors.white70,
                       ),
                     ),
                   ),
@@ -294,7 +298,7 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 8,
                           ),
                         ],
@@ -351,7 +355,7 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
+                      color: Colors.black.withValues(alpha: 0.15),
                       blurRadius: 8,
                     ),
                   ],
@@ -381,7 +385,7 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
+                      color: Colors.black.withValues(alpha: 0.15),
                       blurRadius: 8,
                     ),
                   ],

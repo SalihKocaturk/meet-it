@@ -347,7 +347,8 @@
     "about_text": "Version 1.0.0\nMeetings have never been this easy.",
     "language_select": "Select Language",
     "dark_mode": "Dark Mode",
-    "light_mode": "Light Mode"
+    "light_mode": "Light Mode",
+    "section_legal": "LEGAL"
   },
   "edit_profile": {
     "title": "Edit Profile",
@@ -477,6 +478,36 @@
     "history_title": "Change Over Time",
     "history_subtitle": "Last {count} records — lines on the left show each type's score, the list on the right shows the change since the first record.",
     "history_empty": "There isn't more than one record yet. Once you start reviewing venues, your profile will change over time and a chart will appear here."
+  },
+  "legal": {
+    "terms_title": "Terms of Service",
+    "privacy_title": "Privacy Policy",
+    "terms_last_updated": "Last updated: June 2025",
+    "privacy_last_updated": "Last updated: June 2025",
+    "terms_s1_title": "1. Acceptance and Scope",
+    "terms_s1_body": "By using the MeetIt app, you agree to these Terms of Service. These terms govern your use of the application and define the legal relationship between you and MeetIt. Continuing to use the app constitutes your acceptance of these terms.",
+    "terms_s2_title": "2. Account Creation and Security",
+    "terms_s2_body": "You are responsible for providing accurate and up-to-date information when creating an account. You are responsible for the security of your account and the confidentiality of your password. If you notice unauthorized access to your account, please notify us immediately. Users under 18 years of age may not use the application.",
+    "terms_s3_title": "3. Acceptable Use",
+    "terms_s3_body": "The app may only be used for lawful and ethical purposes. Sharing content that is harmful, harassing, or misleading to other users is prohibited. Sharing others' personal information without consent, sending spam, or abusing the application may result in your account being suspended.",
+    "terms_s4_title": "4. Content and Intellectual Property",
+    "terms_s4_body": "You are legally responsible for the content you share through the app (photos, reviews, etc.). The MeetIt brand, logo, and app content are protected under intellectual property rights. App content may not be copied, distributed, or used for commercial purposes without permission.",
+    "terms_s5_title": "5. Limitation of Liability",
+    "terms_s5_body": "MeetIt cannot be held liable for damages arising from interactions between users. The app is provided \"as is\" without warranties of uninterrupted or error-free operation. MeetIt accepts no responsibility for issues arising from third-party services (Google Maps, Firebase, etc.).",
+    "terms_s6_title": "6. Changes and Termination",
+    "terms_s6_body": "These terms may be updated from time to time. Significant changes will be communicated through the app. You may delete your account at any time. MeetIt reserves the right to suspend or delete accounts that violate these terms without prior notice.",
+    "privacy_s1_title": "1. Information We Collect",
+    "privacy_s1_body": "We collect the name, email, age, and gender you provide when creating an account; your device information; location data (if you grant permission); and your in-app interactions and preferences.",
+    "privacy_s2_title": "2. How We Use Your Information",
+    "privacy_s2_body": "Your information is used to provide personalized venue recommendations based on your personality profile, power friendship features, ensure app security, respond to support requests, and improve our services.",
+    "privacy_s3_title": "3. Information Sharing",
+    "privacy_s3_body": "Your personal information is never sold or rented to third parties. It is shared with service partners (Firebase, Google Maps) only to the extent necessary to provide our services. Sharing with authorities may occur when legally required.",
+    "privacy_s4_title": "4. Location Data",
+    "privacy_s4_body": "Your location is used only to recommend nearby venues and calculate meeting points. You can revoke location permission at any time in your device settings. Your location is shared with other users only with your consent.",
+    "privacy_s5_title": "5. Data Security",
+    "privacy_s5_body": "Your data is protected using industry-standard encryption methods and stored securely on Firebase infrastructure. However, no system is 100% secure — if you notice anything suspicious, please contact us.",
+    "privacy_s6_title": "6. Your Rights and Contact",
+    "privacy_s6_body": "You have the right to access, correct, or request deletion of your data. When you delete your account, your personal data will be removed from our systems within 30 days. For privacy-related questions, please contact us at meetit.support@gmail.com."
   },
   "friend_compat": {
     "title": "Friend Compatibility",
