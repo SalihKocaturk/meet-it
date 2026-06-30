@@ -32,11 +32,27 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- Firebase Cloud Messaging — arka planda mesaj işleme.
+             FirebaseMessagingService plugin tarafından otomatik merge
+             edilir; default kanal ve ikon burada tanımlanır. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="high_importance_channel" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher" />
     </application>
 
     <!-- Konum izni -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
+    <!-- Push bildirim izni (Android 13 / API 33+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <!-- FCM bağlantısı için internet -->
+    <uses-permission android:name="android.permission.INTERNET"/>
 
     <!-- Google Maps açmak için url_launcher -->
     <queries>
