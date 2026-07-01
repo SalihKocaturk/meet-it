@@ -136,6 +136,18 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
   /// Arkadaş değiştiğinde veya yeni bir akış başlatılırken çağrılır.
   void reset() => state = const VenueSearchState();
 
+  /// Sonuçlarda bir sonraki sayfaya geç.
+  void nextPage() {
+    if (!state.hasNextPage) return;
+    state = state.copyWith(currentPage: state.currentPage + 1);
+  }
+
+  /// Sonuçlarda bir önceki sayfaya dön.
+  void prevPage() {
+    if (!state.hasPrevPage) return;
+    state = state.copyWith(currentPage: state.currentPage - 1);
+  }
+
   // ── Kısa süreli "az önce gösterilen mekan" hafızası ────────────────────────
   //
   // Kullanıcı şikayeti: aynı arkadaşla peş peşe 3 kez arama yapınca 1.
@@ -587,16 +599,4 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
         place.types.any(_hangoutFriendlyTypes.contains);
     if (isHangoutFriendly) return -0.2; // ~200m öne çek
 
-    return 0.0;
-  }
-
-  Future<Position?> _getLocation() async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      state = state.copyWith(
-          isLoading: false,
-          errorMessage: 'Konum servisi kapalı. Lütfen açın.');
-      return null;
-    }
-
-    var permission = await
+  
