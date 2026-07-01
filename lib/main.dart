@@ -1,7 +1,10 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
+import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 import 'package:meetit/core/constants/app_theme.dart';
 import 'package:meetit/core/providers/theme_provider.dart';
 import 'package:meetit/core/router/app_router.dart';
@@ -12,6 +15,16 @@ import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Google Maps renderer'ı açıkça başlat — belirtilmezse SurfaceProducer
+  // backend'i "skip updating surface" döngüsüne giriyor ve harita beyaz kalıyor.
+  if (!kIsWeb) {
+    final mapsImpl = GoogleMapsFlutterPlatform.instance;
+    if (mapsImpl is GoogleMapsFlutterAndroid) {
+      await mapsImpl.initializeWithRenderer(AndroidMapRenderer.latest);
+    }
+  }
+
   await EasyLocalization.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
