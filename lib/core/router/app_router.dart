@@ -14,7 +14,6 @@ import 'package:meetit/features/settings/change_password_page.dart';
 import 'package:meetit/features/settings/edit_profile_page.dart';
 import 'package:meetit/features/settings/privacy_policy_page.dart';
 import 'package:meetit/features/settings/settings_page.dart';
-import 'package:meetit/features/history/meeting_history_page.dart';
 import 'package:meetit/features/settings/terms_page.dart';
 
 import 'app_routes.dart';
@@ -184,13 +183,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.privacyPolicy,
         builder: (context, state) => const PrivacyPolicyPage(),
       ),
-      GoRoute(
-        path: AppRoutes.meetingHistory,
-        builder: (context, state) => const MeetingHistoryPage(),
-      ),
     ],
   );
 });
 
 /// GoRouter'a `refreshListenable` olarak verilen basit yardımcı sınıf.
-/// Sadece `ping()` çağrıldığında dinleyicilere 
+/// Sadece `ping()` çağrıldığında dinleyicilere haber verir; herhangi bir
+/// değer taşımaz, sadece "redirect'i tekrar değerlendir" sinyali üretir.
+class _RouterRefreshNotifier extends ChangeNotifier {
+  void ping() => notifyListeners();
+}

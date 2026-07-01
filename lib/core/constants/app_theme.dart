@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 
 class AppTheme {
@@ -8,14 +7,9 @@ class AppTheme {
 
   static ThemeData _build(AppColors c, Brightness b) {
     final isDark = b == Brightness.dark;
-    final baseTextTheme = b == Brightness.dark
-        ? ThemeData.dark().textTheme
-        : ThemeData.light().textTheme;
-
     return ThemeData(
       useMaterial3: true,
       brightness: b,
-      textTheme: GoogleFonts.nunitoTextTheme(baseTextTheme),
       colorScheme: ColorScheme(
         brightness: b,
         primary: c.primary,
@@ -76,4 +70,14 @@ class AppTheme {
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: c.card,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.ve
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+      ),
+      listTileTheme: ListTileThemeData(
+        textColor: c.textPrimary,
+        iconColor: c.primary,
+      ),
+      iconTheme: IconThemeData(color: c.textPrimary),
+    );
+  }
+}

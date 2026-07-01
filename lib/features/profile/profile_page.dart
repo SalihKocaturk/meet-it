@@ -1,24 +1,25 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/router/app_routes.dart';
-import 'package:meetit/core/widgets/app_alert.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
-import 'package:meetit/core/widgets/network_status_banner.dart';
 import 'package:meetit/features/auth/models/user_model.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/main/main_page.dart' show mainTabIndexProvider;
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/providers/saved_venues_provider.dart';
+import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/profile/saved_page.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:meetit/core/widgets/app_alert.dart';
+import 'package:meetit/core/widgets/network_status_banner.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Kaydedilen/tarif alınan mekanlar listesinde "tekrar tarif al" butonuna
@@ -49,7 +50,7 @@ class ProfilePage extends ConsumerWidget {
     // Toplam alınan beğeni
     final totalLikes = myReviews.fold(0, (sum, r) => sum + r.likeCount);
 
-    final savedVenues = ref.watch(savedVenuesProvider);
+    final savedVenues     = ref.watch(savedVenuesProvider);
     final navigatedVenues = ref.watch(navigatedVenuesProvider);
 
     return Scaffold(
@@ -131,7 +132,8 @@ class _ProfileHeader extends ConsumerWidget {
                   size: 26,
                 ),
                 onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ProfileMenuPage()),
+                  MaterialPageRoute(
+                      builder: (_) => const ProfileMenuPage()),
                 ),
                 padding: EdgeInsets.zero,
               ),
@@ -163,10 +165,7 @@ class _ProfileHeader extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: context.colors.primary,
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: context.colors.card,
-                            width: 2,
-                          ),
+                          border: Border.all(color: context.colors.card, width: 2),
                         ),
                         child: const Icon(
                           Iconsax.edit_2,
@@ -342,11 +341,7 @@ class _ReviewsGrid extends ConsumerWidget {
 
   const _ReviewsGrid({required this.reviews});
 
-  void _confirmDelete(
-    BuildContext context,
-    WidgetRef ref,
-    VenueReviewModel review,
-  ) {
+  void _confirmDelete(BuildContext context, WidgetRef ref, VenueReviewModel review) {
     final uid = ref.read(currentUserProvider)?.uid;
     showAppAlert(
       context: context,
@@ -383,10 +378,7 @@ class _ReviewsGrid extends ConsumerWidget {
               SizedBox(height: 12),
               Text(
                 'profile.no_reviews'.tr(),
-                style: TextStyle(
-                  fontSize: 14,
-                  color: context.colors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 14, color: context.colors.textSecondary),
               ),
             ],
           ),
@@ -432,10 +424,8 @@ class _ReviewsGrid extends ConsumerWidget {
                   ? CachedNetworkImage(
                       imageUrl: imgUrl,
                       fit: BoxFit.cover,
-                      placeholder: (_, _) =>
-                          Container(color: context.colors.border),
-                      errorWidget: (_, _, _) =>
-                          _ReviewPlaceholderTile(review: review),
+                      placeholder: (_, _) => Container(color: context.colors.border),
+                      errorWidget: (_, _, _) => _ReviewPlaceholderTile(review: review),
                     )
                   : _ReviewPlaceholderTile(review: review),
             ),
@@ -522,20 +512,14 @@ class _SavedVenuesList extends ConsumerWidget {
             GestureDetector(
               onTap: () =>
                   ref.read(savedVenuesProvider.notifier).toggle(venues[i]),
-              child: Icon(
-                Iconsax.save_add,
-                color: context.colors.primary,
-                size: 22,
-              ),
+              child: Icon(Iconsax.save_add,
+                  color: context.colors.primary, size: 22),
             ),
             const SizedBox(width: 12),
             GestureDetector(
               onTap: () => _reopenDirections(venues[i]),
-              child: Icon(
-                Iconsax.routing,
-                color: context.colors.primary,
-                size: 22,
-              ),
+              child: Icon(Iconsax.routing,
+                  color: context.colors.primary, size: 22),
             ),
           ],
         ),
@@ -579,10 +563,8 @@ class _NavigatedVenuesList extends ConsumerWidget {
               GestureDetector(
                 onTap: () => showAddReviewSheet(context, ref, place),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: context.colors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -590,19 +572,15 @@ class _NavigatedVenuesList extends ConsumerWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Iconsax.message_add_1,
-                        size: 13,
-                        color: context.colors.primary,
-                      ),
+                      Icon(Iconsax.message_add_1,
+                          size: 13, color: context.colors.primary),
                       const SizedBox(width: 4),
                       Text(
                         'profile.add_review'.tr(),
                         style: TextStyle(
-                          fontSize: 12,
-                          color: context.colors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                            fontSize: 12,
+                            color: context.colors.primary,
+                            fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),
@@ -611,11 +589,8 @@ class _NavigatedVenuesList extends ConsumerWidget {
               const SizedBox(width: 10),
               GestureDetector(
                 onTap: () => _reopenDirections(place),
-                child: Icon(
-                  Iconsax.routing,
-                  color: context.colors.primary,
-                  size: 22,
-                ),
+                child: Icon(Iconsax.routing,
+                    color: context.colors.primary, size: 22),
               ),
             ],
           ),
@@ -687,9 +662,7 @@ class _VenueTile extends StatelessWidget {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: context.colors.primary.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(4),
@@ -705,11 +678,8 @@ class _VenueTile extends StatelessWidget {
                     ),
                     if (place.rating != null) ...[
                       const SizedBox(width: 6),
-                      const Icon(
-                        Iconsax.star_1,
-                        size: 12,
-                        color: Color(0xFFFFB800),
-                      ),
+                      const Icon(Iconsax.star_1,
+                          size: 12, color: Color(0xFFFFB800)),
                       const SizedBox(width: 2),
                       Text(
                         place.ratingText,
@@ -748,7 +718,9 @@ class _PlaceholderBox extends StatelessWidget {
       ),
       child: Center(
         child: Text(
-          place.primaryTypeLabel.isNotEmpty ? place.primaryTypeLabel[0] : '📍',
+          place.primaryTypeLabel.isNotEmpty
+              ? place.primaryTypeLabel[0]
+              : '📍',
           style: const TextStyle(fontSize: 20),
         ),
       ),
@@ -763,4 +735,23 @@ class _EmptyTab extends StatelessWidget {
   const _EmptyTab({required this.icon, required this.message});
 
   @override
-  Widget buil
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 48, color: context.colors.hint),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            style: TextStyle(
+              fontSize: 14,
+              color: context.colors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}

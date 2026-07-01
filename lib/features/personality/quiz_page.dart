@@ -8,7 +8,6 @@ import 'package:meetit/core/router/app_routes.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/personality/providers/personality_provider.dart';
-import 'package:meetit/features/personality/widgets/personality_breakdown.dart';
 
 class QuizPage extends ConsumerStatefulWidget {
   const QuizPage({super.key});
@@ -71,21 +70,6 @@ class _QuizPageState extends ConsumerState<QuizPage>
     _fadeController.forward(from: 0);
   }
 
-  void _exitQuiz() {
-    // NOT: Bilerek go_router'ın context.pop()/canPop() yerine ham
-    // Navigator API'si kullanılıyor — bu sayfa artık her zaman go_router
-    // rotası olarak açılmıyor; `ensurePersonalityReady` (bkz.
-    // important_action_guard.dart) onu düz bir MaterialPageRoute olarak
-    // PUSH ediyor. Navigator.of(context) her iki durumda da (go_router
-    // rotası VEYA düz push) doğru sonucu verir.
-    final navigator = Navigator.of(context);
-    if (navigator.canPop()) {
-      navigator.pop(false);
-    } else {
-      context.go(AppRoutes.main);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final quizState = ref.watch(quizProvider);
@@ -112,25 +96,26 @@ class _QuizPageState extends ConsumerState<QuizPage>
               // Üst bar: geri + ilerleme
               Row(
                 children: [
-                  GestureDetector(
-                    onTap: quizState.currentQuestionIndex > 0
-                        ? _animateToPrev
-                        : _exitQuiz,
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: context.colors.card,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: context.colors.border),
+                  if (quizState.currentQuestionIndex > 0)
+                    GestureDetector(
+                      onTap: _animateToPrev,
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: context.colors.card,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: context.colors.border),
+                        ),
+                        child: Icon(
+                          Iconsax.arrow_left_2,
+                          size: 16,
+                          color: context.colors.textPrimary,
+                        ),
                       ),
-                      child: Icon(
-                        Iconsax.arrow_left_2,
-                        size: 16,
-                        color: context.colors.textPrimary,
-                      ),
-                    ),
-                  ),
+                    )
+                  else
+                    SizedBox(width: 36),
                   SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -172,7 +157,7 @@ class _QuizPageState extends ConsumerState<QuizPage>
               // Başlık
               Center(
                 child: Text(
-                  'quiz.title'.tr(),
+                  '🧠 ${'quiz.title'.tr()}',
                   style: TextStyle(
                     fontSize: 13,
                     color: context.colors.primary,
@@ -343,6 +328,10 @@ class _ResultPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final dominant = result.dominantType;
+    final secondary = result.secondaryType;
+    final ranked = result.rankedTypes;
+
     return Scaffold(
       backgroundColor: context.colors.scaffold,
       body: SafeArea(
@@ -366,7 +355,97 @@ class _ResultPage extends ConsumerWidget {
               ),
               SizedBox(height: 16),
 
-              PersonalityBreakdown(profile: result),
+              // Dominant tip
+              Text(dominant.emoji, style: TextStyle(fontSize: 64)),
+              SizedBox(height: 8),
+              Text(
+                dominant.displayName,
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: context.colors.textPrimary,
+                ),
+              ),
+
+              // İkincil tip varsa göster
+              if (secondary != null) ...[
+                SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: context.colors.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'quiz.secondary_type'.tr(namedArgs: {
+                      'emoji': secondary.emoji,
+                      'name': secondary.displayName,
+                    }),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: context.colors.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+
+              SizedBox(height: 16),
+
+              // Açıklama
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: context.colors.card,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: context.colors.border),
+                ),
+                child: Text(
+                  dominant.description,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: context.colors.textPrimary,
+                    height: 1.6,
+                  ),
+                ),
+              ),
+
+              SizedBox(height: 20),
+
+              // ── Skor Barları ───────────────────────────────────────────────
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: context.colors.card,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: context.colors.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'quiz.personality_distribution'.tr(),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: context.colors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    ...ranked.map(
+                      (entry) => _ScoreBar(
+                        type: entry.key,
+                        score: entry.value,
+                        isDominant: entry.key == dominant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
               SizedBox(height: 16),
 
@@ -414,22 +493,7 @@ class _ResultPage extends ConsumerWidget {
                         .read(authProvider.notifier)
                         .setPersonalityProfile(result);
                     if (!context.mounted) return;
-                    // NOT: Test artık her zaman router seviyesinde bir
-                    // sayfa olarak AÇILMIYOR — `ensurePersonalityReady`
-                    // (bkz. important_action_guard.dart) bunu düz bir
-                    // MaterialPageRoute ile PUSH ediyor; bu yüzden ham
-                    // Navigator API'si kullanılıyor (go_router'ın
-                    // context.pop()/canPop() yerine — bkz. _exitQuiz).
-                    // Pop edilebilirse `pop(true)` ile çağıran tarafa
-                    // ("testi tamamladım, devam et") haber veriyoruz;
-                    // pop edilecek bir şey yoksa (testin tek/ilk rota
-                    // olduğu eski senaryo) ana sayfaya gidiyoruz.
-                    final navigator = Navigator.of(context);
-                    if (navigator.canPop()) {
-                      navigator.pop(true);
-                    } else {
-                      context.go(AppRoutes.main);
-                    }
+                    context.go(AppRoutes.main);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: context.colors.primary,
@@ -475,7 +539,86 @@ class _ResultPage extends ConsumerWidget {
   }
 }
 
-// Not: skor çubuğu artık paylaşılan PersonalityScoreBar widget'ında
-// (lib/features/personality/widgets/personality_breakdown.dart) — bu sayfa
-// ile "Kişilik Analizim" sayfası arasında kod tekrarını önlemek için
-// taşındı.
+// ── Skor Çubuğu ───────────────────────────────────────────────────────────────
+
+class _ScoreBar extends StatelessWidget {
+  final PersonalityType type;
+  final double score; // 0.0 – 1.0
+  final bool isDominant;
+
+  const _ScoreBar({
+    required this.type,
+    required this.score,
+    required this.isDominant,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final percent = (score * 100).round();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          // Emoji + isim
+          SizedBox(
+            width: 120,
+            child: Row(
+              children: [
+                Text(type.emoji, style: const TextStyle(fontSize: 16)),
+                SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    type.displayName,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: isDominant
+                          ? FontWeight.w700
+                          : FontWeight.w400,
+                      color: isDominant
+                          ? context.colors.primary
+                          : context.colors.textSecondary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 8),
+          // Çubuk
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: score,
+                minHeight: 8,
+                backgroundColor: context.colors.primary.withOpacity(0.10),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  isDominant
+                      ? context.colors.primary
+                      : context.colors.primary.withOpacity(0.40),
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: 8),
+          // Yüzde
+          SizedBox(
+            width: 32,
+            child: Text(
+              '%$percent',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isDominant ? FontWeight.w700 : FontWeight.w400,
+                color: isDominant
+                    ? context.colors.primary
+                    : context.colors.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

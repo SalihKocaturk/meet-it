@@ -1,6 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
@@ -8,6 +7,7 @@ import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/history/meeting_history_detail_page.dart';
 import 'package:meetit/features/history/models/meeting_record.dart';
 import 'package:meetit/features/history/providers/meeting_history_provider.dart';
+import 'package:iconsax/iconsax.dart';
 
 class MeetingHistoryPage extends ConsumerWidget {
   const MeetingHistoryPage({super.key});
@@ -23,11 +23,8 @@ class MeetingHistoryPage extends ConsumerWidget {
         backgroundColor: context.colors.scaffold,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(
-            Iconsax.arrow_left_2,
-            size: 18,
-            color: context.colors.textPrimary,
-          ),
+          icon: Icon(Iconsax.arrow_left_2,
+              size: 18, color: context.colors.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -47,7 +44,8 @@ class MeetingHistoryPage extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Iconsax.info_circle, size: 48, color: context.colors.hint),
+                Icon(Iconsax.info_circle,
+                    size: 48, color: context.colors.hint),
                 const SizedBox(height: 12),
                 Text(
                   'common.error'.tr(),
@@ -64,7 +62,7 @@ class MeetingHistoryPage extends ConsumerWidget {
           return ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             itemCount: records.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               return _HistoryCard(
                 record: records[index],
@@ -156,10 +154,9 @@ class _HistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateStr = DateFormat(
-      'd MMM y',
-      context.locale.languageCode,
-    ).format(record.createdAt);
+    final firstVenue = record.venues.isNotEmpty ? record.venues.first : null;
+    final dateStr = DateFormat('d MMM y', context.locale.languageCode)
+        .format(record.createdAt);
 
     return GestureDetector(
       onTap: onTap,
@@ -198,7 +195,10 @@ class _HistoryCard extends StatelessWidget {
                       backgroundImage: NetworkImage(_partnerPhoto!),
                     )
                   else
-                    CircularAvatar(name: _partnerName ?? '?', radius: 22),
+                    CircularAvatar(
+                      name: _partnerName ?? '?',
+                      radius: 22,
+                    ),
 
                   const SizedBox(width: 12),
 
@@ -246,29 +246,80 @@ class _HistoryCard extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 4,
                   children: record.activities
-                      .map((a) => _Chip(label: a))
+                      .map(
+                        (a) => _Chip(label: a),
+                      )
                       .toList(),
                 ),
               ),
 
-            // ── Mekan sayısı chip ──────────────────────────────────────
-            if (record.venues.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+            // ── İlk mekan önizlemesi ──────────────────────────────────
+            if (firstVenue != null)
+              Container(
+                margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: context.colors.scaffold,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: context.colors.border),
+                ),
                 child: Row(
                   children: [
                     Icon(
                       Iconsax.location,
-                      size: 13,
-                      color: context.colors.hint,
+                      size: 16,
+                      color: context.colors.primary,
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'history.venue_count'.tr(
-                        namedArgs: {'count': record.venues.length.toString()},
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            firstVenue.name,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: context.colors.textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (firstVenue.vicinity != null)
+                            Text(
+                              firstVenue.vicinity!,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: context.colors.textSecondary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
                       ),
+                    ),
+                    if (firstVenue.rating != null) ...[
+                      const SizedBox(width: 6),
+                      Icon(Iconsax.star_1,
+                          size: 13, color: Colors.amber[600]),
+                      const SizedBox(width: 2),
+                      Text(
+                        firstVenue.rating!.toStringAsFixed(1),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: context.colors.textPrimary,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(width: 6),
+                    Text(
+                      'history.venue_count'.tr(namedArgs: {
+                        'count': record.venues.length.toString(),
+                      }),
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         color: context.colors.hint,
                       ),
                     ),
@@ -305,4 +356,3 @@ class _Chip extends StatelessWidget {
     );
   }
 }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               

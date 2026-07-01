@@ -8,18 +8,29 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
-import 'package:meetit/core/widgets/network_status_banner.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friend_profile_page.dart';
 import 'package:meetit/features/friends/models/user_friend_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/main/main_page.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
+import 'package:meetit/features/match/providers/saved_venues_provider.dart';
 import 'package:meetit/features/personality/friend_compatibility_page.dart';
 import 'package:meetit/features/personality/personality_analysis_page.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
+import 'package:meetit/core/widgets/network_status_banner.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+/// Bir mekana tekrar tarif almak için Google Maps'i açar — yorum kartlarından
+/// (kullanıcı detay sayfasına girmeden) doğrudan kullanılabilsin diye.
+Future<void> _openDirectionsFromReview(VenueReviewModel review) async {
+  final uri = Uri.parse(review.toPlaceResult().googleMapsUrl);
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+}
 
 /// Ana Sayfa (eski Feed sekmesinin yerine geçti).
 ///
@@ -104,312 +115,289 @@ class _HomePageState extends ConsumerState<HomePage> {
             const NetworkStatusBanner(),
             Expanded(
               child: RefreshIndicator(
-                color: context.colors.primary,
-                backgroundColor: context.colors.card,
-                // Friends sayfasındaki aşağı çekip yenileme davranışıyla aynı:
-                // arkadaş listesi + yakınınızdaki beğenilen mekanlar (yorumlar)
-                // tazelenir. Min. 700ms bekleme, gerçek istek çok hızlı dönse
-                // bile kullanıcıya "yenilendi" hissi versin diye (friends_page'le
-                // aynı UX tutarlılığı).
-                onRefresh: () async {
-                  final uid = ref.read(currentUserProvider)?.uid ?? '';
-                  await Future.wait([
-                    if (uid.isNotEmpty)
-                      ref.read(friendsProvider.notifier).loadAll(uid),
-                    Future(() => ref.invalidate(topReviewsProvider)),
-                    Future.delayed(const Duration(milliseconds: 700)),
-                  ]);
-                },
-                child: CustomScrollView(
-                  slivers: [
-                    // ── Üst bar: başlık + sağ üstte profil avatarı ─────────────────
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'home.greeting'.tr(
-                                      namedArgs: {
-                                        'name':
-                                            currentUser?.name
-                                                .split(' ')
-                                                .first ??
-                                            '',
-                                      },
-                                    ),
-                                    style: TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: context.colors.textPrimary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  // Önceden tanımlı ama hiçbir yerde kullanılmayan
-                                  // "home.subtitle" çevirisi — başlığın altındaki
-                                  // boşluğu dolduran kısa bir alt metin olarak eklendi.
-                                  Text(
-                                    'home.subtitle'.tr(),
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: context.colors.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
+          color: context.colors.primary,
+          backgroundColor: context.colors.card,
+          // Friends sayfasındaki aşağı çekip yenileme davranışıyla aynı:
+          // arkadaş listesi + yakınınızdaki beğenilen mekanlar (yorumlar)
+          // tazelenir. Min. 700ms bekleme, gerçek istek çok hızlı dönse
+          // bile kullanıcıya "yenilendi" hissi versin diye (friends_page'le
+          // aynı UX tutarlılığı).
+          onRefresh: () async {
+            final uid = ref.read(currentUserProvider)?.uid ?? '';
+            await Future.wait([
+              if (uid.isNotEmpty)
+                ref.read(friendsProvider.notifier).loadAll(uid),
+              Future(() => ref.invalidate(topReviewsProvider)),
+              Future.delayed(const Duration(milliseconds: 700)),
+            ]);
+          },
+          child: CustomScrollView(
+            slivers: [
+            // ── Üst bar: başlık + sağ üstte profil avatarı ─────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'home.greeting'.tr(
+                              namedArgs: {
+                                'name':
+                                    currentUser?.name.split(' ').first ?? '',
+                              },
                             ),
-                            // Profil avatarı — dokununca Profil sekmesine geç
-                            //
-                            // NOT: Önceden burada ham CircleAvatar + NetworkImage
-                            // kullanılıyordu — internet yokken (örn. Google hesabı
-                            // fotoğrafı lh3.googleusercontent.com'dan çekilemediğinde)
-                            // bu, yakalanmayan bir SocketException fırlatıyor ve bu da
-                            // build/layout sırasında art arda "Null check operator
-                            // used on a null value" / "RenderBox was not laid out"
-                            // hatalarına, dolayısıyla ana sayfanın bozuk/boş
-                            // görünmesine sebep oluyordu. CircularAvatar zaten
-                            // CachedNetworkImage + errorWidget ile bu durumu güvenli
-                            // şekilde harf-avatara düşürüyor — diğer tüm avatarlarda
-                            // (arkadaş kartları, profil sayfası vb.) bu yüzden o
-                            // kullanılıyordu, burada da aynısına geçirildi.
-                            GestureDetector(
-                              onTap: () =>
-                                  ref
-                                          .read(mainTabIndexProvider.notifier)
-                                          .state =
-                                      3,
-                              child: CircularAvatar(
-                                name: currentUser?.name ?? '',
-                                photoUrl: currentUser?.photoUrl,
-                                radius: 20,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // ── Arkadaşların ────────────────────────────────────────────────
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-                        child: Text(
-                          'home.friends_section'.tr(),
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: context.colors.textPrimary,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SliverToBoxAdapter(
-                      child: connections.isEmpty
-                          ? Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                              ),
-                              child: _NoFriendsCard(
-                                onAddFriend: () =>
-                                    ref
-                                            .read(mainTabIndexProvider.notifier)
-                                            .state =
-                                        2,
-                              ),
-                            )
-                          : SizedBox(
-                              // Kart içeriği (avatar + isim + Buluş butonu) ~136px
-                              // yükseklik gerektiriyor — daha kısa bir SizedBox,
-                              // butonun alt kenarının kart dışına taşmasına
-                              // (RenderFlex overflow) sebep oluyordu.
-                              height: 140,
-                              child: ListView.separated(
-                                scrollDirection: Axis.horizontal,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                ),
-                                itemCount: sortedConnections.length,
-                                separatorBuilder: (_, _) =>
-                                    const SizedBox(width: 12),
-                                itemBuilder: (_, i) => _HomeFriendCard(
-                                  friend: sortedConnections[i],
-                                ),
-                              ),
-                            ),
-                    ),
-
-                    // ── Yakınınızdaki Beğenilen Mekanlar ────────────────────────────
-                    // (eski adıyla "Öne Çıkan Mekanlar ve Yorumlar" — artık
-                    // topReviewsProvider, kullanıcının konumuna 10km'den uzak
-                    // yorumları göstermiyor, bkz. review_notifier.dart)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-                        child: Text(
-                          'home.featured_section'.tr(),
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: context.colors.textPrimary,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SliverToBoxAdapter(
-                      child: topReviewsAsync.when(
-                        data: (reviews) {
-                          if (reviews.isEmpty) {
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 12,
-                              ),
-                              child: Text(
-                                'home.no_reviews_hint'.tr(),
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: context.colors.textSecondary,
-                                ),
-                              ),
-                            );
-                          }
-                          return NotificationListener<ScrollNotification>(
-                            onNotification: (notification) {
-                              // Kullanıcı dokunup kaydırmaya başladığında otomatik
-                              // kaymayı durdur; bıraktıktan birkaç saniye sonra
-                              // tekrar başlat.
-                              if (notification is UserScrollNotification) {
-                                if (notification.direction !=
-                                    ScrollDirection.idle) {
-                                  _pauseAutoScroll();
-                                } else {
-                                  _scheduleResume();
-                                }
-                              }
-                              return false;
-                            },
-                            child: SizedBox(
-                              // 210, içerik (resim + metin bloğu) için 1px'lik bir
-                              // RenderFlex overflow'una sebep oluyordu — kartın tüm
-                              // içeriğine güvenli pay bırakmak için yükseklik artırıldı.
-                              height: 216,
-                              child: ListView.separated(
-                                controller: _carouselController,
-                                scrollDirection: Axis.horizontal,
-                                physics: const ClampingScrollPhysics(),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                ),
-                                // Sonsuz döngü hissi için liste 3 kat tekrarlanıyor;
-                                // otomatik kaydırma maxScrollExtent'e gelince jumpTo(0)
-                                // ile sıfırlandığından kullanıcı sıçramayı fark etmez.
-                                itemCount: reviews.length * 3,
-                                separatorBuilder: (_, _) =>
-                                    const SizedBox(width: 14),
-                                itemBuilder: (_, i) => _ReviewCarouselCard(
-                                  review: reviews[i % reviews.length],
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                        loading: () => SizedBox(
-                          height: 210,
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              color: context.colors.primary,
-                            ),
-                          ),
-                        ),
-                        error: (_, _) => Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
-                          ),
-                          child: Text(
-                            'home.no_reviews_hint'.tr(),
                             style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: context.colors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          // Önceden tanımlı ama hiçbir yerde kullanılmayan
+                          // "home.subtitle" çevirisi — başlığın altındaki
+                          // boşluğu dolduran kısa bir alt metin olarak eklendi.
+                          Text(
+                            'home.subtitle'.tr(),
+                            style: TextStyle(
+                              fontSize: 13,
                               color: context.colors.textSecondary,
                             ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
-
-                    // ── Kişiliğini Yönet ────────────────────────────────────────────
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-                        child: Text(
-                          'home.personality_section'.tr(),
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: context.colors.textPrimary,
-                          ),
-                        ),
+                    // Profil avatarı — dokununca Profil sekmesine geç
+                    //
+                    // NOT: Önceden burada ham CircleAvatar + NetworkImage
+                    // kullanılıyordu — internet yokken (örn. Google hesabı
+                    // fotoğrafı lh3.googleusercontent.com'dan çekilemediğinde)
+                    // bu, yakalanmayan bir SocketException fırlatıyor ve bu da
+                    // build/layout sırasında art arda "Null check operator
+                    // used on a null value" / "RenderBox was not laid out"
+                    // hatalarına, dolayısıyla ana sayfanın bozuk/boş
+                    // görünmesine sebep oluyordu. CircularAvatar zaten
+                    // CachedNetworkImage + errorWidget ile bu durumu güvenli
+                    // şekilde harf-avatara düşürüyor — diğer tüm avatarlarda
+                    // (arkadaş kartları, profil sayfası vb.) bu yüzden o
+                    // kullanılıyordu, burada da aynısına geçirildi.
+                    GestureDetector(
+                      onTap: () =>
+                          ref.read(mainTabIndexProvider.notifier).state = 3,
+                      child: CircularAvatar(
+                        name: currentUser?.name ?? '',
+                        photoUrl: currentUser?.photoUrl,
+                        radius: 20,
                       ),
                     ),
-                    SliverToBoxAdapter(
-                      child: SizedBox(
-                        // NOT: Bu height olmadan, sınırsız (unbounded) bir dikey
-                        // alanda yatay kayan bir ListView, layout aşamasında
-                        // "RenderBox was not laid out" / NEEDS-PAINT hatası
-                        // fırlatıyordu — ana sayfanın bozuk/boş görünmesinin bir
-                        // diğer sebebi buydu.
-                        height: 124,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          // NOT: "Testi tekrar al" kartı buradan kaldırıldı — ana
-                          // sayfada bu kadar göz önünde olmaması gerekiyordu
-                          // (kullanıcı isteği). O eylem artık Ayarlar sayfasında
-                          // (settings_page.dart -> settings.retake_quiz) tek giriş
-                          // noktası olarak duruyor. Kalan 2 kart, kullanıcının
-                          // isteğiyle yeniden sıralandı: önce arkadaşlarla uyum,
-                          // sonra kişilik analizi.
-                          itemCount: 2,
-                          separatorBuilder: (_, _) => const SizedBox(width: 12),
-                          itemBuilder: (_, i) {
-                            switch (i) {
-                              case 0:
-                                return _PersonalityActionCard(
-                                  icon: Iconsax.people,
-                                  title: 'home.friend_compat'.tr(),
-                                  subtitle: 'home.friend_compat_desc'.tr(),
-                                  onTap: () => Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          const FriendCompatibilityPage(),
-                                    ),
-                                  ),
-                                );
-                              default:
-                                return _PersonalityActionCard(
-                                  icon: Iconsax.trend_up,
-                                  title: 'home.view_analysis'.tr(),
-                                  subtitle: 'home.view_analysis_desc'.tr(),
-                                  onTap: () => Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          const PersonalityAnalysisPage(),
-                                    ),
-                                  ),
-                                );
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-
-                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
                   ],
                 ),
               ),
+            ),
+
+            // ── Arkadaşların ────────────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+                child: Text(
+                  'home.friends_section'.tr(),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: context.colors.textPrimary,
+                  ),
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: connections.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _NoFriendsCard(
+                        onAddFriend: () =>
+                            ref.read(mainTabIndexProvider.notifier).state = 2,
+                      ),
+                    )
+                  : SizedBox(
+                      // Kart içeriği (avatar + isim + Buluş butonu) ~136px
+                      // yükseklik gerektiriyor — daha kısa bir SizedBox,
+                      // butonun alt kenarının kart dışına taşmasına
+                      // (RenderFlex overflow) sebep oluyordu.
+                      height: 140,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: sortedConnections.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 12),
+                        itemBuilder: (_, i) =>
+                            _HomeFriendCard(friend: sortedConnections[i]),
+                      ),
+                    ),
+            ),
+
+            // ── Yakınınızdaki Beğenilen Mekanlar ────────────────────────────
+            // (eski adıyla "Öne Çıkan Mekanlar ve Yorumlar" — artık
+            // topReviewsProvider, kullanıcının konumuna 10km'den uzak
+            // yorumları göstermiyor, bkz. review_notifier.dart)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+                child: Text(
+                  'home.featured_section'.tr(),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: context.colors.textPrimary,
+                  ),
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: topReviewsAsync.when(
+                data: (reviews) {
+                  if (reviews.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      child: Text(
+                        'home.no_reviews_hint'.tr(),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: context.colors.textSecondary,
+                        ),
+                      ),
+                    );
+                  }
+                  return NotificationListener<ScrollNotification>(
+                    onNotification: (notification) {
+                      // Kullanıcı dokunup kaydırmaya başladığında otomatik
+                      // kaymayı durdur; bıraktıktan birkaç saniye sonra
+                      // tekrar başlat.
+                      if (notification is UserScrollNotification) {
+                        if (notification.direction != ScrollDirection.idle) {
+                          _pauseAutoScroll();
+                        } else {
+                          _scheduleResume();
+                        }
+                      }
+                      return false;
+                    },
+                    child: SizedBox(
+                      // 210, içerik (resim + metin bloğu) için 1px'lik bir
+                      // RenderFlex overflow'una sebep oluyordu — kartın tüm
+                      // içeriğine güvenli pay bırakmak için yükseklik artırıldı.
+                      height: 216,
+                      child: ListView.separated(
+                        controller: _carouselController,
+                        scrollDirection: Axis.horizontal,
+                        physics: const ClampingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        // Sonsuz döngü hissi için liste 3 kat tekrarlanıyor;
+                        // otomatik kaydırma maxScrollExtent'e gelince jumpTo(0)
+                        // ile sıfırlandığından kullanıcı sıçramayı fark etmez.
+                        itemCount: reviews.length * 3,
+                        separatorBuilder: (_, _) => const SizedBox(width: 14),
+                        itemBuilder: (_, i) => _ReviewCarouselCard(
+                          review: reviews[i % reviews.length],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                loading: () => SizedBox(
+                  height: 210,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: context.colors.primary,
+                    ),
+                  ),
+                ),
+                error: (_, _) => Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  child: Text(
+                    'home.no_reviews_hint'.tr(),
+                    style: TextStyle(color: context.colors.textSecondary),
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Kişiliğini Yönet ────────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+                child: Text(
+                  'home.personality_section'.tr(),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: context.colors.textPrimary,
+                  ),
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                // NOT: Bu height olmadan, sınırsız (unbounded) bir dikey
+                // alanda yatay kayan bir ListView, layout aşamasında
+                // "RenderBox was not laid out" / NEEDS-PAINT hatası
+                // fırlatıyordu — ana sayfanın bozuk/boş görünmesinin bir
+                // diğer sebebi buydu.
+                height: 124,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  // NOT: "Testi tekrar al" kartı buradan kaldırıldı — ana
+                  // sayfada bu kadar göz önünde olmaması gerekiyordu
+                  // (kullanıcı isteği). O eylem artık Ayarlar sayfasında
+                  // (settings_page.dart -> settings.retake_quiz) tek giriş
+                  // noktası olarak duruyor. Kalan 2 kart, kullanıcının
+                  // isteğiyle yeniden sıralandı: önce arkadaşlarla uyum,
+                  // sonra kişilik analizi.
+                  itemCount: 2,
+                  separatorBuilder: (_, _) => const SizedBox(width: 12),
+                  itemBuilder: (_, i) {
+                    switch (i) {
+                      case 0:
+                        return _PersonalityActionCard(
+                          icon: Iconsax.people,
+                          title: 'home.friend_compat'.tr(),
+                          subtitle: 'home.friend_compat_desc'.tr(),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const FriendCompatibilityPage(),
+                            ),
+                          ),
+                        );
+                      default:
+                        return _PersonalityActionCard(
+                          icon: Iconsax.trend_up,
+                          title: 'home.view_analysis'.tr(),
+                          subtitle: 'home.view_analysis_desc'.tr(),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const PersonalityAnalysisPage(),
+                            ),
+                          ),
+                        );
+                    }
+                  },
+                ),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            ],
+          ),
+        ),
             ),
           ],
         ),
@@ -682,10 +670,12 @@ class _ReviewCarouselCard extends ConsumerWidget {
     // mekanizması burada da kullanılarak placeId'si olan TÜM yorumlar (eski
     // veya yeni, fark etmez) için çalışan bir foto garanti ediliyor.
     final fetchedPhotos = ref.watch(venuePhotosProvider(review.placeId));
-    final freshPhotoUrl = fetchedPhotos.value?.isNotEmpty == true
-        ? fetchedPhotos.value!.first
-        : null;
+    final freshPhotoUrl =
+        fetchedPhotos.value?.isNotEmpty == true ? fetchedPhotos.value!.first : null;
     final displayUrl = freshPhotoUrl ?? review.displayPhotoUrl;
+    final savedVenues = ref.watch(savedVenuesProvider);
+    final isSaved = savedVenues.any((p) => p.placeId == review.placeId);
+
     return GestureDetector(
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
@@ -739,6 +729,31 @@ class _ReviewCarouselCard extends ConsumerWidget {
                             size: 28,
                           ),
                         ),
+                  // Yorumu görüp mekanı detaya girmeden de kaydedebilsin/
+                  // tarif alabilsin diye hızlı aksiyon ikonları — kullanıcı
+                  // talebi: "yorumlardan görüp tarif almak veya kaydetmek
+                  // isteyebilir".
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Row(
+                      children: [
+                        _CarouselQuickAction(
+                          icon: isSaved
+                              ? Iconsax.save_add
+                              : Iconsax.save_add_border,
+                          onTap: () => ref
+                              .read(savedVenuesProvider.notifier)
+                              .toggle(review.toPlaceResult()),
+                        ),
+                        const SizedBox(width: 6),
+                        _CarouselQuickAction(
+                          icon: Iconsax.routing,
+                          onTap: () => _openDirectionsFromReview(review),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -799,4 +814,48 @@ class _ReviewCarouselCard extends ConsumerWidget {
                       review.authorName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-               
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: context.colors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Yorum carousel kartının fotoğrafı üzerinde duran küçük, yarı saydam
+/// aksiyon butonu (kaydet / tarif al). Kartın kendi `onTap`'i (detay
+/// sayfasına git) ile çakışmasın diye `behavior: opaque` kullanılıyor —
+/// böylece bu küçük dairesel alana dokunulduğunda SADECE bu buton tetiklenir,
+/// karttaki üstteki GestureDetector'a "sızmaz".
+class _CarouselQuickAction extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _CarouselQuickAction({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: 26,
+        height: 26,
+        decoration: const BoxDecoration(
+          color: Colors.black54,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, size: 15, color: Colors.white),
+      ),
+    );
+  }
+}

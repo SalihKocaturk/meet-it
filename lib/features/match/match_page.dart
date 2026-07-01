@@ -2,7 +2,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
-import 'package:meetit/core/widgets/network_status_banner.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/match/attempt_meet_page.dart';
@@ -15,12 +14,15 @@ import 'package:meetit/features/match/widgets/empty_friends_card.dart';
 import 'package:meetit/features/match/widgets/find_venue_button_bar.dart';
 import 'package:meetit/features/match/widgets/friend_chip.dart';
 import 'package:meetit/features/match/widgets/location_field.dart';
+import 'package:meetit/features/match/widgets/personality_banner.dart';
 import 'package:meetit/features/match/widgets/price_filter.dart';
 import 'package:meetit/features/match/widgets/venue_results_view.dart';
+import 'package:meetit/core/widgets/network_status_banner.dart';
 
 // Bu dosya artık SADECE MatchPage'i içeriyor — tüm alt widget'lar ve
 // MapLocationPickerPage feature klasör yapısına bölündü:
 //   pages/map_location_picker_page.dart   → MapLocationPickerPage
+//   widgets/personality_banner.dart       → PersonalityBanner
 //   widgets/compatibility_card.dart       → CompatibilityCard
 //   widgets/location_field.dart           → LocationField
 //   widgets/friend_chip.dart              → FriendChip
@@ -83,212 +85,235 @@ class MatchPage extends ConsumerWidget {
             const NetworkStatusBanner(),
             Expanded(
               child: showVenues
-                  ? VenueResultsView(
-                      onBack: () {
-                        ref.read(showVenuesProvider.notifier).state = false;
-                      },
-                    )
-                  // ── "Mekan Bul" butonu SABİT (asılı) ──────────────────────────
-                  //
-                  // Kullanıcı talebi: buton liste içinde EN ALTTA bir sliver
-                  // olduğu için tüm filtreler eklenince ekranın çok aşağısına
-                  // gidiyordu, kullanıcı onu görmek için tamamen sona kadar
-                  // kaydırmak zorunda kalıyordu. Artık Stack ile ekranın en
-                  // altına SABİTLENDİ (diğer filtreler bunun ÜZERİNDEN kayar) —
-                  // CustomScrollView'in sonuna da bu barın yüksekliğine yakın bir
-                  // boşluk eklendi (bkz. aşağıdaki son SliverToBoxAdapter), yoksa
-                  // son filtre barın arkasında kalırdı.
-                  : Stack(
-                      children: [
-                        CustomScrollView(
-                          slivers: [
-                            // Başlık
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  20,
-                                  20,
-                                  20,
-                                  4,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'match.title'.tr(),
-                                      style: TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.w700,
-                                        color: context.colors.textPrimary,
-                                      ),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      'match.subtitle'.tr(),
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: context.colors.textSecondary,
-                                      ),
-                                    ),
-                                  ],
+            ? VenueResultsView(
+                onBack: () {
+                  ref.read(showVenuesProvider.notifier).state = false;
+                },
+              )
+            // ── "Mekan Bul" butonu SABİT (asılı) ──────────────────────────
+            //
+            // Kullanıcı talebi: buton liste içinde EN ALTTA bir sliver
+            // olduğu için tüm filtreler eklenince ekranın çok aşağısına
+            // gidiyordu, kullanıcı onu görmek için tamamen sona kadar
+            // kaydırmak zorunda kalıyordu. Artık Stack ile ekranın en
+            // altına SABİTLENDİ (diğer filtreler bunun ÜZERİNDEN kayar) —
+            // CustomScrollView'in sonuna da bu barın yüksekliğine yakın bir
+            // boşluk eklendi (bkz. aşağıdaki son SliverToBoxAdapter), yoksa
+            // son filtre barın arkasında kalırdı.
+            : Stack(
+                children: [
+                  CustomScrollView(
+                    slivers: [
+                      // Başlık
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'match.title'.tr(),
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w700,
+                                  color: context.colors.textPrimary,
                                 ),
                               ),
-                            ),
-
-                            // Konumun
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  20,
-                                  20,
-                                  20,
-                                  0,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'match.your_location'.tr(),
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: context.colors.textPrimary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    LocationField(
-                                      defaultHint:
-                                          currentUser?.location ??
-                                          'match.location_hint'.tr(),
-                                    ),
-                                  ],
+                              SizedBox(height: 4),
+                              Text(
+                                'match.subtitle'.tr(),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: context.colors.textSecondary,
                                 ),
                               ),
-                            ),
+                            ],
+                          ),
+                        ),
+                      ),
 
-                            // Arkadaş seçimi
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  20,
-                                  20,
-                                  20,
-                                  0,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'match.friend_to_meet'.tr(),
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: context.colors.textPrimary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    if (connections.isEmpty)
-                                      const EmptyFriendsCard()
-                                    else
-                                      SizedBox(
-                                        height: 112,
-                                        child: ListView.separated(
-                                          scrollDirection: Axis.horizontal,
-                                          itemCount: connections.length,
-                                          separatorBuilder: (_, _) =>
-                                              const SizedBox(width: 12),
-                                          itemBuilder: (context, i) {
-                                            final f = connections[i];
-                                            return FriendChip(friend: f);
-                                          },
-                                        ),
-                                      ),
-                                  ],
+                      // Kişilik profili banner
+                      if (currentUser?.personalityProfile != null)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                            child: PersonalityBanner(
+                              type:
+                                  currentUser!.personalityProfile!.dominantType,
+                            ),
+                          ),
+                        ),
+
+                      // Konumun
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'match.your_location'.tr(),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: context.colors.textPrimary,
                                 ),
                               ),
-                            ),
-
-                            // Uyumluluk göstergesi
-                            SliverToBoxAdapter(
-                              child: Consumer(
-                                builder: (context, ref, _) {
-                                  final selectedFriend = ref.watch(
-                                    selectedFriendProvider,
-                                  );
-                                  if (selectedFriend == null) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  final score = ref.watch(
-                                    compatibilityScoreProvider,
-                                  );
-                                  return Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                      20,
-                                      16,
-                                      20,
-                                      0,
-                                    ),
-                                    child: CompatibilityCard(
-                                      friend: selectedFriend,
-                                      score: score,
-                                    ),
-                                  );
-                                },
+                              const SizedBox(height: 8),
+                              LocationField(
+                                defaultHint:
+                                    currentUser?.location ??
+                                    'match.location_hint'.tr(),
                               ),
-                            ),
+                            ],
+                          ),
+                        ),
+                      ),
 
-                            // Aktivite seçimi (çoklu)
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'match.activity_types'.tr(),
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: context.colors.textPrimary,
-                                      ),
-                                    ),
-                                    SizedBox(height: 8),
-                                    ActivityGrid(),
-                                  ],
+                      // Arkadaş seçimi
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'match.friend_to_meet'.tr(),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: context.colors.textPrimary,
                                 ),
                               ),
-                            ),
+                              const SizedBox(height: 8),
+                              if (connections.isEmpty)
+                                const EmptyFriendsCard()
+                              else
+                                SizedBox(
+                                  height: 112,
+                                  child: ListView.separated(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: connections.length,
+                                    separatorBuilder: (_, _) =>
+                                        const SizedBox(width: 12),
+                                    itemBuilder: (context, i) {
+                                      final f = connections[i];
+                                      return FriendChip(friend: f);
+                                    },
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
 
-                            // Fiyat filtresi
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'match.price_level'.tr(),
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: context.colors.textPrimary,
-                                      ),
-                                    ),
-                                    SizedBox(height: 8),
-                                    PriceFilter(),
-                                  ],
+                      // Uyumluluk göstergesi
+                      SliverToBoxAdapter(
+                        child: Consumer(
+                          builder: (context, ref, _) {
+                            final selectedFriend = ref.watch(
+                              selectedFriendProvider,
+                            );
+                            if (selectedFriend == null) {
+                              return const SizedBox.shrink();
+                            }
+                            final score = ref.watch(compatibilityScoreProvider);
+                            return Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                              child: CompatibilityCard(
+                                friend: selectedFriend,
+                                score: score,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+
+                      // Aktivite seçimi (çoklu)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'match.activity_types'.tr(),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: context.colors.textPrimary,
                                 ),
                               ),
-                            ),
+                              SizedBox(height: 8),
+                              ActivityGrid(),
+                            ],
+                          ),
+                        ),
+                      ),
 
-                            // Mesafe filtresi (orta noktadan / kendi konumundan km)
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'match.max_distance'.tr(),
-                                      style: TextStyle(
-      
+                      // Fiyat filtresi
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'match.price_level'.tr(),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: context.colors.textPrimary,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              PriceFilter(),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // Mesafe filtresi (orta noktadan / kendi konumundan km)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'match.max_distance'.tr(),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: context.colors.textPrimary,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              DistanceFilter(),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // Sabit "Mekan Bul" barının altta kapatmaması için
+                      // scroll içeriğinin sonuna onun yüksekliğine yakın bir
+                      // boşluk ekleniyor (bkz. FindVenueButtonBar — Stack
+                      // içinde Positioned(bottom: 0) ile sabitlendi).
+                      const SliverToBoxAdapter(child: SizedBox(height: 110)),
+                    ],
+                  ),
+                  const Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: FindVenueButtonBar(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

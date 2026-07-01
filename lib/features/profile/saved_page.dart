@@ -1,5 +1,4 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
@@ -9,8 +8,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/providers/theme_provider.dart';
 import 'package:meetit/core/router/app_routes.dart';
-import 'package:meetit/core/widgets/app_alert.dart';
-import 'package:meetit/core/widgets/langauge_switcher.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friend_code_page.dart';
 import 'package:meetit/features/match/match_page.dart';
@@ -18,8 +15,9 @@ import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
-
-import '../history/meeting_history_page.dart';
+import 'package:meetit/core/widgets/langauge_switcher.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:meetit/core/widgets/app_alert.dart';
 
 class ProfileMenuPage extends ConsumerStatefulWidget {
   const ProfileMenuPage({super.key});
@@ -85,9 +83,8 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
     final myReviewsAsync = ref.watch(myReviewsProvider(currentUid));
     final allReviews = myReviewsAsync.value ?? const <VenueReviewModel>[];
 
-    final likedReviews = allReviews
-        .where((r) => r.isLikedBy(currentUid))
-        .toList();
+    final likedReviews =
+        allReviews.where((r) => r.isLikedBy(currentUid)).toList();
 
     final searchResults = _query.isEmpty
         ? <VenueReviewModel>[]
@@ -201,8 +198,7 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                                   builder: (_) => _ReviewListPage(
                                     title: 'profile.liked_reviews'.tr(),
                                     reviews: likedReviews,
-                                    emptyText: 'profile.empty_liked_reviews'
-                                        .tr(),
+                                    emptyText: 'profile.empty_liked_reviews'.tr(),
                                   ),
                                 ),
                               ),
@@ -268,16 +264,6 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                               },
                             ),
                             _MenuItem(
-                              icon: Iconsax.clock,
-                              title: 'settings.meeting_history'.tr(),
-                              subtitle: 'settings.meeting_history_desc'.tr(),
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const MeetingHistoryPage(),
-                                ),
-                              ),
-                            ),
-                            _MenuItem(
                               icon: Iconsax.tag,
                               title: 'settings.add_friend_code'.tr(),
                               subtitle: 'settings.add_friend_code_desc'.tr(),
@@ -303,10 +289,9 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                               // göstermek için isEffectivelyDark kullanılıyor
                               // (== ThemeMode.dark yalnızca açık/kapalı
                               // tercihi seçildiğinde doğru sonuç verirdi).
-                              title:
-                                  isEffectivelyDark(
-                                    ref.watch(themeModeProvider),
-                                  )
+                              title: isEffectivelyDark(
+                                ref.watch(themeModeProvider),
+                              )
                                   ? 'settings.light_mode'.tr()
                                   : 'settings.dark_mode'.tr(),
                               onTap: () =>
@@ -341,14 +326,12 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                             _MenuItem(
                               icon: Iconsax.document_text_1,
                               title: 'legal.terms_title'.tr(),
-                              onTap: () =>
-                                  _showLegalSheet(context, isTerms: true),
+                              onTap: () => _showLegalSheet(context, isTerms: true),
                             ),
                             _MenuItem(
                               icon: Iconsax.shield_tick,
                               title: 'legal.privacy_title'.tr(),
-                              onTap: () =>
-                                  _showLegalSheet(context, isTerms: false),
+                              onTap: () => _showLegalSheet(context, isTerms: false),
                             ),
                           ],
                         ),
@@ -706,12 +689,8 @@ class _LegalBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sections = isTerms ? _termsSections : _privacySections;
-    final title = isTerms
-        ? 'legal.terms_title'.tr()
-        : 'legal.privacy_title'.tr();
-    final lastUpdated = isTerms
-        ? 'legal.terms_last_updated'.tr()
-        : 'legal.privacy_last_updated'.tr();
+    final title = isTerms ? 'legal.terms_title'.tr() : 'legal.privacy_title'.tr();
+    final lastUpdated = isTerms ? 'legal.terms_last_updated'.tr() : 'legal.privacy_last_updated'.tr();
 
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
@@ -759,9 +738,7 @@ class _LegalBottomSheet extends StatelessWidget {
                 controller: controller,
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
                 children: [
-                  ...sections.map(
-                    (s) => _LegalSection(title: s[0], body: s[1]),
-                  ),
+                  ...sections.map((s) => _LegalSection(title: s[0], body: s[1])),
                   const SizedBox(height: 8),
                   Text(
                     lastUpdated,
@@ -830,4 +807,31 @@ List<List<String>> get _privacySections => [
   ['legal.privacy_s6_title'.tr(), 'legal.privacy_s6_body'.tr()],
 ];
 
-class _GridPlaceholder extends Stateless
+class _GridPlaceholder extends StatelessWidget {
+  final VenueReviewModel review;
+  const _GridPlaceholder({required this.review});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: context.colors.primary.withOpacity(0.08),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Iconsax.location, color: context.colors.primary, size: 22),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              review.venueName,
+              style: TextStyle(fontSize: 9, color: context.colors.primary),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

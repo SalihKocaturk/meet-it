@@ -12,13 +12,12 @@ import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/core/widgets/langauge_switcher.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friend_code_page.dart';
+import 'package:meetit/features/settings/privacy_policy_page.dart';
+import 'package:meetit/features/settings/terms_page.dart';
 import 'package:meetit/features/match/match_page.dart'
     hide Expanded, SizedBox, Row;
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/personality/providers/personality_provider.dart';
-import 'package:meetit/features/history/meeting_history_page.dart';
-import 'package:meetit/features/settings/privacy_policy_page.dart';
-import 'package:meetit/features/settings/terms_page.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -234,16 +233,6 @@ class SettingsPage extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      _SettingsItem(
-                        icon: Iconsax.clock,
-                        title: 'settings.meeting_history'.tr(),
-                        subtitle: 'settings.meeting_history_desc'.tr(),
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const MeetingHistoryPage(),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
 
@@ -316,9 +305,7 @@ class SettingsPage extends ConsumerWidget {
                         icon: Iconsax.shield_tick,
                         title: 'legal.privacy_title'.tr(),
                         onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const PrivacyPolicyPage(),
-                          ),
+                          MaterialPageRoute(builder: (_) => const PrivacyPolicyPage()),
                         ),
                       ),
                     ],
@@ -424,4 +411,26 @@ class _SettingsItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: context.color
+      leading: Icon(icon, color: context.colors.primary, size: 22),
+      title: Text(
+        title,
+        style: TextStyle(fontSize: 14, color: context.colors.textPrimary),
+      ),
+      subtitle: subtitle != null
+          ? Text(
+              subtitle!,
+              style: TextStyle(
+                fontSize: 11,
+                color: context.colors.textSecondary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            )
+          : null,
+      trailing:
+          trailing ??
+          Icon(Iconsax.arrow_right_3, size: 14, color: context.colors.hint),
+      onTap: onTap,
+    );
+  }
+}
