@@ -477,8 +477,8 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
         } catch (_) {}
       }
 
-      // PlaceResult → VenueSnapshot dönüşümü
-      final snapshots = allVenues.map((p) {
+      // PlaceResult → VenueSnapshot dönüşümü (max 3 mekan kaydedilir)
+      final snapshots = allVenues.take(3).map((p) {
         final cachedUrls = p.photoReferences
             .where((r) => r.startsWith('https://'))
             .take(3)
@@ -523,5 +523,4 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
       // Arkadaşa bildirim gönder
       if (friendUid != null) {
         NotificationService.sendNotification(
-          toUid: friendUid,
-          type: 
+          to

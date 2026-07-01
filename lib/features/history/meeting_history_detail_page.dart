@@ -20,11 +20,7 @@ class MeetingHistoryDetailPage extends ConsumerStatefulWidget {
   final MeetingRecord record;
   final String? myUid;
 
-  const MeetingHistoryDetailPage({
-    super.key,
-    required this.record,
-    this.myUid,
-  });
+  const MeetingHistoryDetailPage({super.key, required this.record, this.myUid});
 
   @override
   ConsumerState<MeetingHistoryDetailPage> createState() =>
@@ -35,7 +31,8 @@ class _MeetingHistoryDetailPageState
     extends ConsumerState<MeetingHistoryDetailPage> {
   GoogleMapController? _mapController;
   Set<Marker> _markers = {};
-  int _selectedIndex = 0;
+  // -1 = henüz hiçbir kart seçilmedi; ilk tap seçer, ikinci tap detay açar
+  int _selectedIndex = -1;
 
   @override
   void initState() {
@@ -83,7 +80,7 @@ class _MeetingHistoryDetailPageState
   }
 
   void _focusSelected() {
-    if (widget.record.venues.isEmpty) return;
+    if (widget.record.venues.isEmpty || _selectedIndex < 0) return;
     final v = widget.record.venues[_selectedIndex];
     _mapController?.animateCamera(
       CameraUpdate.newLatLngZoom(LatLng(v.lat, v.lng), 15.5),
@@ -98,7 +95,10 @@ class _MeetingHistoryDetailPageState
 
   @override
   Widget build(BuildContext context) {
-    final isDark = ref.watch(themeProvider) == ThemeMode.dark;
+    final themeMode = ref.watch(themeModeProvider);
+    final isDark = themeMode == ThemeMode.dark ||
+        (themeMode == ThemeMode.system &&
+            MediaQuery.platformBrightnessOf(context) == Brightness.dark);
     final venues = widget.record.venues;
 
     return Scaffold(
@@ -107,8 +107,11 @@ class _MeetingHistoryDetailPageState
         backgroundColor: context.colors.scaffold,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new,
-              size: 18, color: context.colors.textPrimary),
+          icon: Icon(
+            Icons.arrow_back_ios_new,
+            size: 18,
+            color: context.colors.textPrimary,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Column(
@@ -123,8 +126,10 @@ class _MeetingHistoryDetailPageState
               ),
             ),
             Text(
-              DateFormat('d MMM y', context.locale.languageCode)
-                  .format(widget.record.createdAt),
+              DateFormat(
+                'd MMM y',
+                context.locale.languageCode,
+              ).format(widget.record.createdAt),
               style: TextStyle(
                 fontSize: 11,
                 color: context.colors.textSecondary,
@@ -193,16 +198,21 @@ class _MeetingHistoryDetailPageState
                       // Mekan sayısı başlığı
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 6),
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
                         child: Row(
                           children: [
-                            Icon(Icons.place,
-                                size: 16, color: context.colors.primary),
+                            Icon(
+                              Icons.place,
+                              size: 16,
+                              color: context.colors.primary,
+                            ),
                             const SizedBox(width: 6),
                             Text(
-                              'history.venue_count'.tr(namedArgs: {
-                                'count': venues.length.toString(),
-                              }),
+                              'history.venue_count'.tr(
+                                namedArgs: {'count': venues.length.toString()},
+                              ),
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -219,32 +229,37 @@ class _MeetingHistoryDetailPageState
                           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                           scrollDirection: Axis.horizontal,
                           itemCount: venues.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(width: 10),
+                          separatorBuilder: (_, _) => const SizedBox(width: 10),
                           itemBuilder: (context, index) {
+                            final isSelected = index == _selectedIndex;
                             return _VenueCard(
                               venue: venues[index],
-                              isSelected: index == _selectedIndex,
+                              isSelected: isSelected,
                               onTap: () {
-                                _onMarkerTap(index);
-                                // Mekan detay sayfasına git
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => VenueDetailPage(
-                                      placeId: venues[index].placeId,
-                                      venueName: venues[index].name,
-                                      venueAddress: venues[index].vicinity,
-                                      venuePhotoUrl:
-                                          venues[index].photoUrls.isNotEmpty
-                                              ? venues[index].photoUrls.first
-                                              : null,
-                                      venuePhotoUrls: venues[index].photoUrls,
-                                      googleRating: venues[index].rating,
-                                      lat: venues[index].lat,
-                                      lng: venues[index].lng,
+                                if (!isSelected) {
+                                  // İlk tap: haritada seç ve odaklan
+                                  _onMarkerTap(index);
+                                } else {
+                                  // İkinci tap: detay sayfasına git
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => VenueDetailPage(
+                                        placeId: venues[index].placeId,
+                                        venueName: venues[index].name,
+                                        venueAddress: venues[index].vicinity,
+                                        venuePhotoUrl:
+                                            venues[index].photoUrls.isNotEmpty
+                                            ? venues[index].photoUrls.first
+                                            : null,
+                                        venuePhotoUrls:
+                                            venues[index].photoUrls,
+                                        googleRating: venues[index].rating,
+                                        lat: venues[index].lat,
+                                        lng: venues[index].lng,
+                                      ),
                                     ),
-                                  ),
-                                );
+                                  );
+                                }
                               },
                             );
                           },
@@ -283,9 +298,7 @@ class _VenueCard extends StatelessWidget {
           color: context.colors.scaffold,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected
-                ? context.colors.primary
-                : context.colors.border,
+            color: isSelected ? context.colors.primary : context.colors.border,
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
@@ -303,22 +316,23 @@ class _VenueCard extends StatelessWidget {
           children: [
             // Fotoğraf
             ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(11)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(11),
+              ),
               child: venue.photoUrls.isNotEmpty
                   ? CachedNetworkImage(
                       imageUrl: venue.photoUrls.first,
                       height: 70,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) =>
+                      errorWidget: (_, _, _) =>
                           _PlaceholderPhoto(types: venue.types),
                     )
                   : _PlaceholderPhoto(types: venue.types),
             ),
-            // İsim + puan
+            // Mekan adı
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
               child: Text(
                 venue.name,
                 style: TextStyle(
@@ -326,27 +340,10 @@ class _VenueCard extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                   color: context.colors.textPrimary,
                 ),
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            if (venue.rating != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 2, 8, 0),
-                child: Row(
-                  children: [
-                    Icon(Icons.star_rounded, size: 11, color: Colors.amber[600]),
-                    const SizedBox(width: 2),
-                    Text(
-                      venue.rating!.toStringAsFixed(1),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: context.colors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
           ],
         ),
       ),
@@ -375,8 +372,12 @@ class _PlaceholderPhoto extends StatelessWidget {
       height: 70,
       width: double.infinity,
       color: context.colors.primary.withOpacity(0.08),
-      child: Icon(_icon, size: 28, color: context.colors.primary.withOpacity(0.4)),
+      child: Icon(
+        _icon,
+        size: 28,
+        color: context.colors.primary.withOpacity(0.4),
+      ),
     );
   }
 }
-                                                                                                                                                                   
+                                    
