@@ -519,4 +519,92 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
         searchLng: searchLng,
         hasMidpoint: hasMidpoint,
         createdAt: DateTime.now(),
-        participantUi
+        participantUids: participantUids,
+      );
+
+      await MeetingHistoryService.save(record);
+
+      // Arkadaşa bildirim gönder
+      if (friendUid != null) {
+        NotificationService.sendNotification(
+          toUid: friendUid,
+          type: 'meetup_invite',
+          fromName: me.name,
+          fromUid: myUid,
+        ).ignore();
+      }
+    } catch (_) {
+      // Geçmiş kayıt başarısız olsa bile sessizce yut — kullanıcı
+      // mekan sonuçlarını görmeye devam eder.
+    }
+  }
+
+  // ── Hangout uyumu yardımcıları ────────────────────────────────────────────
+
+  // Oturup sohbet edilebilecek/zaman geçirilebilecek type'lar — bunlar orta
+  // nokta sıralamasında hafifçe öne çekilir.
+  static const Set<String> _hangoutFriendlyTypes = {
+    'cafe', 'restaurant', 'park', 'museum', 'art_gallery', 'library',
+    'bar', 'night_club', 'movie_theater', 'tourist_attraction', 'bakery',
+  };
+
+  // İsminden anlaşılan hızlı/ayaküstü tüketim yerleri — "cafe"/"restaurant"
+  // gibi oturmaya uygun bir type'ı da YOKSA hafifçe geriye itilir (tamamen
+  // elenmez, sadece eşit mesafede gerçek bir "mekan"ın önüne geçmesin).
+  static const List<String> _quickServiceNameKeywords = [
+    'büfe', 'fast food', 'lahmacun', 'dürüm', 'kebapçı', 'tost ', 'çorbacı',
+    'döner ',
+  ];
+
+  double _hangoutAdjustmentKm(PlaceResult place) {
+    final lowerName = place.name.toLowerCase();
+    final isQuickServiceName =
+        _quickServiceNameKeywords.any(lowerName.contains) &&
+            !place.types.contains('cafe') &&
+            !place.types.contains('restaurant');
+    if (isQuickServiceName) return 0.35; // ~350m geriye it
+
+    final isHangoutFriendly =
+        place.types.any(_hangoutFriendlyTypes.contains);
+    if (isHangoutFriendly) return -0.2; // ~200m öne çek
+
+    return 0.0;
+  }
+
+  Future<Position?> _getLocation() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Konum servisi kapalı. Lütfen açın.');
+      return null;
+    }
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        state = state.copyWith(
+            isLoading: false, errorMessage: 'Konum izni verilmedi.');
+        return null;
+      }
+    }
+    if (permission == LocationPermission.deniedForever) {
+      state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Konum izni kalıcı reddedildi.');
+      return null;
+    }
+
+    try {
+      return await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+    } catch (_) {
+      return await Geolocator.getLastKnownPosition();
+    }
+  }
+}
