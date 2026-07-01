@@ -539,6 +539,25 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
     }
   }
 
+  // ── Haversine mesafe hesabı ───────────────────────────────────────────────
+
+  /// İki koordinat arasındaki kuş uçuşu mesafeyi kilometre cinsinden döner.
+  /// Orta nokta hesabı, mesafe filtresi ve mekan sıralama skorlamasında
+  /// kullanılır.
+  double _haversineKm(double lat1, double lon1, double lat2, double lon2) {
+    const r = 6371.0; // Dünya yarıçapı (km)
+    final dLat = _deg2rad(lat2 - lat1);
+    final dLon = _deg2rad(lon2 - lon1);
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(_deg2rad(lat1)) *
+            cos(_deg2rad(lat2)) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
+    return r * 2 * atan2(sqrt(a), sqrt(1 - a));
+  }
+
+  double _deg2rad(double deg) => deg * pi / 180;
+
   // ── Hangout uyumu yardımcıları ────────────────────────────────────────────
 
   // Oturup sohbet edilebilecek/zaman geçirilebilecek type'lar — bunlar orta
@@ -580,31 +599,4 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
       return null;
     }
 
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        state = state.copyWith(
-            isLoading: false, errorMessage: 'Konum izni verilmedi.');
-        return null;
-      }
-    }
-    if (permission == LocationPermission.deniedForever) {
-      state = state.copyWith(
-          isLoading: false,
-          errorMessage: 'Konum izni kalıcı reddedildi.');
-      return null;
-    }
-
-    try {
-      return await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 10),
-        ),
-      );
-    } catch (_) {
-      return await Geolocator.getLastKnownPosition();
-    }
-  }
-}
+    var permission = await
