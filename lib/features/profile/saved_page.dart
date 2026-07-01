@@ -1,13 +1,16 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:iconsax/iconsax.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/providers/theme_provider.dart';
 import 'package:meetit/core/router/app_routes.dart';
+import 'package:meetit/core/widgets/app_alert.dart';
+import 'package:meetit/core/widgets/langauge_switcher.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friend_code_page.dart';
 import 'package:meetit/features/match/match_page.dart';
@@ -15,9 +18,8 @@ import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
-import 'package:meetit/core/widgets/langauge_switcher.dart';
-import 'package:easy_localization/easy_localization.dart';
-import 'package:meetit/core/widgets/app_alert.dart';
+
+import '../history/meeting_history_page.dart';
 
 class ProfileMenuPage extends ConsumerStatefulWidget {
   const ProfileMenuPage({super.key});
@@ -35,6 +37,105 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
     _searchCtrl.dispose();
     super.dispose();
   }
+
+  List<_MenuItem> _searchItems(
+    BuildContext context,
+    WidgetRef ref,
+    bool isEmailUser,
+    List<VenueReviewModel> likedReviews,
+  ) =>
+      [
+        _MenuItem(
+          icon: Iconsax.heart,
+          title: 'profile.liked_reviews'.tr(),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => _ReviewListPage(
+                title: 'profile.liked_reviews'.tr(),
+                reviews: likedReviews,
+                emptyText: 'profile.empty_liked_reviews'.tr(),
+              ),
+            ),
+          ),
+        ),
+        _MenuItem(
+          icon: Iconsax.clock,
+          title: 'settings.meeting_history'.tr(),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const MeetingHistoryPage()),
+          ),
+        ),
+        _MenuItem(
+          icon: Iconsax.profile_circle,
+          title: 'settings.edit_profile'.tr(),
+          onTap: () => context.push(AppRoutes.editProfile),
+        ),
+        if (isEmailUser)
+          _MenuItem(
+            icon: Iconsax.lock_1,
+            title: 'settings.change_password'.tr(),
+            onTap: () => context.push(AppRoutes.changePassword),
+          ),
+        _MenuItem(
+          icon: Iconsax.activity,
+          title: 'settings.retake_quiz'.tr(),
+          onTap: () => context.push(AppRoutes.quiz),
+        ),
+        _MenuItem(
+          icon: Iconsax.location,
+          title: 'settings.update_location'.tr(),
+          onTap: () async {
+            final current = ref.read(userLocationProvider);
+            final result = await Navigator.of(context)
+                .push<UserLocation>(
+                  MaterialPageRoute(
+                    builder: (_) => MapLocationPickerPage(
+                      initial: current?.hasCoords == true
+                          ? LatLng(current!.lat!, current.lng!)
+                          : null,
+                    ),
+                  ),
+                );
+            if (result != null) {
+              ref.read(userLocationProvider.notifier).state = result;
+            }
+          },
+        ),
+        _MenuItem(
+          icon: Iconsax.hashtag,
+          title: 'settings.add_friend_code'.tr(),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const FriendCodePage()),
+          ),
+        ),
+        _MenuItem(
+          icon: Iconsax.global,
+          title: 'settings.language'.tr(),
+          onTap: () => showLanguagePickerSheet(context),
+        ),
+        _MenuItem(
+          icon: Iconsax.info_circle,
+          title: 'settings.about'.tr(),
+          onTap: () => showAppAlert(
+            context: context,
+            type: AppAlertType.info,
+            title: 'app_name'.tr(),
+            text: 'settings.about_text'.tr(),
+            confirmBtnText: 'common.ok'.tr(),
+            confirmBtnColor: context.colors.primary,
+          ),
+        ),
+        _MenuItem(
+          icon: Iconsax.document_text_1,
+          title: 'legal.terms_title'.tr(),
+          onTap: () => _showLegalSheet(context, isTerms: true),
+        ),
+        _MenuItem(
+          icon: Iconsax.shield_tick,
+          title: 'legal.privacy_title'.tr(),
+          onTap: () => _showLegalSheet(context, isTerms: false),
+        ),
+      ];
 
   bool _isEmailUser() {
     final user = FirebaseAuth.instance.currentUser;
@@ -83,20 +184,19 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
     final myReviewsAsync = ref.watch(myReviewsProvider(currentUid));
     final allReviews = myReviewsAsync.value ?? const <VenueReviewModel>[];
 
-    final likedReviews =
-        allReviews.where((r) => r.isLikedBy(currentUid)).toList();
+    final likedReviews = allReviews
+        .where((r) => r.isLikedBy(currentUid))
+        .toList();
 
-    final searchResults = _query.isEmpty
-        ? <VenueReviewModel>[]
-        : allReviews
-              .where(
-                (r) =>
-                    r.venueName.toLowerCase().contains(_query.toLowerCase()) ||
-                    (r.comment?.toLowerCase().contains(_query.toLowerCase()) ??
-                        false) ||
-                    r.authorName.toLowerCase().contains(_query.toLowerCase()),
-              )
-              .toList();
+    final filteredMenuItems = _query.isEmpty
+        ? <_MenuItem>[]
+        : _searchItems(context, ref, isEmailUser, likedReviews)
+            .where(
+              (item) => item.title
+                  .toLowerCase()
+                  .contains(_query.toLowerCase()),
+            )
+            .toList();
 
     return Scaffold(
       backgroundColor: context.colors.scaffold,
@@ -131,7 +231,7 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
 
             Expanded(
               child: _query.isNotEmpty
-                  ? _SearchResults(results: searchResults, query: _query)
+                  ? _MenuSearchResults(items: filteredMenuItems, query: _query)
                   : ListView(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20,
@@ -198,15 +298,20 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                                   builder: (_) => _ReviewListPage(
                                     title: 'profile.liked_reviews'.tr(),
                                     reviews: likedReviews,
-                                    emptyText: 'profile.empty_liked_reviews'.tr(),
+                                    emptyText: 'profile.empty_liked_reviews'
+                                        .tr(),
                                   ),
                                 ),
                               ),
                             ),
                             _MenuItem(
-                              icon: Iconsax.notification_1,
-                              title: 'profile.notifications'.tr(),
-                              onTap: () {},
+                              icon: Iconsax.clock,
+                              title: 'settings.meeting_history'.tr(),
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const MeetingHistoryPage(),
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -289,9 +394,10 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                               // göstermek için isEffectivelyDark kullanılıyor
                               // (== ThemeMode.dark yalnızca açık/kapalı
                               // tercihi seçildiğinde doğru sonuç verirdi).
-                              title: isEffectivelyDark(
-                                ref.watch(themeModeProvider),
-                              )
+                              title:
+                                  isEffectivelyDark(
+                                    ref.watch(themeModeProvider),
+                                  )
                                   ? 'settings.light_mode'.tr()
                                   : 'settings.dark_mode'.tr(),
                               onTap: () =>
@@ -326,12 +432,14 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                             _MenuItem(
                               icon: Iconsax.document_text_1,
                               title: 'legal.terms_title'.tr(),
-                              onTap: () => _showLegalSheet(context, isTerms: true),
+                              onTap: () =>
+                                  _showLegalSheet(context, isTerms: true),
                             ),
                             _MenuItem(
                               icon: Iconsax.shield_tick,
                               title: 'legal.privacy_title'.tr(),
-                              onTap: () => _showLegalSheet(context, isTerms: false),
+                              onTap: () =>
+                                  _showLegalSheet(context, isTerms: false),
                             ),
                           ],
                         ),
@@ -487,101 +595,33 @@ class _MenuItem extends StatelessWidget {
 // yorumları (VenueReviewModel) içinde arama yapılıyor, dokununca o yorumun
 // ait olduğu mekanın VenueDetailPage'i açılıyor.
 
-class _SearchResults extends StatelessWidget {
-  final List<VenueReviewModel> results;
+class _MenuSearchResults extends StatelessWidget {
+  final List<_MenuItem> items;
   final String query;
 
-  const _SearchResults({required this.results, required this.query});
+  const _MenuSearchResults({required this.items, required this.query});
 
   @override
   Widget build(BuildContext context) {
-    if (results.isEmpty) {
+    if (items.isEmpty) {
       return Center(
-        child: Text(
-          'profile.no_search_result'.tr(namedArgs: {'query': query}),
-          style: TextStyle(fontSize: 14, color: context.colors.textSecondary),
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Text(
+            'profile.no_search_result'.tr(namedArgs: {'query': query}),
+            style: TextStyle(fontSize: 14, color: context.colors.textSecondary),
+            textAlign: TextAlign.center,
+          ),
         ),
       );
     }
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: results.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
-      itemBuilder: (ctx, i) {
-        final r = results[i];
-        final img = r.photoUrl ?? r.displayPhotoUrl;
-        return ListTile(
-          contentPadding: const EdgeInsets.symmetric(vertical: 6),
-          leading: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: img != null
-                ? CachedNetworkImage(
-                    imageUrl: img,
-                    width: 52,
-                    height: 52,
-                    fit: BoxFit.cover,
-                  )
-                : Container(
-                    width: 52,
-                    height: 52,
-                    color: context.colors.primary.withOpacity(0.1),
-                    child: Icon(
-                      Iconsax.location,
-                      color: context.colors.primary,
-                    ),
-                  ),
-          ),
-          title: Text(
-            r.venueName,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: context.colors.textPrimary,
-            ),
-          ),
-          subtitle: Text(
-            r.comment ?? r.authorName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 12, color: context.colors.textSecondary),
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Iconsax.magic_star,
-                size: 14,
-                color: Color(0xFFFFB800),
-              ),
-              const SizedBox(width: 2),
-              Text(
-                '${r.rating}',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          onTap: () => Navigator.of(ctx).push(
-            MaterialPageRoute(
-              builder: (_) => VenueDetailPage(
-                placeId: r.placeId,
-                venueName: r.venueName,
-                venueAddress: r.venueAddress,
-                venuePhotoUrl: r.displayPhotoUrl,
-                lat: r.lat,
-                lng: r.lng,
-              ),
-            ),
-          ),
-        );
-      },
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      children: [_MenuSection(items: items)],
     );
   }
 }
 
-// ── Yorum Liste Sayfası (Beğenilenler) ─────────────────────────────────────────
 
 class _ReviewListPage extends StatelessWidget {
   final String title;
@@ -623,11 +663,7 @@ class _ReviewListPage extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Iconsax.heart,
-                    size: 56,
-                    color: context.colors.hint,
-                  ),
+                  Icon(Iconsax.heart, size: 56, color: context.colors.hint),
                   SizedBox(height: 12),
                   Text(
                     emptyText,
@@ -689,8 +725,12 @@ class _LegalBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sections = isTerms ? _termsSections : _privacySections;
-    final title = isTerms ? 'legal.terms_title'.tr() : 'legal.privacy_title'.tr();
-    final lastUpdated = isTerms ? 'legal.terms_last_updated'.tr() : 'legal.privacy_last_updated'.tr();
+    final title = isTerms
+        ? 'legal.terms_title'.tr()
+        : 'legal.privacy_title'.tr();
+    final lastUpdated = isTerms
+        ? 'legal.terms_last_updated'.tr()
+        : 'legal.privacy_last_updated'.tr();
 
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
@@ -738,7 +778,9 @@ class _LegalBottomSheet extends StatelessWidget {
                 controller: controller,
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
                 children: [
-                  ...sections.map((s) => _LegalSection(title: s[0], body: s[1])),
+                  ...sections.map(
+                    (s) => _LegalSection(title: s[0], body: s[1]),
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     lastUpdated,
@@ -809,29 +851,4 @@ List<List<String>> get _privacySections => [
 
 class _GridPlaceholder extends StatelessWidget {
   final VenueReviewModel review;
-  const _GridPlaceholder({required this.review});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: context.colors.primary.withOpacity(0.08),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Iconsax.location, color: context.colors.primary, size: 22),
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(
-              review.venueName,
-              style: TextStyle(fontSize: 9, color: context.colors.primary),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+  const _GridPlaceholder({required this.r

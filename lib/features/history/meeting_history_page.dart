@@ -154,7 +154,6 @@ class _HistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final firstVenue = record.venues.isNotEmpty ? record.venues.first : null;
     final dateStr = DateFormat('d MMM y', context.locale.languageCode)
         .format(record.createdAt);
 
@@ -253,79 +252,6 @@ class _HistoryCard extends StatelessWidget {
                 ),
               ),
 
-            // ── İlk mekan önizlemesi ──────────────────────────────────
-            if (firstVenue != null)
-              Container(
-                margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: context.colors.scaffold,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: context.colors.border),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Iconsax.location,
-                      size: 16,
-                      color: context.colors.primary,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            firstVenue.name,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: context.colors.textPrimary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          if (firstVenue.vicinity != null)
-                            Text(
-                              firstVenue.vicinity!,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: context.colors.textSecondary,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                        ],
-                      ),
-                    ),
-                    if (firstVenue.rating != null) ...[
-                      const SizedBox(width: 6),
-                      Icon(Iconsax.magic_star,
-                          size: 13, color: Colors.amber[600]),
-                      const SizedBox(width: 2),
-                      Text(
-                        firstVenue.rating!.toStringAsFixed(1),
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: context.colors.textPrimary,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(width: 6),
-                    Text(
-                      'history.venue_count'.tr(namedArgs: {
-                        'count': record.venues.length.toString(),
-                      }),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: context.colors.hint,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
           ],
         ),
       ),
