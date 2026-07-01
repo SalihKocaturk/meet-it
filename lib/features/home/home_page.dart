@@ -19,6 +19,7 @@ import 'package:meetit/features/personality/personality_analysis_page.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
+import 'package:meetit/core/widgets/network_status_banner.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Bir mekana tekrar tarif almak için Google Maps'i açar — yorum kartlarından
@@ -108,7 +109,11 @@ class _HomePageState extends ConsumerState<HomePage> {
     return Scaffold(
       backgroundColor: context.colors.scaffold,
       body: SafeArea(
-        child: RefreshIndicator(
+        child: Column(
+          children: [
+            const NetworkStatusBanner(),
+            Expanded(
+              child: RefreshIndicator(
           color: context.colors.primary,
           backgroundColor: context.colors.card,
           // Friends sayfasındaki aşağı çekip yenileme davranışıyla aynı:
@@ -391,6 +396,9 @@ class _HomePageState extends ConsumerState<HomePage> {
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
             ],
           ),
+        ),
+            ),
+          ],
         ),
       ),
     );
@@ -840,13 +848,4 @@ class _CarouselQuickAction extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: 26,
-        height: 26,
-        decoration: const BoxDecoration(
-          color: Colors.black54,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, size: 15, color: Colors.white),
-      ),
-    );
-  }
-}
+ 

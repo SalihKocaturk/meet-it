@@ -18,6 +18,7 @@ import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:meetit/core/widgets/app_alert.dart';
+import 'package:meetit/core/widgets/network_status_banner.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Kaydedilen/tarif alınan mekanlar listesinde "tekrar tarif al" butonuna
@@ -53,30 +54,37 @@ class ProfilePage extends ConsumerWidget {
 
     return Scaffold(
       body: SafeArea(
-        child: NestedScrollView(
-          headerSliverBuilder: (context, _) => [
-            SliverToBoxAdapter(
-              child: _ProfileHeader(
-                user: user,
-                postsCount: myReviews.length,
-                friendsCount: connections.length,
-                totalLikes: totalLikes,
-              ),
-            ),
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _TabBarDelegate(
-                tabIndex: tabIndex,
-                onTabChanged: (i) =>
-                    ref.read(profileTabProvider.notifier).state = i,
+        child: Column(
+          children: [
+            const NetworkStatusBanner(),
+            Expanded(
+              child: NestedScrollView(
+                headerSliverBuilder: (context, _) => [
+                  SliverToBoxAdapter(
+                    child: _ProfileHeader(
+                      user: user,
+                      postsCount: myReviews.length,
+                      friendsCount: connections.length,
+                      totalLikes: totalLikes,
+                    ),
+                  ),
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _TabBarDelegate(
+                      tabIndex: tabIndex,
+                      onTabChanged: (i) =>
+                          ref.read(profileTabProvider.notifier).state = i,
+                    ),
+                  ),
+                ],
+                body: switch (tabIndex) {
+                  0 => _ReviewsGrid(reviews: myReviews),
+                  1 => _SavedVenuesList(venues: savedVenues),
+                  _ => _NavigatedVenuesList(venues: navigatedVenues),
+                },
               ),
             ),
           ],
-          body: switch (tabIndex) {
-            0 => _ReviewsGrid(reviews: myReviews),
-            1 => _SavedVenuesList(venues: savedVenues),
-            _ => _NavigatedVenuesList(venues: navigatedVenues),
-          },
         ),
       ),
     );
@@ -730,19 +738,4 @@ class _EmptyTab extends StatelessWidget {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 48, color: context.colors.hint),
-          const SizedBox(height: 12),
-          Text(
-            message,
-            style: TextStyle(
-              fontSize: 14,
-              color: context.colors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-}
+    

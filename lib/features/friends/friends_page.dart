@@ -12,6 +12,7 @@ import 'package:meetit/features/main/main_page.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/core/widgets/app_alert.dart';
+import 'package:meetit/core/widgets/network_status_banner.dart';
 
 // Arkadaşlar sekmesindeki arama metni için provider
 final friendsSearchProvider = StateProvider.autoDispose<String>((ref) => '');
@@ -36,6 +37,7 @@ class FriendsPage extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const NetworkStatusBanner(),
             // Header
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -814,12 +816,4 @@ class _ConnectionTile extends ConsumerWidget {
               child: const Icon(
                 Icons.person_remove_outlined,
                 size: 16,
-                color: Colors.red,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+       

@@ -17,6 +17,7 @@ import 'package:meetit/features/match/widgets/location_field.dart';
 import 'package:meetit/features/match/widgets/personality_banner.dart';
 import 'package:meetit/features/match/widgets/price_filter.dart';
 import 'package:meetit/features/match/widgets/venue_results_view.dart';
+import 'package:meetit/core/widgets/network_status_banner.dart';
 
 // Bu dosya artık SADECE MatchPage'i içeriyor — tüm alt widget'lar ve
 // MapLocationPickerPage feature klasör yapısına bölündü:
@@ -79,7 +80,11 @@ class MatchPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: context.colors.scaffold,
       body: SafeArea(
-        child: showVenues
+        child: Column(
+          children: [
+            const NetworkStatusBanner(),
+            Expanded(
+              child: showVenues
             ? VenueResultsView(
                 onBack: () {
                   ref.read(showVenuesProvider.notifier).state = false;
@@ -299,13 +304,4 @@ class MatchPage extends ConsumerWidget {
                   ),
                   const Positioned(
                     left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: FindVenueButtonBar(),
-                  ),
-                ],
-              ),
-      ),
-    );
-  }
-}
+          

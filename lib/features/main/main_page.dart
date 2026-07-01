@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/providers/network_provider.dart';
-import 'package:meetit/core/widgets/network_status_banner.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friends_page.dart';
 import 'package:meetit/features/home/home_page.dart';
@@ -37,21 +36,11 @@ class MainPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: context.colors.scaffold,
-      body: Stack(
-        children: [
-          // Sayfa içeriği — offline'da AbsorbPointer ile kitlenir
-          AbsorbPointer(
-            absorbing: isOffline,
-            child: IndexedStack(index: currentIndex, children: _pages),
-          ),
-          // Ağ durumu banner'ı — AppBar'ın üzerinden kayarak iner
-          const Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: NetworkStatusBanner(),
-          ),
-        ],
+      // Banner her sayfanın SafeArea içinde kendi Column'una taşındı;
+      // burada sadece offline tıklama engelleyici kalır.
+      body: AbsorbPointer(
+        absorbing: isOffline,
+        child: IndexedStack(index: currentIndex, children: _pages),
       ),
       bottomNavigationBar: _MainBottomNavBar(currentIndex: currentIndex),
     );
@@ -194,25 +183,4 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              isSelected ? activeIcon : icon,
-              color: isSelected ? context.colors.primary : context.colors.hint,
-              size: 24,
-            ),
-            SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                color: isSelected
-                    ? context.colors.primary
-                    : context.colors.hint,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+            Ic
