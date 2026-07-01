@@ -13,7 +13,7 @@ import 'package:meetit/core/constants/app_colors.dart';
 ///   controller: _emailCtrl,
 ///   label: 'Email',
 ///   hint: 'ornek@email.com',
-///   prefixIcon: Iconsax.sms,
+///   prefixIcon: Iconsax.message,
 /// )
 /// ```
 class AppTextField extends StatefulWidget {
@@ -49,7 +49,7 @@ class AppTextField extends StatefulWidget {
   /// true ise şifre göster/gizle butonu eklenir.
   final bool isPassword;
 
-  /// Sol ikon (örn. Iconsax.sms).
+  /// Sol ikon (örn. Iconsax.message).
   final IconData? prefixIcon;
 
   /// Sağ taraftaki custom widget (isPassword=true ise göz ikonu bunu ezer).

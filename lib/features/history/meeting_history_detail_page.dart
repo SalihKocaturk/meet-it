@@ -336,7 +336,7 @@ class _VenueCard extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(8, 2, 8, 0),
                 child: Row(
                   children: [
-                    Icon(Iconsax.star_1, size: 11, color: Colors.amber[600]),
+                    Icon(Iconsax.magic_star, size: 11, color: Colors.amber[600]),
                     const SizedBox(width: 2),
                     Text(
                       venue.rating!.toStringAsFixed(1),

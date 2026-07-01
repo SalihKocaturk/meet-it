@@ -444,7 +444,7 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Iconsax.tick_circle,
+                          Iconsax.check,
                           color: Colors.white,
                           size: 20,
                         ),

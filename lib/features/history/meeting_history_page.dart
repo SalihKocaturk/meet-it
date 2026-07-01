@@ -184,7 +184,7 @@ class _HistoryCard extends StatelessWidget {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        Iconsax.user_rounded,
+                        Iconsax.profile_circle,
                         color: context.colors.primary,
                         size: 24,
                       ),
@@ -301,7 +301,7 @@ class _HistoryCard extends StatelessWidget {
                     ),
                     if (firstVenue.rating != null) ...[
                       const SizedBox(width: 6),
-                      Icon(Iconsax.star_1,
+                      Icon(Iconsax.magic_star,
                           size: 13, color: Colors.amber[600]),
                       const SizedBox(width: 2),
                       Text(

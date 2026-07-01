@@ -342,7 +342,7 @@ class EditProfilePage extends ConsumerWidget {
                 child: TextButton.icon(
                   onPressed: () => _pickPhoto(ref),
                   icon: Icon(
-                    Iconsax.camera_1,
+                    Iconsax.camera,
                     size: 16,
                     color: context.colors.primary,
                   ),
@@ -369,7 +369,7 @@ class EditProfilePage extends ConsumerWidget {
                 controller: nameCtrl,
                 label: 'auth.name_surname'.tr(),
                 hint: 'auth.name_hint'.tr(),
-                prefixIcon: Iconsax.user,
+                prefixIcon: Iconsax.profile_circle,
                 textInputAction: TextInputAction.next,
               ),
               SizedBox(height: 16),
@@ -388,7 +388,7 @@ class EditProfilePage extends ConsumerWidget {
                 child: Row(
                   children: [
                     Icon(
-                      Iconsax.sms,
+                      Iconsax.message,
                       color: context.colors.hint,
                       size: 18,
                     ),

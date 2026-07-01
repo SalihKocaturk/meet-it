@@ -195,7 +195,7 @@ class VenueDetailPage extends ConsumerWidget {
                         child: _VenueActionButton(
                           icon: isSaved
                               ? Iconsax.save_add
-                              : Iconsax.save_add_border,
+                              : Iconsax.save_add,
                           label: isSaved
                               ? 'venue_detail.saved'.tr()
                               : 'venue_detail.save'.tr(),
@@ -226,7 +226,7 @@ class VenueDetailPage extends ConsumerWidget {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(Iconsax.star_1,
+                        const Icon(Iconsax.magic_star,
                             size: 18, color: Color(0xFFFFB800)),
                         const SizedBox(width: 4),
                         Text(
@@ -327,7 +327,7 @@ class VenueDetailPage extends ConsumerWidget {
               // "önce ziyaret et" notu.
               child: hasOwnReview
                   ? _InfoNote(
-                      icon: Iconsax.tick_circle,
+                      icon: Iconsax.check,
                       text: 'venue_detail.already_reviewed'.tr(),
                     )
                   : hasVisited
@@ -768,8 +768,8 @@ class _ReviewTileState extends ConsumerState<_ReviewTile>
                   5,
                   (i) => Icon(
                     i < review.rating
-                        ? Iconsax.star_1
-                        : Iconsax.star,
+                        ? Iconsax.magic_star
+                        : Iconsax.medal_star,
                     size: 14,
                     color: i < review.rating
                         ? const Color(0xFFFFB800)
@@ -784,7 +784,7 @@ class _ReviewTileState extends ConsumerState<_ReviewTile>
                   child: Padding(
                     padding: const EdgeInsets.all(4),
                     child: Icon(
-                      Iconsax.trash,
+                      Iconsax.note_remove,
                       size: 18,
                       color: context.colors.error,
                     ),
@@ -824,8 +824,8 @@ class _ReviewTileState extends ConsumerState<_ReviewTile>
               children: [
                 Icon(
                   user != null && review.isLikedBy(user.uid)
-                      ? Iconsax.heart_rounded
-                      : Iconsax.heart_border_rounded,
+                      ? Iconsax.heart
+                      : Iconsax.heart,
                   size: 16,
                   color: user != null && review.isLikedBy(user.uid)
                       ? context.colors.error
@@ -852,7 +852,7 @@ class _ReviewTileState extends ConsumerState<_ReviewTile>
             child: ScaleTransition(
               scale: _heartScale,
               child: Icon(
-                Iconsax.heart_rounded,
+                Iconsax.heart,
                 size: 90,
                 color: Colors.white,
                 shadows: [
@@ -1050,8 +1050,8 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
                       padding: const EdgeInsets.only(right: 6),
                       child: Icon(
                         _rating >= star
-                            ? Iconsax.star_1
-                            : Iconsax.star,
+                            ? Iconsax.magic_star
+                            : Iconsax.medal_star,
                         size: 36,
                         color: _rating >= star
                             ? const Color(0xFFFFB800)
@@ -1131,7 +1131,7 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
-                                  Iconsax.close_circle_1,
+                                  Iconsax.close_circle,
                                   color: Colors.white,
                                   size: 18,
                                 ),

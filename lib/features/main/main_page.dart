@@ -127,8 +127,8 @@ class _MainBottomNavBar extends ConsumerWidget {
                               )
                             : Icon(
                                 currentIndex == 3
-                                    ? Iconsax.user
-                                    : Iconsax.user,
+                                    ? Iconsax.profile_circle
+                                    : Iconsax.profile_circle,
                                 color: currentIndex == 3
                                     ? context.colors.primary
                                     : context.colors.hint,

@@ -188,7 +188,7 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                         _MenuSection(
                           items: [
                             _MenuItem(
-                              icon: Iconsax.heart_border_rounded,
+                              icon: Iconsax.heart,
                               title: 'profile.liked_reviews'.tr(),
                               badge: likedReviews.isNotEmpty
                                   ? likedReviews.length
@@ -219,7 +219,7 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                         _MenuSection(
                           items: [
                             _MenuItem(
-                              icon: Iconsax.user,
+                              icon: Iconsax.profile_circle,
                               title: 'settings.edit_profile'.tr(),
                               onTap: () => context.push(AppRoutes.editProfile),
                             ),
@@ -264,7 +264,7 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                               },
                             ),
                             _MenuItem(
-                              icon: Iconsax.tag,
+                              icon: Iconsax.hashtag,
                               title: 'settings.add_friend_code'.tr(),
                               subtitle: 'settings.add_friend_code_desc'.tr(),
                               onTap: () => Navigator.of(context).push(
@@ -549,7 +549,7 @@ class _SearchResults extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(
-                Iconsax.star_1,
+                Iconsax.magic_star,
                 size: 14,
                 color: Color(0xFFFFB800),
               ),
@@ -624,7 +624,7 @@ class _ReviewListPage extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    Iconsax.heart_border_rounded,
+                    Iconsax.heart,
                     size: 56,
                     color: context.colors.hint,
                   ),

@@ -32,11 +32,11 @@ Future<T?> showAppAlert<T>({
   final Color iconColor;
   switch (type) {
     case AppAlertType.success:
-      icon = Iconsax.tick_square_1;
+      icon = Iconsax.check;
       iconColor = colors.success;
       break;
     case AppAlertType.error:
-      icon = Iconsax.close_circle_1_rounded;
+      icon = Iconsax.close_circle;
       iconColor = colors.error;
       break;
     case AppAlertType.warning:
@@ -44,7 +44,7 @@ Future<T?> showAppAlert<T>({
       iconColor = const Color(0xFFF59E0B);
       break;
     case AppAlertType.info:
-      icon = Iconsax.info_circle_rounded;
+      icon = Iconsax.info_circle;
       iconColor = colors.primary;
       break;
     case AppAlertType.confirm:

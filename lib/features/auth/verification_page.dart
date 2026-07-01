@@ -168,7 +168,7 @@ class _VerificationPageState extends ConsumerState<VerificationPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                Iconsax.sms,
+                Iconsax.message,
                 size: 80,
                 color: context.colors.primary,
               ),

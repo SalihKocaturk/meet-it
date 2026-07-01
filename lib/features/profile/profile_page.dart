@@ -441,7 +441,7 @@ class _ReviewsGrid extends ConsumerWidget {
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    Iconsax.trash,
+                    Iconsax.note_remove,
                     size: 14,
                     color: Colors.white,
                   ),
@@ -678,7 +678,7 @@ class _VenueTile extends StatelessWidget {
                     ),
                     if (place.rating != null) ...[
                       const SizedBox(width: 6),
-                      const Icon(Iconsax.star_1,
+                      const Icon(Iconsax.magic_star,
                           size: 12, color: Color(0xFFFFB800)),
                       const SizedBox(width: 2),
                       Text(

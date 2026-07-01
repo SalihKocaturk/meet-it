@@ -92,7 +92,7 @@ class SignInPage extends ConsumerWidget {
                     controller: emailController,
                     label: 'auth.email'.tr(),
                     hint: 'auth.email_hint'.tr(),
-                    prefixIcon: Iconsax.sms,
+                    prefixIcon: Iconsax.message,
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                   ),

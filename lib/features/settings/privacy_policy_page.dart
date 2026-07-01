@@ -14,7 +14,7 @@ class PrivacyPolicyPage extends StatelessWidget {
         backgroundColor: context.colors.scaffold,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Iconsax.arrow_left_ios, color: context.colors.textPrimary, size: 20),
+          icon: Icon(Iconsax.arrow_left_2, color: context.colors.textPrimary, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(

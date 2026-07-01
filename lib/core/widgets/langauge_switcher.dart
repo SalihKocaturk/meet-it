@@ -252,7 +252,7 @@ class _LangTile extends StatelessWidget {
               duration: const Duration(milliseconds: 200),
               child: isSelected
                   ? Icon(
-                      Iconsax.tick_circle,
+                      Iconsax.check,
                       key: const ValueKey('check'),
                       color: context.colors.primary,
                       size: 22,

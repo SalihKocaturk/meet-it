@@ -193,7 +193,7 @@ class VenueBottomBar extends ConsumerWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Icon(
-                                  Iconsax.star_1,
+                                  Iconsax.magic_star,
                                   size: 13,
                                   color: Color(0xFFFFB800),
                                 ),
@@ -262,7 +262,7 @@ class VenueBottomBar extends ConsumerWidget {
                       ),
                     if (estimate.walkMinutes != null)
                       TravelChip(
-                        icon: Iconsax.walking,
+                        icon: Iconsax.routing_2,
                         label:
                             '$prefix${formatTravelMinutes(estimate.walkMinutes!)}',
                       ),
@@ -296,7 +296,7 @@ class VenueBottomBar extends ConsumerWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          isSaved ? Iconsax.save_add : Iconsax.save_add_border,
+                          isSaved ? Iconsax.save_add : Iconsax.save_add,
                           size: 16,
                           color: isSaved
                               ? context.colors.primary

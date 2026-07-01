@@ -176,7 +176,7 @@ class SettingsPage extends ConsumerWidget {
                     title: 'settings.section_account'.tr(),
                     items: [
                       _SettingsItem(
-                        icon: Iconsax.user,
+                        icon: Iconsax.profile_circle,
                         title: 'settings.edit_profile'.tr(),
                         onTap: () => context.push(AppRoutes.editProfile),
                       ),
@@ -224,7 +224,7 @@ class SettingsPage extends ConsumerWidget {
                         },
                       ),
                       _SettingsItem(
-                        icon: Iconsax.tag,
+                        icon: Iconsax.hashtag,
                         title: 'settings.add_friend_code'.tr(),
                         subtitle: 'settings.add_friend_code_desc'.tr(),
                         onTap: () => Navigator.of(context).push(

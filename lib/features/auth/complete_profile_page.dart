@@ -186,7 +186,7 @@ class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Iconsax.user_pin_circle_outlined,
+              Icon(Iconsax.profile_circle,
                   size: 56, color: context.colors.primary),
               const SizedBox(height: 16),
               Text(
@@ -219,7 +219,7 @@ class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
                             ? NetworkImage(user!.photoUrl!)
                             : null,
                         child: (user?.photoUrl == null)
-                            ? Icon(Iconsax.user, color: context.colors.primary)
+                            ? Icon(Iconsax.profile_circle, color: context.colors.primary)
                             : null,
                       ),
                       const SizedBox(width: 12),

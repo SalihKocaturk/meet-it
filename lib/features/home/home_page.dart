@@ -379,7 +379,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         );
                       default:
                         return _PersonalityActionCard(
-                          icon: Iconsax.trend_up,
+                          icon: Iconsax.chart_2,
                           title: 'home.view_analysis'.tr(),
                           subtitle: 'home.view_analysis_desc'.tr(),
                           onTap: () => Navigator.of(context).push(
@@ -741,7 +741,7 @@ class _ReviewCarouselCard extends ConsumerWidget {
                         _CarouselQuickAction(
                           icon: isSaved
                               ? Iconsax.save_add
-                              : Iconsax.save_add_border,
+                              : Iconsax.save_add,
                           onTap: () => ref
                               .read(savedVenuesProvider.notifier)
                               .toggle(review.toPlaceResult()),
@@ -786,8 +786,8 @@ class _ReviewCarouselCard extends ConsumerWidget {
                           5,
                           (i) => Icon(
                             i < review.rating
-                                ? Iconsax.star_1
-                                : Iconsax.star,
+                                ? Iconsax.magic_star
+                                : Iconsax.medal_star,
                             size: 12,
                             color: i < review.rating
                                 ? const Color(0xFFFFB800)

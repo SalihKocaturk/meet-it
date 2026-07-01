@@ -14,8 +14,8 @@ class ActivityGrid extends ConsumerWidget {
   static const _activities = [
     ('Kafe', 'match.activity_cafe', Iconsax.coffee),
     ('Restoran', 'match.activity_restaurant', Iconsax.cake),
-    ('Park', 'match.activity_park', Iconsax.sun_1),
-    ('Sinema', 'match.activity_cinema', Iconsax.video_play),
+    ('Park', 'match.activity_park', Iconsax.cloud_sunny),
+    ('Sinema', 'match.activity_cinema', Iconsax.play_circle),
     ('Alışveriş', 'match.activity_shopping', Iconsax.bag),
     ('Spor', 'match.activity_sports', Iconsax.activity),
     ('Kültür/Müze', 'match.activity_culture', Iconsax.building_3),

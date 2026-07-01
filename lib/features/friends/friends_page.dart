@@ -66,7 +66,7 @@ class FriendsPage extends ConsumerWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                Iconsax.user_add,
+                                Iconsax.profile_add,
                                 size: 12,
                                 color: context.colors.primary,
                               ),
@@ -106,7 +106,7 @@ class FriendsPage extends ConsumerWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            Iconsax.tag,
+                            Iconsax.hashtag,
                             size: 14,
                             color: context.colors.primary,
                           ),
@@ -490,7 +490,7 @@ class _SuggestionTile extends ConsumerWidget {
                 .read(friendsProvider.notifier)
                 .sendFriendRequest(friend.uid),
             icon: Icon(
-              Iconsax.user_add,
+              Iconsax.profile_add,
               size: 14,
               color: context.colors.primary,
             ),
@@ -512,7 +512,7 @@ class _SuggestionTile extends ConsumerWidget {
           GestureDetector(
             onTap: () =>
                 ref.read(friendsProvider.notifier).dismissSuggestion(friend.uid),
-            child: Icon(Iconsax.close_circle_1, size: 18, color: context.colors.hint),
+            child: Icon(Iconsax.close_circle, size: 18, color: context.colors.hint),
           ),
         ],
       ),
@@ -565,7 +565,7 @@ class _InvitationTile extends ConsumerWidget {
           ),
           IconButton(
             icon: Icon(
-              Iconsax.close_circle_1,
+              Iconsax.close_circle,
               size: 22,
               color: context.colors.textSecondary,
             ),
@@ -574,7 +574,7 @@ class _InvitationTile extends ConsumerWidget {
           ),
           IconButton(
             icon: Icon(
-              Iconsax.tick_circle,
+              Iconsax.check,
               size: 22,
               color: context.colors.primary,
             ),
@@ -680,7 +680,7 @@ class _SentRequestTile extends ConsumerWidget {
                 color: Colors.red.withOpacity(0.08),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Iconsax.close_circle_1, size: 16, color: Colors.red),
+              child: const Icon(Iconsax.close_circle, size: 16, color: Colors.red),
             ),
           ),
         ],
@@ -815,7 +815,7 @@ class _ConnectionTile extends ConsumerWidget {
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Iconsax.user_remove,
+                Iconsax.profile_remove,
                 size: 16,
                 color: Colors.red,
               ),

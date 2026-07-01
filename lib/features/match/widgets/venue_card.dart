@@ -193,7 +193,7 @@ class VenueCard extends ConsumerWidget {
                     // Rating
                     if (place.rating != null) ...[
                       const Icon(
-                        Iconsax.star_1,
+                        Iconsax.magic_star,
                         size: 14,
                         color: Color(0xFFFFB800),
                       ),
@@ -318,7 +318,7 @@ class VenueCard extends ConsumerWidget {
                             ),
                           if (estimate.walkMinutes != null)
                             TravelChip(
-                              icon: Iconsax.walking,
+                              icon: Iconsax.routing_2,
                               label:
                                   '$prefix${formatTravelMinutes(estimate.walkMinutes!)}',
                             ),
