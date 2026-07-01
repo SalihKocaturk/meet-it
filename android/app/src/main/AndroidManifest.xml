@@ -54,9 +54,6 @@
     <!-- FCM bağlantısı için internet -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
-    <!-- connectivity_plus — mobil veri / WiFi ağ durumunu okumak için zorunlu -->
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-
     <!-- Google Maps açmak için url_launcher -->
     <queries>
         <intent>
@@ -64,4 +61,8 @@
             <data android:scheme="https"/>
         </intent>
         <intent>
- 
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+    </queries>
+</manifest>
