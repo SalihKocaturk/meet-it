@@ -6,6 +6,7 @@ import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/match/attempt_meet_page.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
+import 'package:meetit/features/history/meeting_history_page.dart';
 import 'package:meetit/features/match/providers/venue_search_provider.dart';
 import 'package:meetit/features/match/widgets/activity_grid.dart';
 import 'package:meetit/features/match/widgets/compatibility_card.dart';
@@ -105,9 +106,8 @@ class MatchPage extends ConsumerWidget {
                       // Başlık
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          padding: const EdgeInsets.fromLTRB(20, 20, 4, 4),
+                          child: Row(
                             children: [
                               Text(
                                 'match.title'.tr(),
@@ -117,12 +117,18 @@ class MatchPage extends ConsumerWidget {
                                   color: context.colors.textPrimary,
                                 ),
                               ),
-                              SizedBox(height: 4),
-                              Text(
-                                'match.subtitle'.tr(),
-                                style: TextStyle(
-                                  fontSize: 13,
+                              const Spacer(),
+                              IconButton(
+                                icon: Icon(
+                                  Iconsax.clock,
                                   color: context.colors.textSecondary,
+                                  size: 22,
+                                ),
+                                tooltip: 'settings.meeting_history'.tr(),
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const MeetingHistoryPage(),
+                                  ),
                                 ),
                               ),
                             ],

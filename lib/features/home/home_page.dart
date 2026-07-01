@@ -145,17 +145,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                               color: context.colors.textPrimary,
                             ),
                           ),
-                          const SizedBox(height: 2),
-                          // Önceden tanımlı ama hiçbir yerde kullanılmayan
-                          // "home.subtitle" çevirisi — başlığın altındaki
-                          // boşluğu dolduran kısa bir alt metin olarak eklendi.
-                          Text(
-                            'home.subtitle'.tr(),
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: context.colors.textSecondary,
-                            ),
-                          ),
                         ],
                       ),
                     ),
