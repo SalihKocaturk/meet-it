@@ -183,4 +183,25 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Ic
+            Icon(
+              isSelected ? activeIcon : icon,
+              color: isSelected ? context.colors.primary : context.colors.hint,
+              size: 24,
+            ),
+            SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                color: isSelected
+                    ? context.colors.primary
+                    : context.colors.hint,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

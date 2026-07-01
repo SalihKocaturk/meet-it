@@ -113,10 +113,7 @@ class _BannerContent extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Sol gösterge noktası (noConnection durumunda yok)
-          if (cfg.dotColor != null) ...[
-            _StatusDot(color: cfg.dotColor!, size: 9, glowing: true),
-            const SizedBox(width: 8),
-          ],
+
           // Mesaj
           Text(
             cfg.text,
@@ -127,6 +124,11 @@ class _BannerContent extends StatelessWidget {
               letterSpacing: 0.1,
             ),
           ),
+          if (cfg.dotColor != null) ...[
+            const SizedBox(width: 8),
+
+            _StatusDot(color: cfg.dotColor!, size: 9, glowing: true),
+          ],
           // Sağ kırmızı nokta (yalnızca noConnection durumunda)
           if (cfg.showRedRight) ...[
             const SizedBox(width: 8),
@@ -140,29 +142,29 @@ class _BannerContent extends StatelessWidget {
   _BannerCfg _config(AppColors c, bool isDark) {
     return switch (status) {
       NetworkStatus.connected => _BannerCfg(
-          text: 'Bağlantı kuruldu',
-          dotColor: c.success,
-          showRedRight: false,
-          bg: c.success.withOpacity(isDark ? 0.15 : 0.10),
-        ),
+        text: 'Bağlantı kuruldu',
+        dotColor: c.success,
+        showRedRight: false,
+        bg: c.success.withOpacity(isDark ? 0.15 : 0.10),
+      ),
       NetworkStatus.maintenance => _BannerCfg(
-          text: 'Sunucu bakımda',
-          dotColor: const Color(0xFFFF8C00),
-          showRedRight: false,
-          bg: const Color(0xFFFF8C00).withOpacity(isDark ? 0.15 : 0.10),
-        ),
+        text: 'Sunucu bakımda',
+        dotColor: const Color(0xFFFF8C00),
+        showRedRight: false,
+        bg: const Color(0xFFFF8C00).withOpacity(isDark ? 0.15 : 0.10),
+      ),
       NetworkStatus.noInternet => _BannerCfg(
-          text: 'Ağ bağlı, internet yok',
-          dotColor: const Color(0xFFFFC107),
-          showRedRight: false,
-          bg: const Color(0xFFFFC107).withOpacity(isDark ? 0.13 : 0.08),
-        ),
+        text: 'Ağ bağlı, internet yok',
+        dotColor: const Color(0xFFFFC107),
+        showRedRight: false,
+        bg: const Color(0xFFFFC107).withOpacity(isDark ? 0.13 : 0.08),
+      ),
       NetworkStatus.noConnection => _BannerCfg(
-          text: 'İnternet bağlantısı yok',
-          dotColor: null,
-          showRedRight: true,
-          bg: c.error.withOpacity(isDark ? 0.13 : 0.07),
-        ),
+        text: 'İnternet bağlantısı yok',
+        dotColor: null,
+        showRedRight: true,
+        bg: c.error.withOpacity(isDark ? 0.13 : 0.07),
+      ),
     };
   }
 }

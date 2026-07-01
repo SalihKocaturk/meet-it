@@ -304,4 +304,16 @@ class MatchPage extends ConsumerWidget {
                   ),
                   const Positioned(
                     left: 0,
-          
+                    right: 0,
+                    bottom: 0,
+                    child: FindVenueButtonBar(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

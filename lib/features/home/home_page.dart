@@ -848,4 +848,13 @@ class _CarouselQuickAction extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: 26,
- 
+        height: 26,
+        decoration: const BoxDecoration(
+          color: Colors.black54,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, size: 15, color: Colors.white),
+      ),
+    );
+  }
+}

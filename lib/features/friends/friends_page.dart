@@ -816,4 +816,12 @@ class _ConnectionTile extends ConsumerWidget {
               child: const Icon(
                 Icons.person_remove_outlined,
                 size: 16,
-       
+                color: Colors.red,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
