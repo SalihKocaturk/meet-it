@@ -59,9 +59,25 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
+    // Bakım durumu — herkes okuyabilir (auth gerekmez), kimse yazamaz.
+    // NetworkService'in katman 3 kontrolü için kullanılır.
+    // Firestore Console'dan: appConfig/maintenance { active: true/false } belgesi oluştur.
+    match /appConfig/maintenance {
+      allow read: if true;
+      allow write: if false;
+    }
+
     match /appConfig/{document=**} {
       allow read: if isSignedIn();
       allow write: if false;
+    }
+
+    // Push bildirim kuyruğu — Cloud Function bu dökümanları okuyup FCM gönderir.
+    // Herhangi bir giriş yapmış kullanıcı başkasına bildirim yazabilir;
+    // okuma sadece kendi bildirimlerine izinli (Cloud Function admin olarak okur).
+    match /notifications/{uid}/{document=**} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow create: if isSignedIn();
     }
 
     match /{document=**} {

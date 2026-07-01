@@ -6,6 +6,7 @@ import 'package:meetit/core/constants/app_theme.dart';
 import 'package:meetit/core/providers/theme_provider.dart';
 import 'package:meetit/core/router/app_router.dart';
 import 'package:meetit/core/services/firestore_seed_service.dart';
+import 'package:meetit/core/services/network_service.dart';
 import 'package:meetit/core/services/notification_service.dart';
 import 'firebase_options.dart';
 
@@ -16,6 +17,9 @@ Future<void> main() async {
 
   // Push bildirim servisini başlat (FCM token + izin + ön plan handler)
   await NotificationService.initialize();
+
+  // 3-katmanlı ağ izleyiciyi başlat (connectivity_plus + HEAD check + Firestore)
+  NetworkService.instance.init();
 
   // Firestore boşsa mock kullanıcılar ekle
   await FirestoreSeedService.seedIfEmpty();
@@ -47,10 +51,4 @@ class MyApp extends ConsumerWidget {
       routerConfig: router,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: themeMode,
-      localizationsDelegates: context.localizationDelegates,
-      supportedLocales: context.supportedLocales,
-      locale: context.locale,
-    );
-  }
-}
+     
