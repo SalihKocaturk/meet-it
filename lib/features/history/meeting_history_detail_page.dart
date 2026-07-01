@@ -99,7 +99,7 @@ class _MeetingHistoryDetailPageState
 
   @override
   Widget build(BuildContext context) {
-    final isDark = ref.watch(themeProvider) == ThemeMode.dark;
+    final isDark = isEffectivelyDark(ref.watch(themeModeProvider));
     final venues = widget.record.venues;
 
     return Scaffold(
@@ -227,25 +227,29 @@ class _MeetingHistoryDetailPageState
                               venue: venues[index],
                               isSelected: index == _selectedIndex,
                               onTap: () {
-                                _onMarkerTap(index);
-                                // Mekan detay sayfasına git
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => VenueDetailPage(
-                                      placeId: venues[index].placeId,
-                                      venueName: venues[index].name,
-                                      venueAddress: venues[index].vicinity,
-                                      venuePhotoUrl:
-                                          venues[index].photoUrls.isNotEmpty
-                                              ? venues[index].photoUrls.first
-                                              : null,
-                                      venuePhotoUrls: venues[index].photoUrls,
-                                      googleRating: venues[index].rating,
-                                      lat: venues[index].lat,
-                                      lng: venues[index].lng,
+                                if (index != _selectedIndex) {
+                                  // İlk tıklama: seç + haritada göster
+                                  _onMarkerTap(index);
+                                } else {
+                                  // Tekrar tıklama (zaten seçili): detay sayfası
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => VenueDetailPage(
+                                        placeId: venues[index].placeId,
+                                        venueName: venues[index].name,
+                                        venueAddress: venues[index].vicinity,
+                                        venuePhotoUrl:
+                                            venues[index].photoUrls.isNotEmpty
+                                                ? venues[index].photoUrls.first
+                                                : null,
+                                        venuePhotoUrls: venues[index].photoUrls,
+                                        googleRating: venues[index].rating,
+                                        lat: venues[index].lat,
+                                        lng: venues[index].lng,
+                                      ),
                                     ),
-                                  ),
-                                );
+                                  );
+                                }
                               },
                             );
                           },
@@ -343,6 +347,25 @@ class _VenueCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         color: context.colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (isSelected)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+                child: Row(
+                  children: [
+                    Icon(Iconsax.arrow_right_3,
+                        size: 10, color: context.colors.primary),
+                    const SizedBox(width: 3),
+                    Text(
+                      'Detay',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: context.colors.primary,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],

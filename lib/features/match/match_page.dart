@@ -14,7 +14,6 @@ import 'package:meetit/features/match/widgets/empty_friends_card.dart';
 import 'package:meetit/features/match/widgets/find_venue_button_bar.dart';
 import 'package:meetit/features/match/widgets/friend_chip.dart';
 import 'package:meetit/features/match/widgets/location_field.dart';
-import 'package:meetit/features/match/widgets/personality_banner.dart';
 import 'package:meetit/features/match/widgets/price_filter.dart';
 import 'package:meetit/features/match/widgets/venue_results_view.dart';
 import 'package:meetit/core/widgets/network_status_banner.dart';
@@ -22,7 +21,6 @@ import 'package:meetit/core/widgets/network_status_banner.dart';
 // Bu dosya artık SADECE MatchPage'i içeriyor — tüm alt widget'lar ve
 // MapLocationPickerPage feature klasör yapısına bölündü:
 //   pages/map_location_picker_page.dart   → MapLocationPickerPage
-//   widgets/personality_banner.dart       → PersonalityBanner
 //   widgets/compatibility_card.dart       → CompatibilityCard
 //   widgets/location_field.dart           → LocationField
 //   widgets/friend_chip.dart              → FriendChip
@@ -131,18 +129,6 @@ class MatchPage extends ConsumerWidget {
                           ),
                         ),
                       ),
-
-                      // Kişilik profili banner
-                      if (currentUser?.personalityProfile != null)
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                            child: PersonalityBanner(
-                              type:
-                                  currentUser!.personalityProfile!.dominantType,
-                            ),
-                          ),
-                        ),
 
                       // Konumun
                       SliverToBoxAdapter(
