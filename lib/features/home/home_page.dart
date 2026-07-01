@@ -14,23 +14,12 @@ import 'package:meetit/features/friends/models/user_friend_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/main/main_page.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
-import 'package:meetit/features/match/providers/saved_venues_provider.dart';
 import 'package:meetit/features/personality/friend_compatibility_page.dart';
 import 'package:meetit/features/personality/personality_analysis_page.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
 import 'package:meetit/core/widgets/network_status_banner.dart';
-import 'package:url_launcher/url_launcher.dart';
-
-/// Bir mekana tekrar tarif almak için Google Maps'i açar — yorum kartlarından
-/// (kullanıcı detay sayfasına girmeden) doğrudan kullanılabilsin diye.
-Future<void> _openDirectionsFromReview(VenueReviewModel review) async {
-  final uri = Uri.parse(review.toPlaceResult().googleMapsUrl);
-  if (await canLaunchUrl(uri)) {
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-}
 
 /// Ana Sayfa (eski Feed sekmesinin yerine geçti).
 ///
@@ -673,9 +662,6 @@ class _ReviewCarouselCard extends ConsumerWidget {
     final freshPhotoUrl =
         fetchedPhotos.value?.isNotEmpty == true ? fetchedPhotos.value!.first : null;
     final displayUrl = freshPhotoUrl ?? review.displayPhotoUrl;
-    final savedVenues = ref.watch(savedVenuesProvider);
-    final isSaved = savedVenues.any((p) => p.placeId == review.placeId);
-
     return GestureDetector(
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
@@ -729,31 +715,6 @@ class _ReviewCarouselCard extends ConsumerWidget {
                             size: 28,
                           ),
                         ),
-                  // Yorumu görüp mekanı detaya girmeden de kaydedebilsin/
-                  // tarif alabilsin diye hızlı aksiyon ikonları — kullanıcı
-                  // talebi: "yorumlardan görüp tarif almak veya kaydetmek
-                  // isteyebilir".
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: Row(
-                      children: [
-                        _CarouselQuickAction(
-                          icon: isSaved
-                              ? Iconsax.save_add
-                              : Iconsax.save_add,
-                          onTap: () => ref
-                              .read(savedVenuesProvider.notifier)
-                              .toggle(review.toPlaceResult()),
-                        ),
-                        const SizedBox(width: 6),
-                        _CarouselQuickAction(
-                          icon: Iconsax.routing,
-                          onTap: () => _openDirectionsFromReview(review),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -831,31 +792,4 @@ class _ReviewCarouselCard extends ConsumerWidget {
   }
 }
 
-/// Yorum carousel kartının fotoğrafı üzerinde duran küçük, yarı saydam
-/// aksiyon butonu (kaydet / tarif al). Kartın kendi `onTap`'i (detay
-/// sayfasına git) ile çakışmasın diye `behavior: opaque` kullanılıyor —
-/// böylece bu küçük dairesel alana dokunulduğunda SADECE bu buton tetiklenir,
-/// karttaki üstteki GestureDetector'a "sızmaz".
-class _CarouselQuickAction extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
 
-  const _CarouselQuickAction({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        width: 26,
-        height: 26,
-        decoration: const BoxDecoration(
-          color: Colors.black54,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, size: 15, color: Colors.white),
-      ),
-    );
-  }
-}

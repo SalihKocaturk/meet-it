@@ -12,6 +12,7 @@ import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/providers/saved_venues_provider.dart';
+import 'package:meetit/features/match/providers/navigated_venues_provider.dart';
 import 'package:meetit/features/match/services/places_service.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
@@ -212,6 +213,11 @@ class VenueDetailPage extends ConsumerWidget {
                           label: 'venue_detail.get_directions'.tr(),
                           filled: false,
                           onTap: () async {
+                            unawaited(
+                              ref
+                                  .read(navigatedVenuesProvider.notifier)
+                                  .add(place),
+                            );
                             final uri = Uri.parse(place.googleMapsUrl);
                             if (await canLaunchUrl(uri)) {
                               await launchUrl(uri,
