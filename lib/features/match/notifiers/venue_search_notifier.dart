@@ -598,5 +598,43 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
     final isHangoutFriendly =
         place.types.any(_hangoutFriendlyTypes.contains);
     if (isHangoutFriendly) return -0.2; // ~200m öne çek
+    return 0.0;
+  }
 
-  
+  Future<Position?> _getLocation() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Konum servisi kapalı. Lütfen açın.');
+      return null;
+    }
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        state = state.copyWith(
+            isLoading: false, errorMessage: 'Konum izni verilmedi.');
+        return null;
+      }
+    }
+    if (permission == LocationPermission.deniedForever) {
+      state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Konum izni kalıcı reddedildi.');
+      return null;
+    }
+
+    try {
+      return await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+    } catch (_) {
+      return await Geolocator.getLastKnownPosition();
+    }
+  }
+}
