@@ -337,6 +337,8 @@
     "update_location": "Update Location",
     "add_friend_code": "Add Friend with Code",
     "add_friend_code_desc": "Add a friend or share your 6-digit code",
+    "meeting_history": "Past Meetups",
+    "meeting_history_desc": "View previously searched venues",
     "notifications": "Notifications",
     "language": "Language",
     "about": "About",
@@ -508,6 +510,15 @@
     "privacy_s5_body": "Your data is protected using industry-standard encryption methods and stored securely on Firebase infrastructure. However, no system is 100% secure — if you notice anything suspicious, please contact us.",
     "privacy_s6_title": "6. Your Rights and Contact",
     "privacy_s6_body": "You have the right to access, correct, or request deletion of your data. When you delete your account, your personal data will be removed from our systems within 30 days. For privacy-related questions, please contact us at meetit.support@gmail.com."
+  },
+  "history": {
+    "title": "Past Meetups",
+    "empty_title": "No meetups yet",
+    "empty_desc": "When you search for venues with a friend or on your own, the results will appear here.",
+    "solo": "Solo",
+    "venue_count": "{count} venues",
+    "detail_title": "Meetup Detail",
+    "no_venues": "No venues found for this record."
   },
   "friend_compat": {
     "title": "Friend Compatibility",

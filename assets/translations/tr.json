@@ -337,6 +337,8 @@
     "update_location": "Konum Güncelle",
     "add_friend_code": "Kodla Arkadaş Ekle",
     "add_friend_code_desc": "6 haneli kod ile arkadaş ekle veya kodunu paylaş",
+    "meeting_history": "Geçmiş Buluşmalar",
+    "meeting_history_desc": "Daha önce aranan mekanları gör",
     "notifications": "Bildirimler",
     "language": "Dil",
     "about": "Hakkında",
@@ -508,6 +510,15 @@
     "privacy_s5_body": "Verileriniz endüstri standardı şifreleme yöntemleriyle korunmaktadır. Firebase altyapısı üzerinden güvenli biçimde saklanmaktadır. Bununla birlikte hiçbir sistem %100 güvenli değildir; şüpheli bir durum fark etmeniz halinde lütfen bize bildirin.",
     "privacy_s6_title": "6. Haklarınız ve İletişim",
     "privacy_s6_body": "Verilerinize erişme, düzeltme veya silme talebinde bulunma hakkına sahipsiniz. Hesabınızı sildiğinizde kişisel verileriniz 30 gün içinde sistemlerimizden kaldırılır. Gizlilik ile ilgili sorularınız için meetit.support@gmail.com adresine ulaşabilirsiniz."
+  },
+  "history": {
+    "title": "Geçmiş Buluşmalar",
+    "empty_title": "Henüz buluşma kaydın yok",
+    "empty_desc": "Bir arkadaşınla veya tek başına mekan aradığında, bulunan mekanlar burada görünecek.",
+    "solo": "Tek başıma",
+    "venue_count": "{count} mekan",
+    "detail_title": "Buluşma Detayı",
+    "no_venues": "Bu kayıtta mekan bulunamadı."
   },
   "friend_compat": {
     "title": "Arkadaş Uyumu",

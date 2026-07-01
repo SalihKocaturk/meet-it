@@ -8,6 +8,8 @@ import 'package:meetit/core/services/distance_matrix_service.dart';
 import 'package:meetit/core/services/notification_service.dart';
 import 'package:meetit/core/utils/travel_time_estimator.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
+import 'package:meetit/features/history/models/meeting_record.dart';
+import 'package:meetit/features/history/services/meeting_history_service.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/services/places_service.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
@@ -256,16 +258,8 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
       friendLng: friendLng,
     );
 
-    // Arkadaşla buluşma araması yapıldığında arkadaşa bildirim gönder
-    if (friendUid != null) {
-      final myName = ref.read(currentUserProvider)?.name ?? '';
-      NotificationService.sendNotification(
-        toUid: friendUid,
-        type: 'meetup_invite',
-        fromName: myName,
-        fromUid: ref.read(authProvider).user?.uid,
-      ).ignore();
-    }
+    // Arkadaşla buluşma araması yapıldığında bildirim MEKAN BULUNUNCA gönderilir
+    // (aşağıdaki _saveMeetingHistory içinde — burada artık gönderilmiyor).
 
     // ── Places API ────────────────────────────────────────────────────────
     final excludeIds =
@@ -378,6 +372,16 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
           isLoading: false,
         );
 
+        // Geçmiş kaydet + arkadaşa bildirim gönder (arka planda)
+        _saveMeetingHistory(
+          allVenues: sorted,
+          friendUid: friendUid,
+          selectedActivities: selectedActivities,
+          searchLat: searchLat,
+          searchLng: searchLng,
+          hasMidpoint: usingMidpoint,
+        );
+
         // Ulaşım süreleri her zaman bu kullanıcının GERÇEK konumundan
         // (myLat/myLng) hesaplanır — orta noktadan değil. Orta nokta sadece
         // mekan ARAMASI için kullanılıyor; kullanıcı "buraya kaç dakikada
@@ -390,6 +394,16 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
           allVenues: results,
           currentPage: 0,
           isLoading: false,
+        );
+
+        // Geçmiş kaydet (tek başına modda bildirim atlanır)
+        _saveMeetingHistory(
+          allVenues: results,
+          friendUid: friendUid,
+          selectedActivities: selectedActivities,
+          searchLat: searchLat,
+          searchLng: searchLng,
+          hasMidpoint: usingMidpoint,
         );
 
         _fetchTravelEstimates(myLat: myLat, myLng: myLng, venues: results);
@@ -428,100 +442,86 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
     }
   }
 
-  void nextPage() {
-    if (state.hasNextPage) {
-      state = state.copyWith(currentPage: state.currentPage + 1);
-    }
-  }
-
-  void prevPage() {
-    if (state.hasPrevPage) {
-      state = state.copyWith(currentPage: state.currentPage - 1);
-    }
-  }
-
-  void reset() => state = const VenueSearchState();
-
-  double _haversineKm(double lat1, double lon1, double lat2, double lon2) {
-    const r = 6371.0;
-    final dLat = _deg2rad(lat2 - lat1);
-    final dLon = _deg2rad(lon2 - lon1);
-    final a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(_deg2rad(lat1)) *
-            cos(_deg2rad(lat2)) *
-            sin(dLon / 2) *
-            sin(dLon / 2);
-    return r * 2 * atan2(sqrt(a), sqrt(1 - a));
-  }
-
-  double _deg2rad(double deg) => deg * pi / 180;
-
-  // ── Buluşma noktasına yakınlık önceliği: "zaman geçirilebilecek yer" mi? ────
-  //
-  // Oturup sohbet edilebilecek/zaman geçirilebilecek type'lar — bunlar orta
-  // nokta sıralamasında hafifçe öne çekilir.
-  static const Set<String> _hangoutFriendlyTypes = {
-    'cafe', 'restaurant', 'park', 'museum', 'art_gallery', 'library',
-    'bar', 'night_club', 'movie_theater', 'tourist_attraction', 'bakery',
-  };
-
-  // İsminden anlaşılan hızlı/ayaküstü tüketim yerleri — "cafe"/"restaurant"
-  // gibi oturmaya uygun bir type'ı da YOKSA hafifçe geriye itilir (tamamen
-  // elenmez, sadece eşit mesafede gerçek bir "mekan"ın önüne geçmesin).
-  static const List<String> _quickServiceNameKeywords = [
-    'büfe', 'fast food', 'lahmacun', 'dürüm', 'kebapçı', 'tost ', 'çorbacı',
-    'döner ',
-  ];
-
-  double _hangoutAdjustmentKm(PlaceResult place) {
-    final lowerName = place.name.toLowerCase();
-    final isQuickServiceName =
-        _quickServiceNameKeywords.any(lowerName.contains) &&
-            !place.types.contains('cafe') &&
-            !place.types.contains('restaurant');
-    if (isQuickServiceName) return 0.35; // ~350m geriye it
-
-    final isHangoutFriendly =
-        place.types.any(_hangoutFriendlyTypes.contains);
-    if (isHangoutFriendly) return -0.2; // ~200m öne çek
-
-    return 0.0;
-  }
-
-  Future<Position?> _getLocation() async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      state = state.copyWith(
-          isLoading: false,
-          errorMessage: 'Konum servisi kapalı. Lütfen açın.');
-      return null;
-    }
-
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        state = state.copyWith(
-            isLoading: false, errorMessage: 'Konum izni verilmedi.');
-        return null;
-      }
-    }
-    if (permission == LocationPermission.deniedForever) {
-      state = state.copyWith(
-          isLoading: false,
-          errorMessage: 'Konum izni kalıcı reddedildi.');
-      return null;
-    }
-
+  /// Başarılı aramanın ardından Firestore'a buluşma kaydı yazar.
+  ///
+  /// `await` EDİLMİYOR — ana akışı bloklamaz. Yazma hatası sessizce yutulur
+  /// (geçmiş kayıt başarısız olsa bile kullanıcı mekan sonuçlarını görür).
+  /// Arkadaşla arama yapıldıysa `venue_found` tipiyle push bildirimi gönderilir.
+  Future<void> _saveMeetingHistory({
+    required List<PlaceResult> allVenues,
+    required String? friendUid,
+    required List<String> selectedActivities,
+    required double searchLat,
+    required double searchLng,
+    required bool hasMidpoint,
+  }) async {
     try {
-      return await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 10),
-        ),
+      final me = ref.read(currentUserProvider);
+      if (me == null) return;
+      final myUid = ref.read(authProvider).user?.uid;
+      if (myUid == null) return;
+
+      // Arkadaşın adını ve fotoğrafını Firestore'dan çek
+      String? friendName;
+      String? friendPhotoUrl;
+      if (friendUid != null) {
+        try {
+          final doc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(friendUid)
+              .get();
+          if (doc.exists) {
+            friendName = doc.data()?['name'] as String?;
+            friendPhotoUrl = doc.data()?['photoUrl'] as String?;
+          }
+        } catch (_) {}
+      }
+
+      // PlaceResult → VenueSnapshot dönüşümü
+      final snapshots = allVenues.map((p) {
+        final cachedUrls = p.photoReferences
+            .where((r) => r.startsWith('https://'))
+            .take(3)
+            .toList();
+        return VenueSnapshot(
+          placeId: p.placeId,
+          name: p.name,
+          vicinity: p.vicinity,
+          lat: p.lat,
+          lng: p.lng,
+          rating: p.rating,
+          photoUrls: cachedUrls,
+          types: p.types,
+          priceLevel: p.priceLevel,
+        );
+      }).toList();
+
+      final participantUids = [
+        myUid,
+        if (friendUid != null) friendUid,
+      ];
+
+      final record = MeetingRecord(
+        id: '', // Firestore otomatik üretir
+        initiatorUid: myUid,
+        initiatorName: me.name,
+        initiatorPhotoUrl: me.photoUrl,
+        friendUid: friendUid,
+        friendName: friendName,
+        friendPhotoUrl: friendPhotoUrl,
+        activities: selectedActivities,
+        venues: snapshots,
+        searchLat: searchLat,
+        searchLng: searchLng,
+        hasMidpoint: hasMidpoint,
+        createdAt: DateTime.now(),
+        participantUids: participantUids,
       );
-    } catch (_) {
-      return await Geolocator.getLastKnownPosition();
-    }
-  }
-}
+
+      await MeetingHistoryService.save(record);
+
+      // Arkadaşa bildirim gönder
+      if (friendUid != null) {
+        NotificationService.sendNotification(
+          toUid: friendUid,
+          type: 

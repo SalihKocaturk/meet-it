@@ -66,6 +66,10 @@ exports.sendPushNotification = onDocumentCreated(
         title = "Buluşma Daveti 📍";
         body = `${data.fromName} seninle buluşmak istiyor!`;
         break;
+      case "venue_found":
+        title = "Mekan Bulundu 🗺️";
+        body = `${data.fromName} seninle buluşmak için mekan buldu!`;
+        break;
       default:
         body = "Yeni bir bildirim aldın.";
     }
@@ -112,10 +116,4 @@ exports.sendPushNotification = onDocumentCreated(
         error.code === "messaging/invalid-registration-token"
       ) {
         await db.collection("users").doc(uid).update({
-          fcmToken: admin.firestore.FieldValue.delete(),
-        });
-        console.log(`[sendPushNotification] Geçersiz token temizlendi: ${uid}`);
-      }
-    }
-  }
-);
+          fcmToken: a

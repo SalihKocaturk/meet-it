@@ -232,6 +232,13 @@ class SettingsPage extends ConsumerWidget {
                           ),
                         ),
                       ),
+                      _SettingsItem(
+                        icon: Icons.history_rounded,
+                        title: 'settings.meeting_history'.tr(),
+                        subtitle: 'settings.meeting_history_desc'.tr(),
+                        onTap: () =>
+                            context.push(AppRoutes.meetingHistory),
+                      ),
                     ],
                   ),
 
@@ -419,17 +426,4 @@ class _SettingsItem extends StatelessWidget {
           ? Text(
               subtitle!,
               style: TextStyle(
-                fontSize: 11,
-                color: context.colors.textSecondary,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            )
-          : null,
-      trailing:
-          trailing ??
-          Icon(Icons.arrow_forward_ios, size: 14, color: context.colors.hint),
-      onTap: onTap,
-    );
-  }
-}
+       

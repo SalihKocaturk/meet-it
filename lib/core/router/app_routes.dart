@@ -20,4 +20,7 @@ abstract class AppRoutes {
   // Yasal
   static const terms = '/terms';
   static const privacyPolicy = '/privacy-policy';
+
+  // Geçmiş buluşmalar
+  static const meetingHistory = '/meeting-history';
 }
