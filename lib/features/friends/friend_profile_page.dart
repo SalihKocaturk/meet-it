@@ -10,8 +10,6 @@ import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
 
-import '../personality/models/personality_model.dart';
-
 /// Bir arkadaşın profilini gösteren sayfa.
 ///
 /// Kendi Profil sekmesiyle (bkz. profile_page.dart) BİREBİR aynı düzeni
@@ -30,7 +28,6 @@ class FriendProfilePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = friend.personalityProfile;
     final reviewsAsync = ref.watch(myReviewsProvider(friend.uid));
     final reviews = reviewsAsync.value ?? const <VenueReviewModel>[];
     final totalLikes = reviews.fold(0, (sum, r) => sum + r.likeCount);
@@ -137,25 +134,6 @@ class FriendProfilePage extends ConsumerWidget {
                               ),
                             ],
                           ),
-                          if (profile != null) ...[
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Text(
-                                  profile.dominantType.emoji,
-                                  style: const TextStyle(fontSize: 13),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  profile.dominantType.displayName,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: context.colors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
                         ],
                       ),
                     ),
@@ -390,3 +368,4 @@ class _FriendReviewPlaceholderTile extends StatelessWidget {
     );
   }
 }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    

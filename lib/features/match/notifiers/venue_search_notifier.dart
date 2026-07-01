@@ -132,6 +132,10 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
   @override
   VenueSearchState build() => const VenueSearchState();
 
+  /// Arama sonuçlarını ve state'i başlangıç değerine sıfırlar.
+  /// Arkadaş değiştiğinde veya yeni bir akış başlatılırken çağrılır.
+  void reset() => state = const VenueSearchState();
+
   // ── Kısa süreli "az önce gösterilen mekan" hafızası ────────────────────────
   //
   // Kullanıcı şikayeti: aynı arkadaşla peş peşe 3 kez arama yapınca 1.
@@ -515,12 +519,4 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
         searchLng: searchLng,
         hasMidpoint: hasMidpoint,
         createdAt: DateTime.now(),
-        participantUids: participantUids,
-      );
-
-      await MeetingHistoryService.save(record);
-
-      // Arkadaşa bildirim gönder
-      if (friendUid != null) {
-        NotificationService.sendNotification(
-          to
+        participantUi
