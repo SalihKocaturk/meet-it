@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
@@ -730,21 +731,15 @@ class _ReviewCarouselCard extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        ...List.generate(
-                          5,
-                          (i) => Icon(
-                            i < review.rating
-                                ? Iconsax.magic_star
-                                : Iconsax.medal_star,
-                            size: 12,
-                            color: i < review.rating
-                                ? const Color(0xFFFFB800)
-                                : context.colors.hint,
-                          ),
-                        ),
-                      ],
+                    RatingBarIndicator(
+                      rating: review.rating.toDouble(),
+                      itemBuilder: (context, _) => const Icon(
+                        Icons.star_rounded,
+                        color: Color(0xFFFFB800),
+                      ),
+                      itemCount: 5,
+                      itemSize: 13,
+                      unratedColor: Colors.grey.withOpacity(0.3),
                     ),
                     if (review.comment != null &&
                         review.comment!.isNotEmpty) ...[

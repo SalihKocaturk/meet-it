@@ -4,19 +4,19 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:iconsax/iconsax.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/widgets/app_alert.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/providers/saved_venues_provider.dart';
-import 'package:meetit/features/match/providers/navigated_venues_provider.dart';
 import 'package:meetit/features/match/services/places_service.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
-import 'package:meetit/core/widgets/app_alert.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Bir mekanın placeId'sinden TÜM Google fotoğraflarını çeker.
@@ -27,8 +27,10 @@ import 'package:url_launcher/url_launcher.dart';
 /// Firestore'daki yorum dokümanında veya basitleştirilmiş PlaceResult'ta
 /// tek foto olarak saklı. Galerinin gerçekten "galeri" olabilmesi için
 /// placeId üzerinden Place Details ile ek fotoğraflar burada çekiliyor.
-final venuePhotosProvider =
-    FutureProvider.family<List<String>, String>((ref, placeId) {
+final venuePhotosProvider = FutureProvider.family<List<String>, String>((
+  ref,
+  placeId,
+) {
   return PlacesService.fetchPhotoUrls(placeId);
 });
 
@@ -93,7 +95,8 @@ class VenueDetailPage extends ConsumerWidget {
     // kontrol ediliyor (asıl yazma anındaki son kontrol review_notifier'da).
     final currentUser = ref.watch(currentUserProvider);
     final reviewsForCheck = reviewsAsync.value ?? const <VenueReviewModel>[];
-    final hasOwnReview = currentUser != null &&
+    final hasOwnReview =
+        currentUser != null &&
         reviewsForCheck.any((r) => r.authorUid == currentUser.uid);
     // placeId üzerinden Place Details'ten çekilen TÜM resmi fotoğraflar —
     // sayfa hangi yoldan açılmış olursa olsun (sadece tek venuePhotoUrl
@@ -140,8 +143,9 @@ class VenueDetailPage extends ConsumerWidget {
             expandedHeight: hasPhotos ? 260 : 0,
             pinned: true,
             backgroundColor: context.colors.card,
-            foregroundColor:
-                hasPhotos ? Colors.white : context.colors.textPrimary,
+            foregroundColor: hasPhotos
+                ? Colors.white
+                : context.colors.textPrimary,
             leading: GestureDetector(
               onTap: () => Navigator.pop(context),
               child: Container(
@@ -194,9 +198,7 @@ class VenueDetailPage extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: _VenueActionButton(
-                          icon: isSaved
-                              ? Iconsax.save_add
-                              : Iconsax.save_add,
+                          icon: isSaved ? Iconsax.save_add : Iconsax.save_add,
                           label: isSaved
                               ? 'venue_detail.saved'.tr()
                               : 'venue_detail.save'.tr(),
@@ -220,8 +222,10 @@ class VenueDetailPage extends ConsumerWidget {
                             );
                             final uri = Uri.parse(place.googleMapsUrl);
                             if (await canLaunchUrl(uri)) {
-                              await launchUrl(uri,
-                                  mode: LaunchMode.externalApplication);
+                              await launchUrl(
+                                uri,
+                                mode: LaunchMode.externalApplication,
+                              );
                             }
                           },
                         ),
@@ -232,9 +236,17 @@ class VenueDetailPage extends ConsumerWidget {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(Iconsax.magic_star,
-                            size: 18, color: Color(0xFFFFB800)),
-                        const SizedBox(width: 4),
+                        RatingBarIndicator(
+                          rating: googleRating!,
+                          itemBuilder: (context, _) => const Icon(
+                            Icons.star_rounded,
+                            color: Color(0xFFFFB800),
+                          ),
+                          itemCount: 5,
+                          itemSize: 16,
+                          unratedColor: Colors.grey.withOpacity(0.3),
+                        ),
+                        const SizedBox(width: 6),
                         Text(
                           googleRating!.toStringAsFixed(1),
                           style: TextStyle(
@@ -246,8 +258,9 @@ class VenueDetailPage extends ConsumerWidget {
                         if (googleRatingCount != null) ...[
                           const SizedBox(width: 4),
                           Text(
-                            'venue_detail.rating_count'
-                                .tr(namedArgs: {'count': '$googleRatingCount'}),
+                            'venue_detail.rating_count'.tr(
+                              namedArgs: {'count': '$googleRatingCount'},
+                            ),
                             style: TextStyle(
                               fontSize: 12,
                               color: context.colors.textSecondary,
@@ -337,50 +350,52 @@ class VenueDetailPage extends ConsumerWidget {
                       text: 'venue_detail.already_reviewed'.tr(),
                     )
                   : hasVisited
-                      ? SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () => showAddReviewSheet(
-                              context,
-                              ref,
-                              PlaceResult(
-                                placeId: placeId,
-                                name: venueName,
-                                vicinity: venueAddress,
-                                // photoReference bilinmiyor (sadece hazır URL
-                                // var); gerçek fotoğrafı venuePhotoUrlOverride
-                                // ile veriyoruz.
-                                photoReference: null,
-                                rating: googleRating,
-                                userRatingsTotal: googleRatingCount,
-                                lat: lat ?? 0,
-                                lng: lng ?? 0,
-                              ),
-                              overridePhotoUrl: venuePhotoUrl,
-                            ),
-                            icon: const Icon(Iconsax.message_add_1,
-                                color: Colors.white),
-                            label: Text(
-                              'venue_detail.add_review'.tr(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: context.colors.primary,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 0,
-                            ),
+                  ? SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => showAddReviewSheet(
+                          context,
+                          ref,
+                          PlaceResult(
+                            placeId: placeId,
+                            name: venueName,
+                            vicinity: venueAddress,
+                            // photoReference bilinmiyor (sadece hazır URL
+                            // var); gerçek fotoğrafı venuePhotoUrlOverride
+                            // ile veriyoruz.
+                            photoReference: null,
+                            rating: googleRating,
+                            userRatingsTotal: googleRatingCount,
+                            lat: lat ?? 0,
+                            lng: lng ?? 0,
                           ),
-                        )
-                      : _InfoNote(
-                          icon: Iconsax.info_circle,
-                          text: 'venue_detail.must_visit_first'.tr(),
+                          overridePhotoUrl: venuePhotoUrl,
                         ),
+                        icon: const Icon(
+                          Iconsax.message_add_1,
+                          color: Colors.white,
+                        ),
+                        label: Text(
+                          'venue_detail.add_review'.tr(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: context.colors.primary,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                      ),
+                    )
+                  : _InfoNote(
+                      icon: Iconsax.info_circle,
+                      text: 'venue_detail.must_visit_first'.tr(),
+                    ),
             ),
           ),
         ],
@@ -504,8 +519,10 @@ class _VenuePhotoGalleryState extends State<_VenuePhotoGallery>
     vsync: this,
     duration: const Duration(seconds: 8),
   )..repeat(reverse: true);
-  late final Animation<double> _zoom = Tween<double>(begin: 1.0, end: 1.12)
-      .animate(CurvedAnimation(parent: _zoomController, curve: Curves.easeInOut));
+  late final Animation<double> _zoom = Tween<double>(
+    begin: 1.0,
+    end: 1.12,
+  ).animate(CurvedAnimation(parent: _zoomController, curve: Curves.easeInOut));
 
   @override
   void initState() {
@@ -542,18 +559,19 @@ class _VenuePhotoGalleryState extends State<_VenuePhotoGallery>
           onPageChanged: (i) => setState(() => _page = i),
           itemBuilder: (context, i) => AnimatedBuilder(
             animation: _zoom,
-            builder: (context, child) => Transform.scale(
-              scale: _zoom.value,
-              child: child,
-            ),
+            builder: (context, child) =>
+                Transform.scale(scale: _zoom.value, child: child),
             child: CachedNetworkImage(
               imageUrl: widget.photos[i],
               fit: BoxFit.cover,
               placeholder: (_, _) => Container(color: context.colors.border),
               errorWidget: (_, _, _) => Container(
                 color: context.colors.primary.withOpacity(0.1),
-                child: Icon(Iconsax.location,
-                    size: 48, color: context.colors.primary),
+                child: Icon(
+                  Iconsax.location,
+                  size: 48,
+                  color: context.colors.primary,
+                ),
               ),
             ),
           ),
@@ -613,8 +631,7 @@ class _VenuePhotoGalleryState extends State<_VenuePhotoGallery>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Iconsax.gallery,
-                      size: 12, color: Colors.white),
+                  const Icon(Iconsax.gallery, size: 12, color: Colors.white),
                   const SizedBox(width: 4),
                   Text(
                     '${_page + 1}/${widget.photos.length}',
@@ -654,13 +671,20 @@ class _ReviewTileState extends ConsumerState<_ReviewTile>
   );
   late final Animation<double> _heartScale = TweenSequence<double>([
     TweenSequenceItem(
-        tween: Tween(begin: 0.0, end: 1.2)
-            .chain(CurveTween(curve: Curves.easeOutBack)),
-        weight: 35),
+      tween: Tween(
+        begin: 0.0,
+        end: 1.2,
+      ).chain(CurveTween(curve: Curves.easeOutBack)),
+      weight: 35,
+    ),
     TweenSequenceItem(tween: ConstantTween(1.2), weight: 20),
     TweenSequenceItem(
-        tween: Tween(begin: 1.2, end: 0.0).chain(CurveTween(curve: Curves.easeIn)),
-        weight: 45),
+      tween: Tween(
+        begin: 1.2,
+        end: 0.0,
+      ).chain(CurveTween(curve: Curves.easeIn)),
+      weight: 45,
+    ),
   ]).animate(_heartController);
 
   VenueReviewModel get review => widget.review;
@@ -729,128 +753,124 @@ class _ReviewTileState extends ConsumerState<_ReviewTile>
         alignment: Alignment.center,
         children: [
           Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: context.colors.card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.colors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircularAvatar(
-                name: review.authorName,
-                photoUrl: review.authorPhotoUrl,
-                radius: 18,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: context.colors.card,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: context.colors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Text(
-                      review.authorName,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: context.colors.textPrimary,
+                    CircularAvatar(
+                      name: review.authorName,
+                      photoUrl: review.authorPhotoUrl,
+                      radius: 18,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            review.authorName,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: context.colors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            _timeAgo(review.createdAt),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: context.colors.hint,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    Text(
-                      _timeAgo(review.createdAt),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: context.colors.hint,
+                    RatingBarIndicator(
+                      rating: review.rating.toDouble(),
+                      itemBuilder: (context, _) => const Icon(
+                        Icons.star_rounded,
+                        color: Color(0xFFFFB800),
                       ),
+                      itemCount: 5,
+                      itemSize: 13,
+                      unratedColor: Colors.grey.withOpacity(0.3),
                     ),
+                    if (isOwn) ...[
+                      const SizedBox(width: 4),
+                      GestureDetector(
+                        onTap: () => _confirmDelete(context, ref, user.uid),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(
+                            Iconsax.note_remove,
+                            size: 18,
+                            color: context.colors.error,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
-              ),
-              Row(
-                children: List.generate(
-                  5,
-                  (i) => Icon(
-                    i < review.rating
-                        ? Iconsax.magic_star
-                        : Iconsax.medal_star,
-                    size: 14,
-                    color: i < review.rating
-                        ? const Color(0xFFFFB800)
-                        : context.colors.hint,
-                  ),
-                ),
-              ),
-              if (isOwn) ...[
-                const SizedBox(width: 4),
-                GestureDetector(
-                  onTap: () => _confirmDelete(context, ref, user!.uid),
-                  child: Padding(
-                    padding: const EdgeInsets.all(4),
-                    child: Icon(
-                      Iconsax.note_remove,
-                      size: 18,
-                      color: context.colors.error,
+                if (review.comment != null && review.comment!.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    review.comment!,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: context.colors.textPrimary,
+                      height: 1.4,
                     ),
                   ),
-                ),
-              ],
-            ],
-          ),
-          if (review.comment != null && review.comment!.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(
-              review.comment!,
-              style: TextStyle(
-                fontSize: 13,
-                color: context.colors.textPrimary,
-                height: 1.4,
-              ),
-            ),
-          ],
-          if (review.photoUrl != null) ...[
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: CachedNetworkImage(
-                imageUrl: review.photoUrl!,
-                height: 160,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            ),
-          ],
-          const SizedBox(height: 10),
-          GestureDetector(
-            onTap: user == null ? null : () => _toggleLike(ref, user.uid),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  user != null && review.isLikedBy(user.uid)
-                      ? Iconsax.heart
-                      : Iconsax.heart,
-                  size: 16,
-                  color: user != null && review.isLikedBy(user.uid)
-                      ? context.colors.error
-                      : context.colors.hint,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${review.likeCount}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: context.colors.textSecondary,
+                ],
+                if (review.photoUrl != null) ...[
+                  const SizedBox(height: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: CachedNetworkImage(
+                      imageUrl: review.photoUrl!,
+                      height: 160,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 10),
+                GestureDetector(
+                  onTap: user == null ? null : () => _toggleLike(ref, user.uid),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        user != null && review.isLikedBy(user.uid)
+                            ? Iconsax.heart
+                            : Iconsax.heart,
+                        size: 16,
+                        color: user != null && review.isLikedBy(user.uid)
+                            ? context.colors.error
+                            : context.colors.hint,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${review.likeCount}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: context.colors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
           ),
           // Çift dokunmada kısaca büyüyüp kaybolan kalp — gerçek kullanıcı
           // etkileşimini engellememesi için IgnorePointer ile sarılı.
@@ -862,10 +882,7 @@ class _ReviewTileState extends ConsumerState<_ReviewTile>
                 size: 90,
                 color: Colors.white,
                 shadows: [
-                  Shadow(
-                    color: Colors.black.withOpacity(0.35),
-                    blurRadius: 16,
-                  ),
+                  Shadow(color: Colors.black.withOpacity(0.35), blurRadius: 16),
                 ],
               ),
             ),
@@ -892,7 +909,8 @@ Future<void> showAddReviewSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) => _AddReviewSheet(venue: venue, overridePhotoUrl: overridePhotoUrl),
+    builder: (_) =>
+        _AddReviewSheet(venue: venue, overridePhotoUrl: overridePhotoUrl),
   );
 }
 
@@ -944,7 +962,9 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
 
     setState(() => _isSubmitting = true);
 
-    final added = await ref.read(reviewProvider.notifier).addReview(
+    final added = await ref
+        .read(reviewProvider.notifier)
+        .addReview(
           authorUid: user.uid,
           authorName: user.name,
           authorPhotoUrl: user.photoUrl,
@@ -1005,7 +1025,9 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
     // klavye açıkken aşağı kaydırılabilir hale getirmek — bu sayede
     // sabit yükseklikli yıldızlar/foto kutusu/buton hiçbir zaman taşmıyor.
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
@@ -1026,7 +1048,10 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
               ),
               Text(
                 'review.add_title'.tr(),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
@@ -1046,26 +1071,22 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
                 ),
               ),
               const SizedBox(height: 8),
-              Row(
-                children: List.generate(5, (i) {
-                  final star = i + 1;
-                  return GestureDetector(
-                    onTap: () =>
-                        setState(() => _rating = _rating == star ? 0 : star),
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: Icon(
-                        _rating >= star
-                            ? Iconsax.magic_star
-                            : Iconsax.medal_star,
-                        size: 36,
-                        color: _rating >= star
-                            ? const Color(0xFFFFB800)
-                            : context.colors.hint,
-                      ),
-                    ),
-                  );
-                }),
+              RatingBar.builder(
+                initialRating: _rating.toDouble(),
+                minRating: 0,
+                direction: Axis.horizontal,
+                allowHalfRating: false,
+                itemCount: 5,
+                itemSize: 36,
+                itemPadding:
+                    const EdgeInsets.symmetric(horizontal: 3),
+                unratedColor: Colors.grey.withOpacity(0.3),
+                itemBuilder: (context, _) => const Icon(
+                  Icons.star_rounded,
+                  color: Color(0xFFFFB800),
+                ),
+                onRatingUpdate: (value) =>
+                    setState(() => _rating = value.toInt()),
               ),
               const SizedBox(height: 16),
               Text(
@@ -1083,7 +1104,10 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
                 maxLength: 280,
                 decoration: InputDecoration(
                   hintText: 'review.comment_hint'.tr(),
-                  hintStyle: TextStyle(color: context.colors.hint, fontSize: 14),
+                  hintStyle: TextStyle(
+                    color: context.colors.hint,
+                    fontSize: 14,
+                  ),
                   filled: true,
                   fillColor: context.colors.card,
                   contentPadding: const EdgeInsets.all(14),
@@ -1097,7 +1121,10 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: context.colors.primary, width: 1.5),
+                    borderSide: BorderSide(
+                      color: context.colors.primary,
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
@@ -1201,4 +1228,3 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
     );
   }
 }
-

@@ -57,7 +57,7 @@ class MeetingHistoryPage extends ConsumerWidget {
         ),
         data: (records) {
           if (records.isEmpty) {
-            return _EmptyState();
+            return const _EmptyState();
           }
           return ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -87,6 +87,8 @@ class MeetingHistoryPage extends ConsumerWidget {
 // ── Boş durum ──────────────────────────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -140,6 +142,16 @@ class _HistoryCard extends StatelessWidget {
     required this.onTap,
   });
 
+  String get _myName {
+    if (record.initiatorUid == myUid) return record.initiatorName;
+    return record.friendName ?? '?';
+  }
+
+  String? get _myPhoto {
+    if (record.initiatorUid == myUid) return record.initiatorPhotoUrl;
+    return record.friendPhotoUrl;
+  }
+
   String? get _partnerName {
     if (record.isSolo) return null;
     if (record.initiatorUid == myUid) return record.friendName;
@@ -165,99 +177,162 @@ class _HistoryCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: context.colors.border),
         ),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Üst kısım: foto + kişi bilgisi + tarih ─────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-              child: Row(
-                children: [
-                  // Avatar / ikon
-                  if (record.isSolo)
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: context.colors.primary.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Iconsax.profile_circle,
-                        color: context.colors.primary,
-                        size: 24,
-                      ),
-                    )
-                  else if (_partnerPhoto != null)
-                    CircleAvatar(
-                      radius: 22,
-                      backgroundImage: NetworkImage(_partnerPhoto!),
-                    )
-                  else
-                    CircularAvatar(
-                      name: _partnerName ?? '?',
-                      radius: 22,
-                    ),
+            // ── Üst kısım: avatarlar + isim/tarih + ok ─────────────────
+            Row(
+              children: [
+                // Çakışan avatarlar
+                _AvatarStack(
+                  myName: _myName,
+                  myPhoto: _myPhoto,
+                  partnerName: _partnerName,
+                  partnerPhoto: _partnerPhoto,
+                  cardColor: context.colors.card,
+                ),
+                const SizedBox(width: 12),
 
-                  const SizedBox(width: 12),
-
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          record.isSolo
-                              ? 'history.solo'.tr()
-                              : (_partnerName ?? '?'),
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: context.colors.textPrimary,
-                          ),
+                // İsim + tarih
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        record.isSolo
+                            ? 'history.solo'.tr()
+                            : (_partnerName ?? '?'),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: context.colors.textPrimary,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          dateStr,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: context.colors.textSecondary,
-                          ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        dateStr,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: context.colors.textSecondary,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
+                ),
 
-                  // Ok
-                  Icon(
-                    Iconsax.arrow_right_3,
-                    size: 13,
-                    color: context.colors.hint,
-                  ),
-                ],
-              ),
+                // Mekan sayısı + ok
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Iconsax.arrow_right_3,
+                      size: 13,
+                      color: context.colors.hint,
+                    ),
+                    if (record.venues.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        '${record.venues.length} mekan',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: context.colors.hint,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
             ),
 
             // ── Aktivite chip'leri ─────────────────────────────────────
-            if (record.activities.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: record.activities
-                      .map(
-                        (a) => _Chip(label: a),
-                      )
-                      .toList(),
-                ),
+            if (record.activities.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children:
+                    record.activities.map((a) => _Chip(label: a)).toList(),
               ),
-
+            ],
           ],
         ),
       ),
     );
   }
 }
+
+// ── Çakışan avatar çifti ────────────────────────────────────────────────────
+
+class _AvatarStack extends StatelessWidget {
+  final String myName;
+  final String? myPhoto;
+  final String? partnerName;
+  final String? partnerPhoto;
+  final Color cardColor;
+
+  const _AvatarStack({
+    required this.myName,
+    required this.myPhoto,
+    required this.partnerName,
+    required this.partnerPhoto,
+    required this.cardColor,
+  });
+
+  // Avatar yarıçapı (border halkası dahil için +2)
+  static const double _r = 18.0;
+  static const double _borderExtra = 2.0;
+  static const double _outerR = _r + _borderExtra;     // 20
+  static const double _outerD = _outerR * 2;            // 40
+  static const double _offset = 22.0; // iki avatar arasındaki yatay kaydırma
+
+  @override
+  Widget build(BuildContext context) {
+    if (partnerName == null) {
+      // Tek başına arama — yalnızca kendi avatarı
+      return _ring(myName, _myPhoto: myPhoto, color: cardColor);
+    }
+
+    // İki katılımcı: sağdaki (arkadaş) arkada, soldaki (ben) önde
+    return SizedBox(
+      width: _outerD + _offset,   // 40 + 22 = 62
+      height: _outerD,             // 40
+      child: Stack(
+        children: [
+          // Arkadaş — sağda, arkada
+          Positioned(
+            right: 0,
+            top: 0,
+            child: _ring(partnerName!, _myPhoto: partnerPhoto, color: cardColor),
+          ),
+          // Ben — solda, önde
+          Positioned(
+            left: 0,
+            top: 0,
+            child: _ring(myName, _myPhoto: myPhoto, color: cardColor),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _ring(String name, {String? _myPhoto, required Color color}) {
+    return CircleAvatar(
+      radius: _outerR,
+      backgroundColor: color,
+      child: CircularAvatar(
+        name: name,
+        photoUrl: _myPhoto,
+        radius: _r,
+      ),
+    );
+  }
+}
+
+// ── Aktivite chip'i ─────────────────────────────────────────────────────────
 
 class _Chip extends StatelessWidget {
   final String label;

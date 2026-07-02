@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/utils/travel_time_estimator.dart';
@@ -192,12 +193,17 @@ class VenueBottomBar extends ConsumerWidget {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(
-                                  Iconsax.magic_star,
-                                  size: 13,
-                                  color: Color(0xFFFFB800),
+                                RatingBarIndicator(
+                                  rating: place.rating!,
+                                  itemBuilder: (context, _) => const Icon(
+                                    Icons.star_rounded,
+                                    color: Color(0xFFFFB800),
+                                  ),
+                                  itemCount: 5,
+                                  itemSize: 10,
+                                  unratedColor: Colors.grey.withOpacity(0.3),
                                 ),
-                                const SizedBox(width: 2),
+                                const SizedBox(width: 4),
                                 Text(
                                   place.ratingText,
                                   style: TextStyle(
