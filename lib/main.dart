@@ -21,7 +21,12 @@ Future<void> main() async {
   if (!kIsWeb) {
     final mapsImpl = GoogleMapsFlutterPlatform.instance;
     if (mapsImpl is GoogleMapsFlutterAndroid) {
-      await mapsImpl.initializeWithRenderer(AndroidMapRenderer.latest);
+      try {
+        await mapsImpl.initializeWithRenderer(AndroidMapRenderer.latest);
+      } catch (_) {
+        // Hot restart sırasında renderer zaten başlatılmışsa
+        // PlatformException("Renderer already initialized") geliyor — sessizce geç.
+      }
     }
   }
 

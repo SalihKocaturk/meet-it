@@ -14,7 +14,7 @@ import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/services/places_service.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 
-const _pageSize = 5;
+const _pageSize = 3;
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -343,15 +343,58 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
       }
 
       if (results.isEmpty) {
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage: maxVenueDistanceKm != null
-              ? 'Seçtiğin mesafe aralığında uygun mekan bulunamadı. '
-                  'Mesafe sınırını artırmayı veya farklı aktivite/fiyat '
-                  'seçmeyi deneyebilirsin.'
-              : 'Yakında uygun mekan bulunamadı. Farklı aktivite veya fiyat seç.',
+        // ── FALLBACK ARAMA: kişilik tipi kısıtlamalarını kaldır ──────────────
+        // İlk aramada hiç sonuç çıkmadıysa (düşük mesafe, nadir aktivite,
+        // vs.) kişilik/aktivite bazlı dar tip filtresini tamamen sallayıp
+        // genel popüler mekan tiplerini kullanan geniş bir arama daha yap.
+        // Fiyat ve puan şartları da kaldırılır, geçmiş hariç tutma listesi
+        // de sıfırlanır — bu sayede en kısıtlayıcı filtreler gevşetilmiş olur.
+        // ignore: avoid_print
+        print('⚠️ Birincil arama boş — fallback aramaya geçiliyor…');
+
+        var fallbackResults = await PlacesService.searchVenues(
+          lat: searchLat,
+          lng: searchLng,
+          userProfile: userProfile,
+          friendProfile: friendProfile,
+          selectedActivities: selectedActivities,
+          priceLevel: null,      // fiyat şartı yok
+          radius: searchRadius,
+          minRating: null,       // puan şartı yok
+          excludePlaceIds: {},   // geçmiş hariç tutma yok
+          fallback: true,        // kişilik tiplerini sallayıp generic ara
         );
-        return;
+
+        // Mesafe filtresini fallback sonuçlarına da uygula
+        if (maxVenueDistanceKm != null && fallbackResults.isNotEmpty) {
+          final fallbackDistancesKm =
+              await DistanceMatrixService.fetchDistancesKm(
+            originLat: searchLat,
+            originLng: searchLng,
+            destinations: fallbackResults,
+          );
+          fallbackResults = fallbackResults.where((p) {
+            final km = fallbackDistancesKm[p.placeId] ??
+                _haversineKm(searchLat, searchLng, p.lat, p.lng);
+            return km <= maxVenueDistanceKm;
+          }).toList();
+        }
+
+        if (fallbackResults.isNotEmpty) {
+          results = fallbackResults;
+          // ignore: avoid_print
+          print('✅ Fallback: ${results.length} mekan bulundu');
+        } else {
+          state = state.copyWith(
+            isLoading: false,
+            errorMessage: maxVenueDistanceKm != null
+                ? 'Seçtiğin mesafe aralığında uygun mekan bulunamadı. '
+                    'Mesafe sınırını artırmayı veya farklı aktivite/fiyat '
+                    'seçmeyi deneyebilirsin.'
+                : 'Yakında uygun mekan bulunamadı. Farklı aktivite veya fiyat seç.',
+          );
+          return;
+        }
       }
 
       if (usingMidpoint) {
@@ -407,7 +450,7 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
         _recordShown(friendUid, results.take(3).toList());
 
         state = state.copyWith(
-          allVenues: results,
+          allVenues: results.take(3).toList(),
           currentPage: 0,
           isLoading: false,
         );

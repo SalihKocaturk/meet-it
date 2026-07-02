@@ -786,11 +786,13 @@ class PlacesService {
     int? radius,
     double? minRating,
     Set<String> excludePlaceIds = const {},
+    bool fallback = false,
   }) async {
     final typeGroups = _resolveTypeGroups(
       userProfile: userProfile,
       friendProfile: friendProfile,
       selectedActivities: selectedActivities,
+      fallback: fallback,
     );
 
     // Kullanıcı otel mi arıyor? (lodging filtresi bypass edilsin mi?)
@@ -861,7 +863,11 @@ class PlacesService {
     // Örn: "Restoran" seçildiyse sonuç restaurant/meal_takeaway/meal_delivery
     // type'larından birini MUTLAKA taşımalı. Bu sayede stadyum, giyim
     // mağazası, optik gibi false-positive'lar elenir.
-    final filtered = _filterByRequiredTypes(excludeFiltered, selectedActivities);
+    // Fallback modda bu filtre atlanır — generic tiplerle geniş bir havuz
+    // çekiyoruz, activity whitelist uygulamak çok fazla sonucu eleyebilir.
+    final filtered = fallback
+        ? excludeFiltered
+        : _filterByRequiredTypes(excludeFiltered, selectedActivities);
 
     // ── Adım 3: Garip/şüpheli isimli mekanları ele ────────────────────────
     final nameFiltered = _filterSuspiciousNames(filtered);
@@ -1424,11 +1430,33 @@ class PlacesService {
   /// ayrılıyor — birden fazla aktivite seçilince ekstra API çağrısı oluşur,
   /// ama bu çağrılar da diğerleri gibi KALICI önbelleğe (VenueSearchCacheService)
   /// giriyor, yani bölge+aktivite kombinasyonu başına ömür boyu en fazla 1 kez.
+  /// Fallback aramada kullanılan geniş/genel mekan tipleri.
+  /// Kişilik/aktivite filtresinden bağımsız olarak popüler buluşma
+  /// noktalarının büyük bölümünü kapsayacak şekilde seçildi.
+  static const List<String> _fallbackVenueTypes = [
+    'restaurant',
+    'cafe',
+    'bar',
+    'park',
+    'tourist_attraction',
+    'museum',
+    'art_gallery',
+    'shopping_mall',
+    'bakery',
+    'movie_theater',
+    'bowling_alley',
+    'library',
+  ];
+
   static List<List<String>> _resolveTypeGroups({
     required PersonalityProfile userProfile,
     required PersonalityProfile friendProfile,
     required List<String> selectedActivities,
+    bool fallback = false,
   }) {
+    // ── FALLBACK MOD: kişilik/aktivite görmezden gel, generic tiplerle ara ──
+    if (fallback) return [_fallbackVenueTypes];
+
     // ── MOD 1: Aktivite seçilmişse SADECE o tipler, AKTİVİTE BAŞINA bir grup ──
     // Kullanıcı ne seçtiyse onu göster, kişilik karıştırma.
     // _activityToTypes bir aktivite için birden fazla type döndürür:
