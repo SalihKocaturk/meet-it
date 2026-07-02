@@ -237,59 +237,67 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
               ),
             ),
 
+            // ── Arama barı (her zaman görünür) ──────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+              child: TextField(
+                controller: _searchCtrl,
+                onChanged: (v) => setState(() => _query = v),
+                decoration: InputDecoration(
+                  hintText: 'profile.search_hint'.tr(),
+                  hintStyle: TextStyle(
+                    color: context.colors.hint,
+                    fontSize: 14,
+                  ),
+                  prefixIcon: Icon(
+                    Iconsax.search_normal_1,
+                    color: context.colors.hint,
+                    size: 20,
+                  ),
+                  suffixIcon: _query.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(
+                            Iconsax.close_circle,
+                            color: context.colors.hint,
+                            size: 18,
+                          ),
+                          onPressed: () {
+                            _searchCtrl.clear();
+                            setState(() => _query = '');
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: context.colors.card,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: context.colors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: context.colors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: context.colors.primary,
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
             Expanded(
               child: _query.isNotEmpty
                   ? _MenuSearchResults(items: filteredMenuItems, query: _query)
                   : ListView(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20,
-                        vertical: 16,
+                        vertical: 12,
                       ),
                       children: [
-                        // ── Arama barı ───────────────────────────────────
-                        TextField(
-                          controller: _searchCtrl,
-                          onChanged: (v) => setState(() => _query = v),
-                          decoration: InputDecoration(
-                            hintText: 'profile.search_hint'.tr(),
-                            hintStyle: TextStyle(
-                              color: context.colors.hint,
-                              fontSize: 14,
-                            ),
-                            prefixIcon: Icon(
-                              Iconsax.search_normal_1,
-                              color: context.colors.hint,
-                              size: 20,
-                            ),
-                            filled: true,
-                            fillColor: context.colors.card,
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 12,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: context.colors.border,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: context.colors.border,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: context.colors.primary,
-                                width: 1.5,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
                         // ── Hareketler ──────────────────────────────────
                         _SectionLabel('profile.section_activity'.tr()),
                         const SizedBox(height: 8),
