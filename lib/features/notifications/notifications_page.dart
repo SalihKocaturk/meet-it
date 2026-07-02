@@ -209,13 +209,13 @@ class _NotifCard extends ConsumerWidget {
   Future<void> _handleTap(BuildContext context, WidgetRef ref) async {
     switch (item.type) {
       case 'friend_request':
-        Navigator.of(context).pop();
+        Navigator.of(context).popUntil((route) => route.isFirst);
         ref.read(mainTabIndexProvider.notifier).state = 2;
         ref.read(friendsTabIndexProvider.notifier).state = 1;
         break;
 
       case 'friend_accepted':
-        Navigator.of(context).pop();
+        Navigator.of(context).popUntil((route) => route.isFirst);
         ref.read(mainTabIndexProvider.notifier).state = 2;
         break;
 
@@ -355,6 +355,4 @@ class _NotifCard extends ConsumerWidget {
               height: 40,
               decoration: BoxDecoration(
                 color: _iconColor(context).withOpacity(0.12),
-                shape: BoxShape.circle,
-              ),
-       
+      
