@@ -747,10 +747,11 @@ class _ReviewCarouselCard extends ConsumerWidget {
                     // ── Mekan tipi + mesafe chip'leri ─────────────────────
                     Row(
                       children: [
-                        _VenueChip(
-                          icon: Iconsax.category_2,
-                          label: review.typeLabel,
-                        ),
+                        if (review.venueType != null)
+                          _VenueChip(
+                            icon: Iconsax.category_2,
+                            label: review.typeLabel,
+                          ),
                         if (review.lat != null &&
                             currentUser?.lat != null &&
                             currentUser?.lng != null) ...[
