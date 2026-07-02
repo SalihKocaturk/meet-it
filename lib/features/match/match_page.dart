@@ -282,4 +282,57 @@ class MatchPage extends ConsumerWidget {
                                         fontWeight: FontWeight.w600,
                                         color: context.colors.textPrimary,
                                       ),
-                            
+                                    ),
+                                    SizedBox(height: 8),
+                                    PriceFilter(),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            // Mesafe filtresi (orta noktadan / kendi konumundan km)
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'match.max_distance'.tr(),
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: context.colors.textPrimary,
+                                      ),
+                                    ),
+                                    SizedBox(height: 8),
+                                    DistanceFilter(),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            // Sabit "Mekan Bul" barının altta kapatmaması için
+                            // scroll içeriğinin sonuna onun yüksekliğine yakın bir
+                            // boşluk ekleniyor (bkz. FindVenueButtonBar — Stack
+                            // içinde Positioned(bottom: 0) ile sabitlendi).
+                            const SliverToBoxAdapter(
+                              child: SizedBox(height: 110),
+                            ),
+                          ],
+                        ),
+                        const Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: FindVenueButtonBar(),
+                        ),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
