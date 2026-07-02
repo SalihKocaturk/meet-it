@@ -310,7 +310,7 @@
     "meet_btn": "Meet",
     "section_activity": "Activity",
     "notifications": "Notifications",
-    "search_hint": "Search venues, people or posts...",
+    "search_hint": "Search...",
     "no_search_result": "No results for \"{query}\".",
     "saved_venues": "Saved",
     "navigated_venues": "Navigated",
