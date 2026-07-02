@@ -10,14 +10,19 @@ import 'package:meetit/core/widgets/app_alert.dart';
 
 /// Avatar özelleştirme sayfası.
 ///
-/// ## Neden controller doğrudan geçiliyor?
-/// `AvatarMakerCustomizer` ve `AvatarMakerAvatar`, `widget.controller != null`
-/// olduğunda `Provider.of(context)` çağrısını tamamen atlıyor (Dart ?? short-circuit).
-/// `Provider.of` çağrısı ise Flutter'ın `initState` sırasında izin vermediği
-/// `dependOnInheritedWidgetOfExactType` hatasına yol açıyor.
+/// ## Dark theme
+/// [AvatarMakerThemeData] ile `context.colors` renkleri Customizer'a
+/// aktarılır; light/dark mode otomatik yansır.
 ///
-/// Bu nedenle [AvatarMakerControllerProvider] kullanmıyoruz; controller'ı
-/// her iki widget'a da `controller:` parametresiyle direkt veriyoruz.
+/// ## Türkçe
+/// [PersistentAvatarMakerController] constructor'ına `locale: context.locale`
+/// geçilir. Paketin `app_localizations_tr.dart` dosyası delegate aracılığıyla
+/// yüklenir (bkz. main.dart → avatarL10n.AppLocalizations.delegate).
+///
+/// ## Provider hatası
+/// AvatarMakerCustomizer/Avatar, `widget.controller != null` olduğunda
+/// `Provider.of(context)` çağrısını tamamen atlıyor (Dart ?? short-circuit).
+/// Bu yüzden AvatarMakerControllerProvider kullanmıyoruz.
 class AvatarPage extends ConsumerStatefulWidget {
   const AvatarPage({super.key});
 
@@ -26,23 +31,26 @@ class AvatarPage extends ConsumerStatefulWidget {
 }
 
 class _AvatarPageState extends ConsumerState<AvatarPage> {
-  /// Controller, SharedPreferences temizlendikten sonra set edilir.
   PersistentAvatarMakerController? _controller;
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    _initController();
+    // EasyLocalization main.dart'ta tamamen mount edilmiş durumda olduğundan
+    // context.locale burada güvenle okunabilir.
+    final locale = context.locale;
+    _initController(locale);
   }
 
-  /// 1. Eski SharedPreferences verisini temizle → jsonDecodeSelectedOptions
-  ///    içindeki "Bad state: No element" hatasını önler.
-  /// 2. Temiz controller oluştur.
-  Future<void> _initController() async {
+  /// 1. Eski SharedPreferences verisini temizle (Bad state: No element önlemi).
+  /// 2. Uygulama diliyle uyumlu controller oluştur.
+  Future<void> _initController(Locale locale) async {
     await PersistentAvatarMakerController.clearAvatarMaker();
     if (!mounted) return;
-    setState(() => _controller = PersistentAvatarMakerController());
+    setState(() => _controller = PersistentAvatarMakerController(
+          locale: locale,
+        ));
   }
 
   Future<void> _saveToFirestore() async {
@@ -84,57 +92,28 @@ class _AvatarPageState extends ConsumerState<AvatarPage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final ctrl = _controller;
-
-    // Controller hazır değilken yükleme göster.
-    if (ctrl == null) {
-      return Scaffold(
-        backgroundColor: context.colors.scaffold,
-        appBar: _appBar(ctrl: null),
-        body: Center(
-          child: CircularProgressIndicator(color: context.colors.primary),
-        ),
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: context.colors.scaffold,
-      appBar: _appBar(ctrl: ctrl),
-      body: Column(
-        children: [
-          // ── Önizleme avatarı ──────────────────────────────────────────
-          Container(
-            color: context.colors.card,
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Center(
-              // controller doğrudan geçildiği için Provider lookup yok.
-              child: AvatarMakerAvatar(
-                controller: ctrl,
-                backgroundColor: context.colors.scaffold,
-                radius: 60,
-              ),
-            ),
-          ),
-
-          // ── Özelleştirici ─────────────────────────────────────────────
-          // controller doğrudan geçildiği için initState'te Provider.of çağrılmaz.
-          Expanded(
-            child: AvatarMakerCustomizer(
-              controller: ctrl,
-            ),
-          ),
-        ],
+  /// Uygulamanın renk temasına göre Customizer görünümü.
+  AvatarMakerThemeData _buildAvatarTheme(BuildContext context) {
+    final colors = context.colors;
+    return AvatarMakerThemeData(
+      // ── Arkaplanlar ──────────────────────────────────────────────────
+      primaryBgColor: colors.card,         // tab bar + ok butonları satırı
+      secondaryBgColor: colors.scaffold,   // ikon grid alanı
+      // ── Yazı ─────────────────────────────────────────────────────────
+      labelTextStyle: TextStyle(
+        color: colors.textPrimary,
+        fontWeight: FontWeight.w600,
+        fontSize: 13,
       ),
-    );
-  }
-
-  AppBar _appBar({required PersistentAvatarMakerController? ctrl}) {
-    return AppBar(
-      backgroundColor: context.colors.scaffold,
-      elevation: 0,
-      leading: IconButton(
-        icon: Icon(Iconsax.arrow_left_2,
-            size: 18, color: context.colors.textPrimary),
-        onPressed: () =>
+      // ── İkonlar ──────────────────────────────────────────────────────
+      iconColor: colors.textSecondary,
+      selectedIconColor: colors.primary,
+      unselectedIconColor: colors.hint,
+      // ── Seçim çerçevesi ──────────────────────────────────────────────
+      selectedTileDecoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.primary, width: 2.5),
+        color: colors.primary.withOpacity(0.08),
+      ),
+      unselectedTileDecoration: BoxDecoration(
+        borderRadius: BorderRadius.circ

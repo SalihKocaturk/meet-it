@@ -1,3 +1,4 @@
+import 'package:avatar_maker/l10n/app_localizations.dart' as avatarL10n;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
@@ -70,7 +71,11 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
-      localizationsDelegates: context.localizationDelegates,
+      localizationsDelegates: [
+        ...context.localizationDelegates,
+        // avatar_maker paketi kendi Türkçe çevirilerini bu delegate üzerinden yükler.
+        avatarL10n.AppLocalizations.delegate,
+      ],
       supportedLocales: context.supportedLocales,
       locale: context.locale,
     );
