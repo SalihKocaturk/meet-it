@@ -661,19 +661,23 @@ class _VenueTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: context.colors.primary.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        place.primaryTypeLabel,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: context.colors.primary,
-                          fontWeight: FontWeight.w500,
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: context.colors.primary.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          place.primaryTypeLabel,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: context.colors.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ),
