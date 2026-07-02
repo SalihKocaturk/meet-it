@@ -10,10 +10,15 @@ import 'package:meetit/core/widgets/app_alert.dart';
 
 /// Avatar özelleştirme sayfası.
 ///
-/// SharedPreferences'daki eski/bozuk veriyi önlemek için controller,
-/// [initState] içinde temizlendikten sonra oluşturuluyor.
-/// Firestore'daki [avatarJson] gerçek kaynaktır; SharedPreferences
-/// sadece pakete ait geçici önbellek olarak kullanılır.
+/// ## Neden iki aşamalı yükleme?
+/// `avatar_maker` paketi, `AvatarMakerCustomizer.initState` içinde
+/// `Provider.of<AvatarMakerController>(context)` çağırıyor (paket bug'ı).
+/// Flutter bu erişime `initState` sırasında izin vermiyor:
+/// `_InheritedProviderScope` henüz mount tamamlanmamışken
+/// `dependOnInheritedWidgetOfExactType` atıyor.
+///
+/// Çözüm: provider tam mount olduktan BİR FRAME SONRA
+/// `AvatarMakerCustomizer`'ı göster. `addPostFrameCallback` bunu garantiler.
 class AvatarPage extends ConsumerStatefulWidget {
   const AvatarPage({super.key});
 
@@ -22,8 +27,12 @@ class AvatarPage extends ConsumerStatefulWidget {
 }
 
 class _AvatarPageState extends ConsumerState<AvatarPage> {
-  /// Controller, SharedPreferences temizlendikten sonra null'dan set edilir.
   PersistentAvatarMakerController? _controller;
+
+  /// true olduğunda AvatarMakerCustomizer render edilir.
+  /// Provider mount tamamlandıktan sonraki frame'de set edilir.
+  bool _customizerReady = false;
+
   bool _saving = false;
 
   @override
@@ -32,24 +41,30 @@ class _AvatarPageState extends ConsumerState<AvatarPage> {
     _initController();
   }
 
-  /// Eski/bozuk SharedPreferences verilerini sil, ardından controller oluştur.
-  /// Böylece jsonDecodeSelectedOptions "Bad state: No element" hatası önlenir.
+  /// 1. Eski/bozuk SharedPreferences verilerini temizle (Bad state: No element önlemi).
+  /// 2. Controller oluştur, provider'ı kur.
+  /// 3. postFrameCallback ile bir frame bekle → Customizer'ı göster.
   Future<void> _initController() async {
     await PersistentAvatarMakerController.clearAvatarMaker();
     if (!mounted) return;
     setState(() => _controller = PersistentAvatarMakerController());
+
+    // Provider frame'ini tamamla, ardından Customizer'ı güvenle mount et.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _customizerReady = true);
+    });
   }
 
   Future<void> _saveToFirestore() async {
     setState(() => _saving = true);
     try {
-      // Static method — class üzerinden çağrılır, instance üzerinden değil.
       final json = await PersistentAvatarMakerController.getJsonOptions();
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid != null && json.isNotEmpty) {
-        await FirebaseFirestore.instance.collection('users').doc(uid).update({
-          'avatarJson': json,
-        });
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .update({'avatarJson': json});
       }
       if (!mounted) return;
       showAppAlert(
@@ -79,65 +94,52 @@ class _AvatarPageState extends ConsumerState<AvatarPage> {
     }
   }
 
+  AppBar _buildAppBar({bool showSave = false}) {
+    return AppBar(
+      backgroundColor: context.colors.scaffold,
+      elevation: 0,
+      leading: IconButton(
+        icon: Icon(Iconsax.arrow_left_2,
+            size: 18, color: context.colors.textPrimary),
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+      title: Text(
+        'avatar.title'.tr(),
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: context.colors.textPrimary,
+        ),
+      ),
+      actions: showSave
+          ? [
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: TextButton(
+                  onPressed: _saving ? null : _saveToFirestore,
+                  child: _saving
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: context.colors.primary,
+                          ),
+                        )
+                      : Text(
+                          'common.save'.tr(),
+                          style: TextStyle(
+                            color: context.colors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                ),
+              ),
+            ]
+          : null,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final ctrl = _controller;
-
-    // Controller hazır değilken yükleme göster.
-    if (ctrl == null) {
-      return Scaffold(
-        backgroundColor: context.colors.scaffold,
-        appBar: AppBar(
-          backgroundColor: context.colors.scaffold,
-          elevation: 0,
-          leading: IconButton(
-            icon: Icon(Iconsax.arrow_left_2,
-                size: 18, color: context.colors.textPrimary),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          title: Text(
-            'avatar.title'.tr(),
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: context.colors.textPrimary,
-            ),
-          ),
-        ),
-        body: Center(
-          child: CircularProgressIndicator(color: context.colors.primary),
-        ),
-      );
-    }
-
-    // AvatarMakerControllerProvider sadece bu sayfanın alt ağacını sarar.
-    return AvatarMakerControllerProvider(
-      controller: ctrl,
-      child: Scaffold(
-        backgroundColor: context.colors.scaffold,
-        appBar: AppBar(
-          backgroundColor: context.colors.scaffold,
-          elevation: 0,
-          leading: IconButton(
-            icon: Icon(Iconsax.arrow_left_2,
-                size: 18, color: context.colors.textPrimary),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          title: Text(
-            'avatar.title'.tr(),
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: context.colors.textPrimary,
-            ),
-          ),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: TextButton(
-                onPressed: _saving ? null : _saveToFirestore,
-                child: _saving
-                    ? SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator
+    final ctrl = _contro
