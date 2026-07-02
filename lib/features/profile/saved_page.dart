@@ -851,4 +851,29 @@ List<List<String>> get _privacySections => [
 
 class _GridPlaceholder extends StatelessWidget {
   final VenueReviewModel review;
-  const _GridPlaceholder({required this.r
+  const _GridPlaceholder({required this.review});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: context.colors.primary.withOpacity(0.08),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Iconsax.location, color: context.colors.primary, size: 22),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              review.venueName,
+              style: TextStyle(fontSize: 9, color: context.colors.primary),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
