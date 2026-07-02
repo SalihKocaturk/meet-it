@@ -12,12 +12,13 @@ import 'package:meetit/features/profile/profile_page.dart';
 
 final mainTabIndexProvider = StateProvider<int>((ref) => 0);
 
+/// Tablet breakpoint: bu genişlikten itibaren NavigationRail kullanılır.
+const _kTabletBreakpoint = 720.0;
+
 class MainPage extends ConsumerWidget {
   const MainPage({super.key});
 
   // Sekme sırası: Ana Sayfa, Buluşma, Arkadaşlar, Profil
-  // (eski sıra: Feed, Arkadaşlar, Buluşma, Profil idi — Feed kaldırıldı,
-  // Buluşma ve Arkadaşlar yer değiştirdi)
   static const _pages = <Widget>[
     HomePage(),
     MatchPage(),
@@ -29,24 +30,123 @@ class MainPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(mainTabIndexProvider);
     final netStatus = ref.watch(networkStatusProvider);
+    final isWide = MediaQuery.sizeOf(context).width >= _kTabletBreakpoint;
 
     // Bağlantı yoksa sayfa içi tüm dokunmalar engellenir;
-    // bottom nav bar kapsam dışında kalır (tab geçişi yine çalışır).
+    // nav bar/rail kapsam dışında kalır (tab geçişi yine çalışır).
     final isOffline = netStatus == NetworkStatus.noConnection ||
         netStatus == NetworkStatus.noInternet;
 
+    final pageContent = AbsorbPointer(
+      absorbing: isOffline,
+      child: IndexedStack(index: currentIndex, children: _pages),
+    );
+
+    if (isWide) {
+      // ── Tablet düzeni: solda NavigationRail ─────────────────────────────
+      return Scaffold(
+        backgroundColor: context.colors.scaffold,
+        body: Row(
+          children: [
+            _SideRail(currentIndex: currentIndex),
+            Container(width: 1, color: context.colors.border),
+            Expanded(child: pageContent),
+          ],
+        ),
+      );
+    }
+
+    // ── Telefon düzeni: altta BottomNavBar ──────────────────────────────
     return Scaffold(
       backgroundColor: context.colors.scaffold,
-      // Banner her sayfanın SafeArea içinde kendi Column'una taşındı;
-      // burada sadece offline tıklama engelleyici kalır.
-      body: AbsorbPointer(
-        absorbing: isOffline,
-        child: IndexedStack(index: currentIndex, children: _pages),
-      ),
+      body: pageContent,
       bottomNavigationBar: _MainBottomNavBar(currentIndex: currentIndex),
     );
   }
 }
+
+// ── Tablet: solda dikey navigasyon rayı ─────────────────────────────────────
+
+class _SideRail extends ConsumerWidget {
+  final int currentIndex;
+  const _SideRail({required this.currentIndex});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(currentUserProvider);
+
+    Widget profileIcon({required bool active}) {
+      if (currentUser?.photoUrl != null) {
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: active
+                ? Border.all(color: context.colors.primary, width: 2)
+                : null,
+          ),
+          child: CircleAvatar(
+            radius: active ? 11 : 12,
+            backgroundImage: NetworkImage(currentUser!.photoUrl!),
+          ),
+        );
+      }
+      return Icon(
+        Iconsax.profile_circle,
+        size: 24,
+        color: active ? context.colors.primary : context.colors.hint,
+      );
+    }
+
+    return NavigationRail(
+      selectedIndex: currentIndex,
+      onDestinationSelected: (i) =>
+          ref.read(mainTabIndexProvider.notifier).state = i,
+      labelType: NavigationRailLabelType.all,
+      backgroundColor: context.colors.card,
+      minWidth: 72,
+      selectedIconTheme:
+          IconThemeData(color: context.colors.primary, size: 24),
+      unselectedIconTheme:
+          IconThemeData(color: context.colors.hint, size: 24),
+      selectedLabelTextStyle: TextStyle(
+        color: context.colors.primary,
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+      ),
+      unselectedLabelTextStyle: TextStyle(
+        color: context.colors.hint,
+        fontSize: 11,
+        fontWeight: FontWeight.w400,
+      ),
+      indicatorColor: context.colors.primary.withOpacity(0.12),
+      destinations: [
+        NavigationRailDestination(
+          icon: const Icon(Iconsax.home_2),
+          selectedIcon: const Icon(Iconsax.home),
+          label: Text('nav.home'.tr()),
+        ),
+        NavigationRailDestination(
+          icon: const Icon(Iconsax.location),
+          selectedIcon: const Icon(Iconsax.location),
+          label: Text('nav.meetup'.tr()),
+        ),
+        NavigationRailDestination(
+          icon: const Icon(Iconsax.people),
+          selectedIcon: const Icon(Iconsax.people),
+          label: Text('nav.friends'.tr()),
+        ),
+        NavigationRailDestination(
+          icon: profileIcon(active: false),
+          selectedIcon: profileIcon(active: true),
+          label: Text('nav.profile'.tr()),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Telefon: altta özel navigasyon barı ─────────────────────────────────────
 
 class _MainBottomNavBar extends ConsumerWidget {
   final int currentIndex;
@@ -126,16 +226,14 @@ class _MainBottomNavBar extends ConsumerWidget {
                                 ),
                               )
                             : Icon(
-                                currentIndex == 3
-                                    ? Iconsax.profile_circle
-                                    : Iconsax.profile_circle,
+                                Iconsax.profile_circle,
                                 color: currentIndex == 3
                                     ? context.colors.primary
                                     : context.colors.hint,
                                 size: 24,
                               ),
                       ),
-                      SizedBox(height: 3),
+                      const SizedBox(height: 3),
                       Text(
                         'nav.profile'.tr(),
                         style: TextStyle(
@@ -189,7 +287,7 @@ class _NavItem extends StatelessWidget {
               color: isSelected ? context.colors.primary : context.colors.hint,
               size: 24,
             ),
-            SizedBox(height: 3),
+            const SizedBox(height: 3),
             Text(
               label,
               style: TextStyle(

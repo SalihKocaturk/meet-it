@@ -249,6 +249,7 @@ class _NotifCard extends ConsumerWidget {
       case 'friend_accepted':
         Navigator.of(context).popUntil((route) => route.isFirst);
         ref.read(mainTabIndexProvider.notifier).state = 2;
+        ref.read(friendsTabIndexProvider.notifier).state = 2; // Bağlantılarım
         break;
 
       case 'meetup_invite':
@@ -361,4 +362,68 @@ class _NotifCard extends ConsumerWidget {
     final lastOpened = ref.watch(notifLastOpenedProvider);
     // Okunmadı görünümü: Firestore'a değil, son açılış zamanına göre
     final unread = !item.read &&
-        
+        (lastOpened == null ||
+            item.createdAt == null ||
+            item.createdAt!.isAfter(lastOpened));
+    return GestureDetector(
+      onTap: () => _handleTap(context, ref),
+      child: Container(
+        decoration: BoxDecoration(
+          color: unread
+              ? context.colors.primary.withOpacity(0.06)
+              : context.colors.card,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: unread
+                ? context.colors.primary.withOpacity(0.2)
+                : context.colors.border,
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: _iconColor(context).withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(_icon, size: 18, color: _iconColor(context)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _body(context),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: context.colors.textPrimary,
+                      fontWeight: unread ? FontWeight.w600 : FontWeight.w400,
+                      height: 1.4,
+                    ),
+                  ),
+                  if (item.createdAt != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      _timeAgo(context),
+                      style:
+                          TextStyle(fontSize: 11, color: context.colors.hint),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (unread) ...[
+              const SizedBox(width: 8),
+              Container(
+                width: 8,
+                height: 8,
+                margin: const EdgeInsets.only(top: 4),
+                decoration: BoxDecoration(
+                  color: context.colors.primary,
+                  shape: BoxShape.circle,
+               
