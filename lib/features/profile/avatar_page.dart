@@ -10,15 +10,14 @@ import 'package:meetit/core/widgets/app_alert.dart';
 
 /// Avatar özelleştirme sayfası.
 ///
-/// ## Neden iki aşamalı yükleme?
-/// `avatar_maker` paketi, `AvatarMakerCustomizer.initState` içinde
-/// `Provider.of<AvatarMakerController>(context)` çağırıyor (paket bug'ı).
-/// Flutter bu erişime `initState` sırasında izin vermiyor:
-/// `_InheritedProviderScope` henüz mount tamamlanmamışken
-/// `dependOnInheritedWidgetOfExactType` atıyor.
+/// ## Neden controller doğrudan geçiliyor?
+/// `AvatarMakerCustomizer` ve `AvatarMakerAvatar`, `widget.controller != null`
+/// olduğunda `Provider.of(context)` çağrısını tamamen atlıyor (Dart ?? short-circuit).
+/// `Provider.of` çağrısı ise Flutter'ın `initState` sırasında izin vermediği
+/// `dependOnInheritedWidgetOfExactType` hatasına yol açıyor.
 ///
-/// Çözüm: provider tam mount olduktan BİR FRAME SONRA
-/// `AvatarMakerCustomizer`'ı göster. `addPostFrameCallback` bunu garantiler.
+/// Bu nedenle [AvatarMakerControllerProvider] kullanmıyoruz; controller'ı
+/// her iki widget'a da `controller:` parametresiyle direkt veriyoruz.
 class AvatarPage extends ConsumerStatefulWidget {
   const AvatarPage({super.key});
 
@@ -27,12 +26,8 @@ class AvatarPage extends ConsumerStatefulWidget {
 }
 
 class _AvatarPageState extends ConsumerState<AvatarPage> {
+  /// Controller, SharedPreferences temizlendikten sonra set edilir.
   PersistentAvatarMakerController? _controller;
-
-  /// true olduğunda AvatarMakerCustomizer render edilir.
-  /// Provider mount tamamlandıktan sonraki frame'de set edilir.
-  bool _customizerReady = false;
-
   bool _saving = false;
 
   @override
@@ -41,18 +36,13 @@ class _AvatarPageState extends ConsumerState<AvatarPage> {
     _initController();
   }
 
-  /// 1. Eski/bozuk SharedPreferences verilerini temizle (Bad state: No element önlemi).
-  /// 2. Controller oluştur, provider'ı kur.
-  /// 3. postFrameCallback ile bir frame bekle → Customizer'ı göster.
+  /// 1. Eski SharedPreferences verisini temizle → jsonDecodeSelectedOptions
+  ///    içindeki "Bad state: No element" hatasını önler.
+  /// 2. Temiz controller oluştur.
   Future<void> _initController() async {
     await PersistentAvatarMakerController.clearAvatarMaker();
     if (!mounted) return;
     setState(() => _controller = PersistentAvatarMakerController());
-
-    // Provider frame'ini tamamla, ardından Customizer'ı güvenle mount et.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _customizerReady = true);
-    });
   }
 
   Future<void> _saveToFirestore() async {
@@ -94,52 +84,57 @@ class _AvatarPageState extends ConsumerState<AvatarPage> {
     }
   }
 
-  AppBar _buildAppBar({bool showSave = false}) {
+  @override
+  Widget build(BuildContext context) {
+    final ctrl = _controller;
+
+    // Controller hazır değilken yükleme göster.
+    if (ctrl == null) {
+      return Scaffold(
+        backgroundColor: context.colors.scaffold,
+        appBar: _appBar(ctrl: null),
+        body: Center(
+          child: CircularProgressIndicator(color: context.colors.primary),
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: context.colors.scaffold,
+      appBar: _appBar(ctrl: ctrl),
+      body: Column(
+        children: [
+          // ── Önizleme avatarı ──────────────────────────────────────────
+          Container(
+            color: context.colors.card,
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              // controller doğrudan geçildiği için Provider lookup yok.
+              child: AvatarMakerAvatar(
+                controller: ctrl,
+                backgroundColor: context.colors.scaffold,
+                radius: 60,
+              ),
+            ),
+          ),
+
+          // ── Özelleştirici ─────────────────────────────────────────────
+          // controller doğrudan geçildiği için initState'te Provider.of çağrılmaz.
+          Expanded(
+            child: AvatarMakerCustomizer(
+              controller: ctrl,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  AppBar _appBar({required PersistentAvatarMakerController? ctrl}) {
     return AppBar(
       backgroundColor: context.colors.scaffold,
       elevation: 0,
       leading: IconButton(
         icon: Icon(Iconsax.arrow_left_2,
             size: 18, color: context.colors.textPrimary),
-        onPressed: () => Navigator.of(context).pop(),
-      ),
-      title: Text(
-        'avatar.title'.tr(),
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-          color: context.colors.textPrimary,
-        ),
-      ),
-      actions: showSave
-          ? [
-              Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: TextButton(
-                  onPressed: _saving ? null : _saveToFirestore,
-                  child: _saving
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: context.colors.primary,
-                          ),
-                        )
-                      : Text(
-                          'common.save'.tr(),
-                          style: TextStyle(
-                            color: context.colors.primary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                ),
-              ),
-            ]
-          : null,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ctrl = _contro
+        onPressed: () =>
