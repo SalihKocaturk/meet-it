@@ -6,10 +6,11 @@ import 'package:iconsax/iconsax.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friends_page.dart';
-import 'package:meetit/features/main/main_page.dart';
 import 'package:meetit/features/history/meeting_history_page.dart';
+import 'package:meetit/features/main/main_page.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ── Model ───────────────────────────────────────────────────────────────────
 
@@ -63,10 +64,41 @@ final _notificationsStreamProvider =
       .map((snap) => snap.docs.map(NotificationItem.fromDoc).toList());
 });
 
-/// Açık oturumda bildirimlerin son görüntülenme zamanı.
-/// Badge ve "okunmadı" görünümü Firestore round-trip'ini beklemeden
-/// bu zamana göre anlık (optimistik) hesaplanır.
-final notifLastOpenedProvider = StateProvider<DateTime?>((ref) => null);
+// ── Kalıcı "son görüntülenme" notifier'ı ────────────────────────────────────
+//
+// SharedPreferences'a yazılır; uygulama yeniden başlatılsa bile
+// bir önceki oturumda görülen bildirimlerin sayacı sıfırlanmaz.
+
+class _NotifLastOpenedNotifier extends Notifier<DateTime?> {
+  static const _kKey = 'notif_last_opened_ms';
+
+  @override
+  DateTime? build() {
+    _loadPersisted();
+    return null;
+  }
+
+  Future<void> _loadPersisted() async {
+    final prefs = await SharedPreferences.getInstance();
+    final ms = prefs.getInt(_kKey);
+    if (ms != null && state == null) {
+      state = DateTime.fromMillisecondsSinceEpoch(ms);
+    }
+  }
+
+  /// Sayfaya girildiğinde çağrılır. Hem provider'ı hem SharedPreferences'ı günceller.
+  Future<void> markOpened() async {
+    final now = DateTime.now();
+    state = now;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_kKey, now.millisecondsSinceEpoch);
+  }
+}
+
+final notifLastOpenedProvider =
+    NotifierProvider<_NotifLastOpenedNotifier, DateTime?>(
+  _NotifLastOpenedNotifier.new,
+);
 
 /// Okunmamış bildirim sayısı — menüde badge için.
 final unreadNotifCountProvider = Provider.autoDispose<int>((ref) {
@@ -99,9 +131,9 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      // Badge ve okunmadı görünümünü Firestore beklenmeden anlık temizle
-      ref.read(notifLastOpenedProvider.notifier).state = DateTime.now();
-      // Firestore'u arka planda güncelle
+      // Badge + görünümü anlık temizle, SharedPreferences'a persist et
+      ref.read(notifLastOpenedProvider.notifier).markOpened();
+      // Firestore'u da arka planda güncelle
       _markAllRead();
     });
   }
@@ -329,30 +361,4 @@ class _NotifCard extends ConsumerWidget {
     final lastOpened = ref.watch(notifLastOpenedProvider);
     // Okunmadı görünümü: Firestore'a değil, son açılış zamanına göre
     final unread = !item.read &&
-        (lastOpened == null ||
-            item.createdAt == null ||
-            item.createdAt!.isAfter(lastOpened));
-    return GestureDetector(
-      onTap: () => _handleTap(context, ref),
-      child: Container(
-        decoration: BoxDecoration(
-          color: unread
-              ? context.colors.primary.withOpacity(0.06)
-              : context.colors.card,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: unread
-                ? context.colors.primary.withOpacity(0.2)
-                : context.colors.border,
-          ),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: _iconColor(context).withOpacity(0.12),
-      
+        
