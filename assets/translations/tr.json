@@ -19,6 +19,7 @@
     "warning": "Uyarı",
     "loading": "Yükleniyor...",
     "no_result": "Sonuç bulunamadı",
+    "try_again": "Bir şeyler ters gitti, tekrar dene.",
     "skip": "Atla",
     "back": "Geri",
     "confirm": "Onayla",
@@ -324,7 +325,16 @@
     "no_reviews_desc": "İlk yorumunu eklemek için gittiğin bir mekanı seç!",
     "saved_reviews": "Kaydedilenler",
     "liked_reviews": "Beğenilenler",
-    "empty_liked_reviews": "Henüz beğendiğin yorum yok."
+    "empty_liked_reviews": "Henüz beğendiğin yorum yok.",
+    "change_photo_title": "Profil Fotoğrafı",
+    "pick_from_gallery": "Galeriden fotoğraf seç",
+    "edit_avatar": "Avatarını Düzenle",
+    "edit_avatar_desc": "Kişiselleştirilmiş karakter oluştur"
+  },
+  "avatar": {
+    "title": "Avatarını Düzenle",
+    "saved_title": "Avatar Kaydedildi",
+    "saved_desc": "Avatarın başarıyla güncellendi."
   },
   "settings": {
     "title": "Ayarlar",

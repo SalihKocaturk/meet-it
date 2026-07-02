@@ -21,6 +21,7 @@ import 'package:meetit/features/reviews/venue_detail_page.dart';
 
 import '../history/meeting_history_page.dart';
 import 'package:meetit/features/notifications/notifications_page.dart';
+import 'package:meetit/features/profile/avatar_page.dart';
 
 class ProfileMenuPage extends ConsumerStatefulWidget {
   const ProfileMenuPage({super.key});
@@ -351,6 +352,16 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                               icon: Iconsax.profile_circle,
                               title: 'settings.edit_profile'.tr(),
                               onTap: () => context.push(AppRoutes.editProfile),
+                            ),
+                            _MenuItem(
+                              icon: Iconsax.profile_2user,
+                              title: 'profile.edit_avatar'.tr(),
+                              subtitle: 'profile.edit_avatar_desc'.tr(),
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const AvatarPage(),
+                                ),
+                              ),
                             ),
                             if (isEmailUser)
                               _MenuItem(
@@ -901,4 +912,3 @@ class _GridPlaceholder extends StatelessWidget {
     );
   }
 }
-                                                                                                                                                                                                        
