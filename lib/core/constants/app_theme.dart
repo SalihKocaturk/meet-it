@@ -76,4 +76,14 @@ class AppTheme {
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: c.card,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.ve
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+      ),
+      listTileTheme: ListTileThemeData(
+        textColor: c.textPrimary,
+        iconColor: c.primary,
+      ),
+      iconTheme: IconThemeData(color: c.textPrimary),
+    );
+  }
+}
