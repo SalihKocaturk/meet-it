@@ -63,11 +63,23 @@ final _notificationsStreamProvider =
       .map((snap) => snap.docs.map(NotificationItem.fromDoc).toList());
 });
 
-/// Okunmamis bildirim sayisi -- menude badge icin.
+/// Açık oturumda bildirimlerin son görüntülenme zamanı.
+/// Badge ve "okunmadı" görünümü Firestore round-trip'ini beklemeden
+/// bu zamana göre anlık (optimistik) hesaplanır.
+final notifLastOpenedProvider = StateProvider<DateTime?>((ref) => null);
+
+/// Okunmamış bildirim sayısı — menüde badge için.
 final unreadNotifCountProvider = Provider.autoDispose<int>((ref) {
+  final lastOpened = ref.watch(notifLastOpenedProvider);
   return ref
           .watch(_notificationsStreamProvider)
-          .whenData((items) => items.where((n) => !n.read).length)
+          .whenData((items) => items.where((n) {
+                if (n.read) return false;
+                if (lastOpened == null) return true;
+                if (n.createdAt == null) return false;
+                // Son açılış zamanından SONRA gelenleri say
+                return n.createdAt!.isAfter(lastOpened);
+              }).length)
           .value ??
       0;
 });
@@ -85,7 +97,13 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _markAllRead());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // Badge ve okunmadı görünümünü Firestore beklenmeden anlık temizle
+      ref.read(notifLastOpenedProvider.notifier).state = DateTime.now();
+      // Firestore'u arka planda güncelle
+      _markAllRead();
+    });
   }
 
   Future<void> _markAllRead() async {
@@ -308,7 +326,12 @@ class _NotifCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final unread = !item.read;
+    final lastOpened = ref.watch(notifLastOpenedProvider);
+    // Okunmadı görünümü: Firestore'a değil, son açılış zamanına göre
+    final unread = !item.read &&
+        (lastOpened == null ||
+            item.createdAt == null ||
+            item.createdAt!.isAfter(lastOpened));
     return GestureDetector(
       onTap: () => _handleTap(context, ref),
       child: Container(
@@ -334,35 +357,4 @@ class _NotifCard extends ConsumerWidget {
                 color: _iconColor(context).withOpacity(0.12),
                 shape: BoxShape.circle,
               ),
-              child: Icon(_icon, size: 18, color: _iconColor(context)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _body(context),
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: context.colors.textPrimary,
-                      fontWeight: unread ? FontWeight.w600 : FontWeight.w400,
-                      height: 1.4,
-                    ),
-                  ),
-                  if (item.createdAt != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      _timeAgo(context),
-                      style:
-                          TextStyle(fontSize: 11, color: context.colors.hint),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            if (unread) ...[
-              const SizedBox(width: 8),
-              Container(
-                width: 8,
-           
+       
