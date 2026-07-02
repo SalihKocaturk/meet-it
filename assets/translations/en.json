@@ -325,16 +325,7 @@
     "no_reviews_desc": "Pick a venue you've visited to add your first review!",
     "saved_reviews": "Saved",
     "liked_reviews": "Liked",
-    "empty_liked_reviews": "No liked reviews yet.",
-    "change_photo_title": "Profile Photo",
-    "pick_from_gallery": "Pick from gallery",
-    "edit_avatar": "Edit Your Avatar",
-    "edit_avatar_desc": "Create a personalised character"
-  },
-  "avatar": {
-    "title": "Edit Your Avatar",
-    "saved_title": "Avatar Saved",
-    "saved_desc": "Your avatar has been updated successfully."
+    "empty_liked_reviews": "No liked reviews yet."
   },
   "settings": {
     "title": "Settings",

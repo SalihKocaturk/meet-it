@@ -14,7 +14,6 @@ import 'package:meetit/features/main/main_page.dart' show mainTabIndexProvider;
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/providers/saved_venues_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
-import 'package:meetit/features/profile/avatar_page.dart';
 import 'package:meetit/features/profile/saved_page.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
@@ -109,71 +108,6 @@ class _ProfileHeader extends ConsumerWidget {
     required this.totalLikes,
   });
 
-  void _showPhotoSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final colors = ctx.colors;
-        return Container(
-          decoration: BoxDecoration(
-            color: colors.card,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // ── Tutaç ──────────────────────────────────────────────────
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: colors.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'profile.change_photo_title'.tr(),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: colors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // ── Galeriden fotoğraf seç ─────────────────────────────────
-              _SheetOption(
-                icon: Iconsax.gallery,
-                label: 'profile.pick_from_gallery'.tr(),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.push(AppRoutes.editProfile);
-                },
-              ),
-              const SizedBox(height: 12),
-
-              // ── Avatarını düzenle ──────────────────────────────────────
-              _SheetOption(
-                icon: Iconsax.profile_2user,
-                label: 'profile.edit_avatar'.tr(),
-                isPrimary: true,
-                onTap: () {
-                  Navigator.pop(ctx);
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const AvatarPage()),
-                  );
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
@@ -212,9 +146,9 @@ class _ProfileHeader extends ConsumerWidget {
           // Avatar + istatistikler
           Row(
             children: [
-              // Avatar — basınca fotoğraf/avatar seçim sayfası
+              // Avatar — basınca profil düzenleme
               GestureDetector(
-                onTap: () => _showPhotoSheet(context),
+                onTap: () => context.push(AppRoutes.editProfile),
                 child: Stack(
                   children: [
                     user?.photoUrl != null
@@ -807,58 +741,6 @@ class _PlaceholderBox extends StatelessWidget {
   }
 }
 
-// ── Fotoğraf/Avatar seçim bottom sheet seçeneği ─────────────────────────────
-
-class _SheetOption extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool isPrimary;
-
-  const _SheetOption({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.isPrimary = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isPrimary ? context.colors.primary : context.colors.textPrimary;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: isPrimary
-              ? context.colors.primary.withOpacity(0.08)
-              : context.colors.scaffold,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isPrimary
-                ? context.colors.primary.withOpacity(0.3)
-                : context.colors.border,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 22, color: color),
-            const SizedBox(width: 14),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ── Boş tab ────────────────────────────────────────────────────────────────────
 
 class _EmptyTab extends StatelessWidget {
@@ -888,3 +770,4 @@ class _EmptyTab extends StatelessWidget {
     );
   }
 }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
