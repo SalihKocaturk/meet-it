@@ -533,5 +533,18 @@
     "tier_good": "İyi bir uyum, ortak noktalarınız var.",
     "tier_medium": "Orta seviye bir uyum, farklılıklarınız ilginç olabilir.",
     "tier_different": "Oldukça farklı kişiliklere sahipsiniz, bu da yeni deneyimler getirebilir."
+  },
+  "notifications": {
+    "title": "Bildirimler",
+    "empty": "Henüz bildirim yok",
+    "empty_desc": "Beğeniler ve arkadaşlık istekleri burada görünecek.",
+    "review_liked": "{name}, \"{venue}\" yorumunu beğendi.",
+    "friend_request": "{name} sana arkadaşlık isteği gönderdi.",
+    "friend_accepted": "{name} arkadaşlık isteğini kabul etti!",
+    "meetup_invite": "{name} seninle buluşmak istiyor!",
+    "venue_found": "{name} buluşma için mekan buldu!",
+    "just_now": "Az önce",
+    "minutes_ago": "{n} dakika önce",
+    "hours_ago": "{n} saat önce"
   }
 }

@@ -20,6 +20,7 @@ import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
 
 import '../history/meeting_history_page.dart';
+import 'package:meetit/features/notifications/notifications_page.dart';
 
 class ProfileMenuPage extends ConsumerStatefulWidget {
   const ProfileMenuPage({super.key});
@@ -45,6 +46,13 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
     List<VenueReviewModel> likedReviews,
   ) =>
       [
+        _MenuItem(
+          icon: Iconsax.notification,
+          title: 'notifications.title'.tr(),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const NotificationsPage()),
+          ),
+        ),
         _MenuItem(
           icon: Iconsax.heart,
           title: 'profile.liked_reviews'.tr(),
@@ -287,6 +295,18 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                         const SizedBox(height: 8),
                         _MenuSection(
                           items: [
+                            _MenuItem(
+                              icon: Iconsax.notification,
+                              title: 'notifications.title'.tr(),
+                              badge: ref.watch(unreadNotifCountProvider) > 0
+                                  ? ref.watch(unreadNotifCountProvider)
+                                  : null,
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const NotificationsPage(),
+                                ),
+                              ),
+                            ),
                             _MenuItem(
                               icon: Iconsax.heart,
                               title: 'profile.liked_reviews'.tr(),

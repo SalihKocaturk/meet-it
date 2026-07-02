@@ -10,6 +10,7 @@ import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/services/places_service.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
+import 'package:meetit/core/services/notification_service.dart';
 
 /// Belirli bir mekana ait yorumların durumu (yüklenen/yükleniyor/hata).
 class ReviewState {
@@ -255,6 +256,21 @@ class ReviewNotifier extends Notifier<ReviewState> {
             ? FieldValue.arrayRemove([uid])
             : FieldValue.arrayUnion([uid]),
       });
+
+      // Beğeni EKLENDİĞİNDE bildirim gönder (kendi yorumuna değil)
+      if (!liked && review.authorUid != uid) {
+        final myName = ref.read(authProvider).user?.name ?? '';
+        unawaited(NotificationService.sendNotification(
+          toUid: review.authorUid,
+          type: 'review_liked',
+          fromName: myName,
+          fromUid: uid,
+          extra: {
+            'venueName': review.venueName,
+            'reviewId': id,
+          },
+        ));
+      }
     } catch (_) {
       // Rollback
       final rollback = List<VenueReviewModel>.from(state.reviews);

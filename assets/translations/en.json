@@ -533,5 +533,18 @@
     "tier_good": "A good match, you share common ground.",
     "tier_medium": "A moderate match — your differences could make things interesting.",
     "tier_different": "Quite different personalities, which can also bring new experiences."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications yet",
+    "empty_desc": "Likes and friend requests will appear here.",
+    "review_liked": "{name} liked your \"{venue}\" review.",
+    "friend_request": "{name} sent you a friend request.",
+    "friend_accepted": "{name} accepted your friend request!",
+    "meetup_invite": "{name} wants to meet up with you!",
+    "venue_found": "{name} found a venue to meet!",
+    "just_now": "Just now",
+    "minutes_ago": "{n}m ago",
+    "hours_ago": "{n}h ago"
   }
 }
