@@ -541,8 +541,8 @@
     "review_liked": "{name} liked your \"{venue}\" review.",
     "friend_request": "{name} sent you a friend request.",
     "friend_accepted": "{name} accepted your friend request!",
-    "meetup_invite": "{name} wants to meet up with you!",
-    "venue_found": "{name} found a venue to meet!",
+    "meetup_invite": "{name} received a venue suggestion to meet with you!",
+    "venue_found": "A venue to meet {name} is ready!",
     "just_now": "Just now",
     "minutes_ago": "{n}m ago",
     "hours_ago": "{n}h ago"

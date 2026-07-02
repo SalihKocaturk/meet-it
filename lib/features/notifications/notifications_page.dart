@@ -7,6 +7,7 @@ import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friends_page.dart';
 import 'package:meetit/features/main/main_page.dart';
+import 'package:meetit/features/history/meeting_history_page.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
 
@@ -200,6 +201,15 @@ class _NotifCard extends ConsumerWidget {
         ref.read(mainTabIndexProvider.notifier).state = 2;
         break;
 
+      case 'meetup_invite':
+      case 'venue_found':
+        final nav = Navigator.of(context);
+        nav.pop();
+        nav.push(MaterialPageRoute(
+          builder: (_) => const MeetingHistoryPage(),
+        ));
+        break;
+
       case 'review_liked':
         final reviewId = item.extra['reviewId'] as String? ?? '';
         if (reviewId.isEmpty) return;
@@ -355,17 +365,4 @@ class _NotifCard extends ConsumerWidget {
               const SizedBox(width: 8),
               Container(
                 width: 8,
-                height: 8,
-                margin: const EdgeInsets.only(top: 4),
-                decoration: BoxDecoration(
-                  color: context.colors.primary,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
+           
