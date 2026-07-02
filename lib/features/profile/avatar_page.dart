@@ -33,14 +33,24 @@ class AvatarPage extends ConsumerStatefulWidget {
 class _AvatarPageState extends ConsumerState<AvatarPage> {
   PersistentAvatarMakerController? _controller;
   bool _saving = false;
+  bool _controllerInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    // EasyLocalization main.dart'ta tamamen mount edilmiş durumda olduğundan
-    // context.locale burada güvenle okunabilir.
-    final locale = context.locale;
-    _initController(locale);
+    // initState'te inherited widget (EasyLocalization, Theme vb.) OKUNAMAZ —
+    // context.locale çağrısı da dependOnInheritedWidgetOfExactType tetikler.
+    // Locale okuma didChangeDependencies'e taşındı.
+  }
+
+  /// Flutter'ın inherited widget erişimi için önerdiği lifecycle hook.
+  /// initState'ten hemen sonra çağrılır; inherited widget'lar burada güvenlidir.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_controllerInitialized) return; // sadece ilk seferde çalıştır
+    _controllerInitialized = true;
+    _initController(context.locale);
   }
 
   /// 1. Eski SharedPreferences verisini temizle (Bad state: No element önlemi).
@@ -109,11 +119,4 @@ class _AvatarPageState extends ConsumerState<AvatarPage> {
       iconColor: colors.textSecondary,
       selectedIconColor: colors.primary,
       unselectedIconColor: colors.hint,
-      // ── Seçim çerçevesi ──────────────────────────────────────────────
-      selectedTileDecoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: colors.primary, width: 2.5),
-        color: colors.primary.withOpacity(0.08),
-      ),
-      unselectedTileDecoration: BoxDecoration(
-        borderRadius: BorderRadius.circ
+      // ── 
