@@ -293,7 +293,7 @@ class _AvatarStack extends StatelessWidget {
   Widget build(BuildContext context) {
     if (partnerName == null) {
       // Tek başına arama — yalnızca kendi avatarı
-      return _ring(myName, _myPhoto: myPhoto, color: cardColor);
+      return _ring(myName, photoUrl: myPhoto, color: cardColor);
     }
 
     // İki katılımcı: sağdaki (arkadaş) arkada, soldaki (ben) önde
@@ -306,26 +306,26 @@ class _AvatarStack extends StatelessWidget {
           Positioned(
             right: 0,
             top: 0,
-            child: _ring(partnerName!, _myPhoto: partnerPhoto, color: cardColor),
+            child: _ring(partnerName!, photoUrl: partnerPhoto, color: cardColor),
           ),
           // Ben — solda, önde
           Positioned(
             left: 0,
             top: 0,
-            child: _ring(myName, _myPhoto: myPhoto, color: cardColor),
+            child: _ring(myName, photoUrl: myPhoto, color: cardColor),
           ),
         ],
       ),
     );
   }
 
-  Widget _ring(String name, {String? _myPhoto, required Color color}) {
+  Widget _ring(String name, {String? photoUrl, required Color color}) {
     return CircleAvatar(
       radius: _outerR,
       backgroundColor: color,
       child: CircularAvatar(
         name: name,
-        photoUrl: _myPhoto,
+        photoUrl: photoUrl,
         radius: _r,
       ),
     );
