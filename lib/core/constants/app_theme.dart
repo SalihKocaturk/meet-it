@@ -15,7 +15,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: b,
-      textTheme: GoogleFonts.nunitoTextTheme(baseTextTheme),
+      textTheme: GoogleFonts.poppinsTextTheme(baseTextTheme),
       colorScheme: ColorScheme(
         brightness: b,
         primary: c.primary,
