@@ -5,6 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
+import 'package:meetit/features/friends/friends_page.dart';
+import 'package:meetit/features/main/main_page.dart';
+import 'package:meetit/features/reviews/models/venue_review_model.dart';
+import 'package:meetit/features/reviews/venue_detail_page.dart';
 
 // ── Model ───────────────────────────────────────────────────────────────────
 
@@ -58,7 +62,7 @@ final _notificationsStreamProvider =
       .map((snap) => snap.docs.map(NotificationItem.fromDoc).toList());
 });
 
-/// Okunmamış bildirim sayısı — menüde badge için.
+/// Okunmamis bildirim sayisi -- menude badge icin.
 final unreadNotifCountProvider = Provider.autoDispose<int>((ref) {
   return ref
           .watch(_notificationsStreamProvider)
@@ -80,7 +84,6 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   @override
   void initState() {
     super.initState();
-    // Sayfa açılınca tümünü okundu işaretle
     WidgetsBinding.instance.addPostFrameCallback((_) => _markAllRead());
   }
 
@@ -145,7 +148,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   }
 }
 
-// ── Boş durum ────────────────────────────────────────────────────────────────
+// ── Bos durum ────────────────────────────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
   @override
@@ -178,11 +181,51 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-// ── Bildirim kartı ───────────────────────────────────────────────────────────
+// ── Bildirim karti ───────────────────────────────────────────────────────────
 
-class _NotifCard extends StatelessWidget {
+class _NotifCard extends ConsumerWidget {
   final NotificationItem item;
   const _NotifCard({required this.item});
+
+  Future<void> _handleTap(BuildContext context, WidgetRef ref) async {
+    switch (item.type) {
+      case 'friend_request':
+        Navigator.of(context).pop();
+        ref.read(mainTabIndexProvider.notifier).state = 2;
+        ref.read(friendsTabIndexProvider.notifier).state = 1;
+        break;
+
+      case 'friend_accepted':
+        Navigator.of(context).pop();
+        ref.read(mainTabIndexProvider.notifier).state = 2;
+        break;
+
+      case 'review_liked':
+        final reviewId = item.extra['reviewId'] as String? ?? '';
+        if (reviewId.isEmpty) return;
+        final doc = await FirebaseFirestore.instance
+            .collection('venue_reviews')
+            .doc(reviewId)
+            .get();
+        if (!doc.exists || !context.mounted) return;
+        final review = VenueReviewModel.fromMap(reviewId, doc.data()!);
+        if (!context.mounted) return;
+        final nav = Navigator.of(context);
+        nav.pop();
+        nav.push(MaterialPageRoute(
+          builder: (_) => VenueDetailPage(
+            placeId: review.placeId,
+            venueName: review.venueName,
+            venueAddress: review.venueAddress,
+            venuePhotoUrl: review.venuePhotoUrl,
+          ),
+        ));
+        break;
+
+      default:
+        Navigator.of(context).pop();
+    }
+  }
 
   IconData get _icon {
     switch (item.type) {
@@ -254,78 +297,74 @@ class _NotifCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final unread = !item.read;
-    return Container(
-      decoration: BoxDecoration(
-        color: unread
-            ? context.colors.primary.withOpacity(0.06)
-            : context.colors.card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
+    return GestureDetector(
+      onTap: () => _handleTap(context, ref),
+      child: Container(
+        decoration: BoxDecoration(
           color: unread
-              ? context.colors.primary.withOpacity(0.2)
-              : context.colors.border,
+              ? context.colors.primary.withOpacity(0.06)
+              : context.colors.card,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: unread
+                ? context.colors.primary.withOpacity(0.2)
+                : context.colors.border,
+          ),
         ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // İkon
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: _iconColor(context).withOpacity(0.12),
-              shape: BoxShape.circle,
-            ),
-            child:
-                Icon(_icon, size: 18, color: _iconColor(context)),
-          ),
-          const SizedBox(width: 12),
-
-          // Metin + zaman
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _body(context),
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: context.colors.textPrimary,
-                    fontWeight:
-                        unread ? FontWeight.w600 : FontWeight.w400,
-                    height: 1.4,
-                  ),
-                ),
-                if (item.createdAt != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    _timeAgo(context),
-                    style: TextStyle(
-                        fontSize: 11, color: context.colors.hint),
-                  ),
-                ],
-              ],
-            ),
-          ),
-
-          // Okunmamış nokta
-          if (unread) ...[
-            const SizedBox(width: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Container(
-              width: 8,
-              height: 8,
-              margin: const EdgeInsets.only(top: 4),
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color: context.colors.primary,
+                color: _iconColor(context).withOpacity(0.12),
                 shape: BoxShape.circle,
               ),
+              child: Icon(_icon, size: 18, color: _iconColor(context)),
             ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _body(context),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: context.colors.textPrimary,
+                      fontWeight: unread ? FontWeight.w600 : FontWeight.w400,
+                      height: 1.4,
+                    ),
+                  ),
+                  if (item.createdAt != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      _timeAgo(context),
+                      style:
+                          TextStyle(fontSize: 11, color: context.colors.hint),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (unread) ...[
+              const SizedBox(width: 8),
+              Container(
+                width: 8,
+                height: 8,
+                margin: const EdgeInsets.only(top: 4),
+                decoration: BoxDecoration(
+                  color: context.colors.primary,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

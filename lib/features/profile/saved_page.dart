@@ -19,6 +19,7 @@ import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
 import '../history/meeting_history_page.dart';
 import 'package:meetit/features/notifications/notifications_page.dart';
 
@@ -32,6 +33,28 @@ class ProfileMenuPage extends ConsumerStatefulWidget {
 class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
   final _searchCtrl = TextEditingController();
   String _query = '';
+  int _lastSeenLikeCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLastSeenLikeCount();
+  }
+
+  Future<void> _loadLastSeenLikeCount() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _lastSeenLikeCount = prefs.getInt('liked_reviews_seen_count') ?? 0;
+      });
+    }
+  }
+
+  Future<void> _markLikesSeen(int count) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('liked_reviews_seen_count', count);
+    if (mounted) setState(() => _lastSeenLikeCount = count);
+  }
 
   @override
   void dispose() {
@@ -318,19 +341,22 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                             _MenuItem(
                               icon: Iconsax.heart,
                               title: 'profile.liked_reviews'.tr(),
-                              badge: likedReviews.isNotEmpty
-                                  ? likedReviews.length
+                              badge: likedReviews.length > _lastSeenLikeCount
+                                  ? likedReviews.length - _lastSeenLikeCount
                                   : null,
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => _ReviewListPage(
-                                    title: 'profile.liked_reviews'.tr(),
-                                    reviews: likedReviews,
-                                    emptyText: 'profile.empty_liked_reviews'
-                                        .tr(),
+                              onTap: () {
+                                _markLikesSeen(likedReviews.length);
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => _ReviewListPage(
+                                      title: 'profile.liked_reviews'.tr(),
+                                      reviews: likedReviews,
+                                      emptyText: 'profile.empty_liked_reviews'
+                                          .tr(),
+                                    ),
                                   ),
-                                ),
-                              ),
+                                );
+                              },
                             ),
                             _MenuItem(
                               icon: Iconsax.clock,
@@ -877,31 +903,4 @@ List<List<String>> get _privacySections => [
   ['legal.privacy_s6_title'.tr(), 'legal.privacy_s6_body'.tr()],
 ];
 
-class _GridPlaceholder extends StatelessWidget {
-  final VenueReviewModel review;
-  const _GridPlaceholder({required this.review});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: context.colors.primary.withOpacity(0.08),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Iconsax.location, color: context.colors.primary, size: 22),
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(
-              review.venueName,
-              style: TextStyle(fontSize: 9, color: context.colors.primary),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+class _GridPlaceho
