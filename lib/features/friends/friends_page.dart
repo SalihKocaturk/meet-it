@@ -497,6 +497,8 @@ class _SuggestionTile extends ConsumerWidget {
             label: Text(
               'friends.add'.tr(),
               style: TextStyle(fontSize: 12, color: context.colors.primary),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

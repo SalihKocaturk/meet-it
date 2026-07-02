@@ -21,9 +21,11 @@ class EmptyFriendsCard extends StatelessWidget {
         children: [
           Icon(Iconsax.people, color: context.colors.hint),
           SizedBox(width: 12),
-          Text(
-            'match.add_friend_hint'.tr(),
-            style: TextStyle(color: context.colors.textSecondary, fontSize: 13),
+          Expanded(
+            child: Text(
+              'match.add_friend_hint'.tr(),
+              style: TextStyle(color: context.colors.textSecondary, fontSize: 13),
+            ),
           ),
         ],
       ),
