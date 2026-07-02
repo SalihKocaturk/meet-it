@@ -20,6 +20,7 @@ import 'package:meetit/features/personality/personality_analysis_page.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
+import 'package:meetit/core/utils/geo_utils.dart';
 import 'package:meetit/core/widgets/network_status_banner.dart';
 
 /// Ana Sayfa (eski Feed sekmesinin yerine geçti).
@@ -648,6 +649,7 @@ class _ReviewCarouselCard extends ConsumerWidget {
     // görünüyor ama ana sayfa carousel'inde görünmüyordu. Aynı taze-çekme
     // mekanizması burada da kullanılarak placeId'si olan TÜM yorumlar (eski
     // veya yeni, fark etmez) için çalışan bir foto garanti ediliyor.
+    final currentUser = ref.watch(currentUserProvider);
     final fetchedPhotos = ref.watch(venuePhotosProvider(review.placeId));
     final freshPhotoUrl =
         fetchedPhotos.value?.isNotEmpty == true ? fetchedPhotos.value!.first : null;
@@ -730,7 +732,7 @@ class _ReviewCarouselCard extends ConsumerWidget {
                         color: context.colors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     RatingBarIndicator(
                       rating: review.rating.toDouble(),
                       itemBuilder: (context, _) => const Icon(
@@ -738,23 +740,39 @@ class _ReviewCarouselCard extends ConsumerWidget {
                         color: Color(0xFFFFB800),
                       ),
                       itemCount: 5,
-                      itemSize: 13,
+                      itemSize: 12,
                       unratedColor: Colors.grey.withOpacity(0.3),
                     ),
-                    if (review.comment != null &&
-                        review.comment!.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        review.comment!,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: context.colors.textSecondary,
+                    const SizedBox(height: 5),
+                    // ── Mekan tipi + mesafe chip'leri ─────────────────────
+                    Row(
+                      children: [
+                        _VenueChip(
+                          icon: Iconsax.category_2,
+                          label: review.typeLabel,
                         ),
-                      ),
-                    ],
-                    const SizedBox(height: 4),
+                        if (review.lat != null &&
+                            currentUser?.lat != null &&
+                            currentUser?.lng != null) ...[
+                          const SizedBox(width: 5),
+                          _VenueChip(
+                            icon: Iconsax.location,
+                            label: () {
+                              final km = GeoUtils.haversineKm(
+                                currentUser!.lat!,
+                                currentUser.lng!,
+                                review.lat!,
+                                review.lng!,
+                              );
+                              return km < 1
+                                  ? '${(km * 1000).round()} m'
+                                  : '${km.toStringAsFixed(1)} km';
+                            }(),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 5),
                     Text(
                       review.authorName,
                       maxLines: 1,
@@ -776,4 +794,35 @@ class _ReviewCarouselCard extends ConsumerWidget {
   }
 }
 
+/// Ana sayfa carousel kartlarında mekan tipi ve mesafe için küçük bilgi chip'i.
+class _VenueChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _VenueChip({required this.icon, required this.label});
 
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: context.colors.primary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: context.colors.primary),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: context.colors.primary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

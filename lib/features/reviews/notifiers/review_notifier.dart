@@ -158,6 +158,7 @@ class ReviewNotifier extends Notifier<ReviewState> {
             venuePhotoUrlOverride == null ? venue.photoReference : null,
         lat: venue.lat,
         lng: venue.lng,
+        venueType: venue.types.isNotEmpty ? venue.types.first : null,
         rating: rating,
         comment: comment,
         photoUrl: photoUrl,

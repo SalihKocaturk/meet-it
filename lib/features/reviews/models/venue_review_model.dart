@@ -30,6 +30,11 @@ class VenueReviewModel {
   final double? lat;
   final double? lng;
 
+  /// Mekan tipi (Google Places taksonomisi: 'restaurant', 'cafe', 'park' vb.)
+  /// Yeni yorumlarda PlaceResult.types.first'ten doldurulur;
+  /// eski yorumlar için null — gösterimde 'Mekan' etiketi kullanılır.
+  final String? venueType;
+
   /// Yıldız değerlendirmesi (1-5) — her yorum için zorunlu
   final int rating;
 
@@ -56,6 +61,7 @@ class VenueReviewModel {
     this.venuePhotoReference,
     this.lat,
     this.lng,
+    this.venueType,
     required this.rating,
     this.comment,
     this.photoUrl,
@@ -70,6 +76,30 @@ class VenueReviewModel {
   String? get displayPhotoUrl => venuePhotoReference != null
       ? PlaceResult.buildPhotoUrl(venuePhotoReference!)
       : venuePhotoUrl;
+
+  /// Mekan tipini Türkçe etikete çevirir (görünür chip için).
+  String get typeLabel {
+    const typeMap = {
+      'restaurant': 'Restoran',
+      'cafe': 'Kafe',
+      'bar': 'Bar',
+      'museum': 'Müze',
+      'art_gallery': 'Galeri',
+      'park': 'Park',
+      'gym': 'Spor Salonu',
+      'movie_theater': 'Sinema',
+      'bowling_alley': 'Bowling',
+      'night_club': 'Gece Kulübü',
+      'library': 'Kütüphane',
+      'bakery': 'Pastane',
+      'amusement_park': 'Eğlence Parkı',
+      'shopping_mall': 'AVM',
+      'spa': 'Spa',
+      'tourist_attraction': 'Turistik',
+    };
+    if (venueType == null) return 'Mekan';
+    return typeMap[venueType] ?? 'Mekan';
+  }
 
   int get likeCount => likedBy.length;
 
@@ -102,6 +132,7 @@ class VenueReviewModel {
       venuePhotoReference: map['venuePhotoReference'] as String?,
       lat: (map['lat'] as num?)?.toDouble(),
       lng: (map['lng'] as num?)?.toDouble(),
+      venueType: map['venueType'] as String?,
       rating: (map['rating'] as num?)?.toInt() ?? 0,
       comment: map['comment'] as String?,
       photoUrl: map['photoUrl'] as String?,
@@ -124,6 +155,7 @@ class VenueReviewModel {
           'venuePhotoReference': venuePhotoReference,
         if (lat != null) 'lat': lat,
         if (lng != null) 'lng': lng,
+        if (venueType != null) 'venueType': venueType,
         'rating': rating,
         if (comment != null) 'comment': comment,
         if (photoUrl != null) 'photoUrl': photoUrl,
@@ -135,6 +167,7 @@ class VenueReviewModel {
     List<String>? likedBy,
     String? comment,
     int? rating,
+    String? venueType,
   }) =>
       VenueReviewModel(
         id: id,
@@ -148,6 +181,7 @@ class VenueReviewModel {
         venuePhotoReference: venuePhotoReference,
         lat: lat,
         lng: lng,
+        venueType: venueType ?? this.venueType,
         rating: rating ?? this.rating,
         comment: comment ?? this.comment,
         photoUrl: photoUrl,
