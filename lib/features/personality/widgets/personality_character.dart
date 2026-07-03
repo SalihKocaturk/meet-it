@@ -279,7 +279,7 @@ class _CharacterPainter extends CustomPainter {
         center: Offset(s * _cx, s * 0.615),
         width: s * 0.27, height: s * 0.30,
       ),
-      const Radius.circular(s),
+      Radius.circular(s * 0.05),
     );
     canvas.drawRRect(bodyRect, _fill(typeColor));
   }
@@ -295,29 +295,24 @@ class _CharacterPainter extends CustomPainter {
 
   void _drawLegs(Canvas canvas, double s) {
     final legP = _stroke(_pants, s * 0.085);
+    final shoeP = _fill(_shoe);
 
-    // Maceraperest yürüme hareketi
     if (type == PersonalityType.maceraperest) {
+      // Yürüme: her kare farklı konum — ayak uçları hesaplanıp ayakkabıya iletiliyor
       final walk = math.sin(anim * math.pi) * s * 0.045;
-      canvas.drawLine(
-        Offset(s * 0.445, s * 0.747),
-        Offset(s * 0.400 - walk, s * 0.895),
-        legP,
-      );
-      canvas.drawLine(
-        Offset(s * 0.555, s * 0.747),
-        Offset(s * 0.580 + walk, s * 0.895),
-        legP,
-      );
+      final leftFoot  = Offset(s * 0.400 - walk, s * 0.895);
+      final rightFoot = Offset(s * 0.580 + walk, s * 0.895);
+      canvas.drawLine(Offset(s * 0.445, s * 0.747), leftFoot,  legP);
+      canvas.drawLine(Offset(s * 0.555, s * 0.747), rightFoot, legP);
+      // Ayakkabılar ayak ucunu takip ediyor
+      canvas.drawOval(Rect.fromCenter(center: Offset(leftFoot.dx,  leftFoot.dy  + s * 0.008), width: s * 0.11, height: s * 0.044), shoeP);
+      canvas.drawOval(Rect.fromCenter(center: Offset(rightFoot.dx, rightFoot.dy + s * 0.008), width: s * 0.11, height: s * 0.044), shoeP);
     } else {
       canvas.drawLine(Offset(s * 0.445, s * 0.747), Offset(s * 0.405, s * 0.895), legP);
       canvas.drawLine(Offset(s * 0.555, s * 0.747), Offset(s * 0.590, s * 0.895), legP);
+      canvas.drawOval(Rect.fromCenter(center: Offset(s * 0.400, s * 0.905), width: s * 0.11, height: s * 0.044), shoeP);
+      canvas.drawOval(Rect.fromCenter(center: Offset(s * 0.592, s * 0.905), width: s * 0.11, height: s * 0.044), shoeP);
     }
-
-    // Ayakkabılar
-    final shoeP = _fill(_shoe);
-    canvas.drawOval(Rect.fromCenter(center: Offset(s * 0.400, s * 0.905), width: s * 0.11, height: s * 0.044), shoeP);
-    canvas.drawOval(Rect.fromCenter(center: Offset(s * 0.592, s * 0.905), width: s * 0.11, height: s * 0.044), shoeP);
   }
 
   // ── Kollar ─────────────────────────────────────────────────────────────────
@@ -582,14 +577,20 @@ class _CharacterPainter extends CustomPainter {
   }
 
   void _drawHikingStick(Canvas canvas, double s) {
-    // Yürüyüş bastonunu sol elde tutuyor
+    // Sol elin anlık konumunu _drawArms ile aynı formülle hesapla
+    final swing = math.sin(anim * math.pi) * s * 0.03;
+    final handX = s * 0.295 + swing;
+    final handY = s * 0.660;
+    // Baston el noktasından yere uzanıyor (sol-aşağı yönde)
+    final tipX = handX - s * 0.055;
+    final tipY = s * 0.895;
     canvas.drawLine(
-      Offset(s * 0.255, s * 0.645),
-      Offset(s * 0.205, s * 0.900),
+      Offset(handX, handY),
+      Offset(tipX, tipY),
       _stroke(const Color(0xFF8B5E3C), s * 0.022),
     );
-    // Uç nokta
-    canvas.drawCircle(Offset(s * 0.205, s * 0.900), s * 0.013, _fill(const Color(0xFF555555)));
+    // Metal uç
+    canvas.drawCircle(Offset(tipX, tipY), s * 0.013, _fill(const Color(0xFF555555)));
   }
 
   // ── Animasyonlu aksesuarlar ────────────────────────────────────────────────
@@ -655,26 +656,4 @@ class _CharacterPainter extends CustomPainter {
       canvas.drawCircle(
         Offset(pts[i].dx, pts[i].dy + yOff),
         rs[i],
-        _fill(typeColor.withOpacity(0.40 - i * 0.10)),
-      );
-    }
-  }
-
-  void _drawFoodSparkles(Canvas canvas, double s) {
-    // Tabaktan yükselen küçük parıltılar
-    final sparkP = _fill(typeColor.withOpacity(0.45));
-    final positions = [
-      Offset(s * 0.240, s * 0.540),
-      Offset(s * 0.260, s * 0.510),
-      Offset(s * 0.280, s * 0.525),
-    ];
-    final animOff = anim * s * 0.030;
-    for (final pos in positions) {
-      canvas.drawCircle(Offset(pos.dx, pos.dy - animOff), s * 0.012, sparkP);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _CharacterPainter old) =>
-      old.anim != anim || old.type != type || old.gender != gender;
-}
+        _fill(typeColor.withOpacity(0.40 - i * 0.10))
