@@ -71,7 +71,7 @@ extension PersonalityTypeX on PersonalityType {
     switch (this) {
       case PersonalityType.sosyalKelebek: return Iconsax.people;    // sosyal bağlantı
       case PersonalityType.sakinRuh:      return Iconsax.coffee;      // kahve/dinginlik
-      case PersonalityType.maceraperest:  return Iconsax.discover_1; // pusula/keşif/macera
+      case PersonalityType.maceraperest:  return Icons.terrain;       // dağ silüeti/macera
       case PersonalityType.entelektuel:   return Iconsax.book_1;     // bilgi/okuma
       case PersonalityType.gurme:         return Iconsax.cake;        // yemek/lezzet
     }
@@ -1333,4 +1333,4 @@ const _venueMap = <String, List<VenueRecommendation>>{
       tags: ['kafe', 'sosyal'],
     ),
     VenueRecommendation(
-      name: 'Park v
+      name: 'Park 
