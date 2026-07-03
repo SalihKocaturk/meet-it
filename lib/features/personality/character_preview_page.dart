@@ -1,11 +1,11 @@
-// ignore_for_file: dead_code
-// TODO: GEÇİCİ - animasyon önizleme sayfası, bitince sil
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/personality/widgets/personality_character.dart';
 
+/// Tüm kişilik tipi karakterlerini animasyonlu olarak gösteren sayfa.
+/// Kullanıcılar diğer tiplerin nasıl göründüğünü buradan keşfedebilir.
 class CharacterPreviewPage extends StatefulWidget {
   const CharacterPreviewPage({super.key});
 
@@ -27,6 +27,14 @@ class _CharacterPreviewPageState extends State<CharacterPreviewPage> {
     PersonalityType.gurme:         'Gurme',
   };
 
+  static const _descriptions = {
+    PersonalityType.sosyalKelebek: 'Enerjik, sosyal ve eğlence odaklı.',
+    PersonalityType.sakinRuh:      'Huzurlu, içe dönük ve doğa sevgini.',
+    PersonalityType.maceraperest:  'Macera arayan, cesaretli ve aktif.',
+    PersonalityType.entelektuel:   'Meraklı, analitik ve kültür odaklı.',
+    PersonalityType.gurme:         'Lezzet arayışında, rafine ve sofistike.',
+  };
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -39,7 +47,7 @@ class _CharacterPreviewPageState extends State<CharacterPreviewPage> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'Karakter Önizleme',
+          'Kişilik Tipleri',
           style: TextStyle(
             color: context.colors.textPrimary,
             fontWeight: FontWeight.w700,
@@ -73,21 +81,21 @@ class _CharacterPreviewPageState extends State<CharacterPreviewPage> {
               ],
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
-            // ── Animasyon ─────────────────────────────────────────────────
+            // ── Animasyonlu karakter ──────────────────────────────────────
             Expanded(
               child: Center(
                 child: PersonalityCharacterWidget(
                   key: ValueKey('$_type-$_gender'),
                   type: _type,
                   gender: _gender,
-                  size: 260,
+                  size: 240,
                 ),
               ),
             ),
 
-            // ── Tip adı ───────────────────────────────────────────────────
+            // ── Tip adı + açıklama ────────────────────────────────────────
             Text(
               _labels[_type] ?? '',
               style: TextStyle(
@@ -96,8 +104,16 @@ class _CharacterPreviewPageState extends State<CharacterPreviewPage> {
                 color: context.colors.textPrimary,
               ),
             ),
+            const SizedBox(height: 4),
+            Text(
+              _descriptions[_type] ?? '',
+              style: TextStyle(
+                fontSize: 13,
+                color: context.colors.textSecondary,
+              ),
+            ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // ── Tip seçici ────────────────────────────────────────────────
             Padding(
@@ -170,25 +186,4 @@ class _GenderChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? color : context.colors.card,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: selected ? color : context.colors.border,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-            color: selected ? Colors.white : context.colors.textPrimary,
-          ),
-        ),
-      ),
-    );
-  }
-}
+      ch
