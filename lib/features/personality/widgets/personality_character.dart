@@ -814,8 +814,8 @@ class _CharacterPainter extends CustomPainter {
     const domeWhite = Color(0xFFF5F5F5); // beyaz panel
     const numPanels = 6;
 
-    final domeCY = s * 0.185; // kubbenin alt merkezi (ip bağlantı hizası)
-    final domeR  = s * 0.165; // yarıçap
+    final domeCY = s * 0.195; // kubbenin alt merkezi (ip bağlantı hizası)
+    final domeR  = s * 0.200; // yarıçap — geniş, gerçekçi paraşüt profili
 
     // ── 6 dilimli kubbe ───────────────────────────────────────────────────────
     // sweepAngle pozitif → saat yönü → sol(π)→ tepe(3π/2)→ sağ(0): ÜST YAY ✓
@@ -869,7 +869,4 @@ class _CharacterPainter extends CustomPainter {
     canvas.drawLine(Offset(cx - domeR * 0.08, domeCY), Offset(s * 0.492, s * hY), stringP);
     canvas.drawLine(Offset(cx + domeR * 0.08, domeCY), Offset(s * 0.508, s * hY), stringP);
     canvas.drawLine(Offset(cx + domeR * 0.52, domeCY), Offset(s * 0.558, s * hY), stringP);
-    canvas.drawLine(Offset(cx + domeR,        domeCY), Offset(s * 0.622, s * hY), stringP);
-  }
-
-  void _dr
+    canvas.drawLine(Offset(cx + domeR,        domeCY), Offset(s * 
