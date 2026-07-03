@@ -55,11 +55,18 @@ class PersonalityAnalysisPage extends ConsumerWidget {
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: Icon(Iconsax.eye, color: context.colors.textSecondary),
-            tooltip: 'Kişilik Tiplerini Keşfet',
+          TextButton.icon(
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const CharacterPreviewPage()),
+            ),
+            icon: Icon(Iconsax.eye, size: 16, color: context.colors.primary),
+            label: Text(
+              'Tipleri İncele',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: context.colors.primary,
+              ),
             ),
           ),
         ],
@@ -148,64 +155,84 @@ class PersonalityAnalysisPage extends ConsumerWidget {
 
                     const SizedBox(height: 16),
 
-                    // ── Kişilik Tipleri keşif kartı ───────────────────────
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const CharacterPreviewPage(),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          ref.read(quizProvider.notifier).reset();
+                          context.push(AppRoutes.quiz);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: BorderSide(color: context.colors.primary),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: Text(
+                          'quiz.retake_test'.tr(),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: context.colors.primary,
+                          ),
                         ),
                       ),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          color: context.colors.card,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: context.colors.border),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                color: context.colors.primary.withOpacity(0.10),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Icon(
-                                Iconsax.people,
-                                color: context.colors.primary,
-                                size: 18,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Kişilik Tiplerini Keşfet',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: context.colors.textPrimary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Tüm karakterlerin animasyonlarını gör',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: context.colors.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Icon(
-                              Iconsax.arrow_right_3,
-                              size: 16,
-                              color: context.colors.textSecon
+                    ),
+                  ],
+                ),
+              ),
+      ),
+    );
+  }
+
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'time.just_now'.tr();
+    if (diff.inMinutes < 60) return '${diff.inMinutes} ${'time.min_ago'.tr()}';
+    if (diff.inHours < 24) return '${diff.inHours} ${'time.hr_ago'.tr()}';
+    return '${diff.inDays} ${'time.days_ago'.tr()}';
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final VoidCallback onTakeQuiz;
+  const _EmptyState({required this.onTakeQuiz});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Iconsax.activity,
+              size: 56,
+              color: context.colors.primary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'match.no_profile'.tr(),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: context.colors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'match.no_profile_desc'.tr(),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: context.colors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: onTakeQuiz,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.c
