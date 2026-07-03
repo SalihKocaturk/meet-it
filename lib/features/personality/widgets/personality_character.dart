@@ -51,12 +51,20 @@ class _PersonalityCharacterWidgetState extends State<PersonalityCharacterWidget>
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2600),
-    )..repeat(reverse: true);
-
-    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+    if (widget.type == PersonalityType.maceraperest) {
+      // Tek seferlik paraşütle iniş: 5 saniye, yavaşlayarak iner (easeOut)
+      _ctrl = AnimationController(
+        vsync: this,
+        duration: const Duration(seconds: 5),
+      )..forward();
+      _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    } else {
+      _ctrl = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 2600),
+      )..repeat(reverse: true);
+      _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+    }
   }
 
   @override
@@ -150,10 +158,17 @@ class _CharacterPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final s = size.width;
 
-    // Tüm karakter hafifçe yukarı-aşağı yüzer
-    final floatY = math.sin(anim * math.pi) * 5.0;
+    // ── Animasyon ötelemesi ───────────────────────────────────────────────────
+    // Maceraperest: tek seferlik iniş (0.75s yukarıdan normale).
+    // Ayaklar başta canvas üstünde ~%19'da görünür, kafa canvas dışı.
+    // anim=0.26'dan itibaren harness ipleri girer, anim≈0.75'te kubbe girer.
+    // Diğerleri: küçük sallanma (±5px).
     canvas.save();
-    canvas.translate(0, -floatY);
+    if (type == PersonalityType.maceraperest) {
+      canvas.translate(0, -s * 0.75 * (1 - anim));
+    } else {
+      canvas.translate(0, -math.sin(anim * math.pi) * 5.0);
+    }
 
     _drawBackground(canvas, s);
     _drawLegs(canvas, s);
@@ -756,7 +771,9 @@ class _CharacterPainter extends CustomPainter {
   void _drawParachute(Canvas canvas, double s) {
     final cx = s * _cx;
 
-    final opacity = math.sin(anim * math.pi).clamp(0.0, 1.0);
+    // Tek seferlik iniş: anim=0.85→1.0 arasında solar, sonra tamamen kaybolur.
+    // anim=0'dan 0.85'e kadar tam görünür; 0.85'te solar, 1.0'da sıfır.
+    final opacity = ((1.0 - anim) / 0.15).clamp(0.0, 1.0);
     if (opacity < 0.02) return;
 
     const domeRed   = Color(0xFFE53935); // kırmızı panel
@@ -855,37 +872,4 @@ class _CharacterPainter extends CustomPainter {
 
   void _drawIdeaBubbles(Canvas canvas, double s) {
     final pts = [
-      Offset(s * 0.140, s * 0.200),
-      Offset(s * 0.820, s * 0.230),
-      Offset(s * 0.830, s * 0.380),
-    ];
-    final rs = [s * 0.025, s * 0.018, s * 0.015];
-
-    for (var i = 0; i < 3; i++) {
-      final yOff = math.sin((anim + i * 0.33) * math.pi) * s * 0.022;
-      canvas.drawCircle(
-        Offset(pts[i].dx, pts[i].dy + yOff),
-        rs[i],
-        _fill(typeColor.withOpacity(0.40 - i * 0.10)),
-      );
-    }
-  }
-
-  void _drawFoodSparkles(Canvas canvas, double s) {
-    // Tabaktan yükselen küçük parıltılar
-    final sparkP = _fill(typeColor.withOpacity(0.45));
-    final positions = [
-      Offset(s * 0.240, s * 0.540),
-      Offset(s * 0.260, s * 0.510),
-      Offset(s * 0.280, s * 0.525),
-    ];
-    final animOff = anim * s * 0.030;
-    for (final pos in positions) {
-      canvas.drawCircle(Offset(pos.dx, pos.dy - animOff), s * 0.012, sparkP);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _CharacterPainter old) =>
-      old.anim != anim || old.type != type || old.gender != gender;
-}
+      Offs
