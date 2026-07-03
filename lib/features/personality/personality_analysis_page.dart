@@ -8,6 +8,7 @@ import 'package:meetit/core/router/app_routes.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/personality/providers/personality_provider.dart';
+import 'package:meetit/features/personality/character_preview_page.dart';
 import 'package:meetit/features/personality/widgets/personality_breakdown.dart';
 import 'package:meetit/features/personality/widgets/personality_history_chart.dart';
 
@@ -53,6 +54,18 @@ class PersonalityAnalysisPage extends ConsumerWidget {
           ),
         ),
         centerTitle: true,
+        actions: [
+          // TODO: GEÇİCİ — animasyon önizleme, bitince sil
+          IconButton(
+            icon: Icon(Iconsax.eye, color: context.colors.textSecondary),
+            tooltip: 'Karakter Önizleme',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const CharacterPreviewPage(),
+              ),
+            ),
+          ),
+        ],
       ),
       body: SafeArea(
         top: false,
@@ -122,7 +135,10 @@ class PersonalityAnalysisPage extends ConsumerWidget {
 
                     const SizedBox(height: 16),
 
-                    PersonalityBreakdown(profile: profile),
+                    PersonalityBreakdown(
+                      profile: profile,
+                      gender: currentUser?.gender,
+                    ),
 
                     const SizedBox(height: 16),
 
@@ -218,24 +234,4 @@ class _EmptyState extends StatelessWidget {
                 backgroundColor: context.colors.primary,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
-                  vertical: 14,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: Text(
-                'match.take_quiz'.tr(),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+         
