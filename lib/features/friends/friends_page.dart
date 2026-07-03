@@ -127,12 +127,19 @@ class FriendsPage extends ConsumerWidget {
               ),
             ),
 
-            // Arama çubuğu
+            // Arama çubuğu — dokunulunca FriendCodePage'e git
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: _SearchBar(
-                onChanged: (v) =>
-                    ref.read(friendsSearchProvider.notifier).state = v,
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const FriendCodePage()),
+                ),
+                child: AbsorbPointer(
+                  child: _SearchBar(
+                    onChanged: (v) =>
+                        ref.read(friendsSearchProvider.notifier).state = v,
+                  ),
+                ),
               ),
             ),
 
@@ -620,12 +627,23 @@ class _SentRequestTile extends ConsumerWidget {
                   ),
                 ),
                 if (friend.personalityProfile != null)
-                  Text(
-                    '${friend.personalityProfile!.dominantType.emoji} ${friend.personalityProfile!.dominantType.displayName}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: context.colors.textSecondary,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        friend.personalityProfile!.dominantType.iconsaxIcon,
+                        size: 12,
+                        color: context.colors.textSecondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        friend.personalityProfile!.dominantType.displayName,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: context.colors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
               ],
             ),
@@ -735,11 +753,12 @@ class _ConnectionTile extends ConsumerWidget {
                         if (friend.personalityProfile != null)
                           Row(
                             children: [
-                              Text(
-                                friend.personalityProfile!.dominantType.emoji,
-                                style: TextStyle(fontSize: 12),
+                              Icon(
+                                friend.personalityProfile!.dominantType.iconsaxIcon,
+                                size: 12,
+                                color: context.colors.textSecondary,
                               ),
-                              SizedBox(width: 2),
+                              const SizedBox(width: 4),
                               Text(
                                 friend.personalityProfile!.dominantType.displayName,
                                 style: TextStyle(
@@ -809,22 +828,3 @@ class _ConnectionTile extends ConsumerWidget {
                   ref.read(friendsProvider.notifier).removeFriend(friend.uid);
                 },
               );
-            },
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.08),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Iconsax.profile_remove,
-                size: 16,
-                color: Colors.red,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
