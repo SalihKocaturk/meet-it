@@ -490,7 +490,7 @@ class _CharacterPainter extends CustomPainter {
       cx - r - s * 0.01,
       headCY - r - s * 0.01,  // başın tepesinin biraz üstü
       cx + r + s * 0.01,
-      hairlineY,               // hairline'ın altını kes
+      hairlineY + s * 0.006,  // yan saçla örtüşme boşluğunu kapatmak için biraz aşağı
     ));
     canvas.drawCircle(Offset(cx, headCY), r + s * 0.006, hairP);
     canvas.restore();
@@ -870,7 +870,4 @@ class _CharacterPainter extends CustomPainter {
     final positions = [
       Offset(s * 0.140, s * 0.230),
       Offset(s * 0.790, s * 0.200),
-      Offset(s * 0.745, s * 0.360),
-    ];
-    final offsets = [
-      
+      Offset(s * 0.745, s * 0.360)
