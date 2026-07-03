@@ -2,10 +2,12 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
+import 'package:meetit/features/personality/widgets/personality_character.dart';
 import 'package:meetit/features/personality/widgets/personality_radar_chart.dart';
 
-/// Bir [PersonalityProfile]'ın görsel dökümü: dominant tip, varsa ikincil
-/// tip rozeti, açıklama kartı ve skor çubukları.
+/// Bir [PersonalityProfile]'ın görsel dökümü: animasyonlu karakter
+/// illüstrasyonu, dominant tip adı, varsa ikincil tip rozeti, açıklama
+/// kartı, radar chart ve skor çubukları.
 ///
 /// Hem quiz sonuç sayfasında (quiz_page.dart — yeni tamamlanan profil için)
 /// hem de "Kişilik Analizim" sayfasında (kayıtlı/evrilmiş profil için)
@@ -13,7 +15,15 @@ import 'package:meetit/features/personality/widgets/personality_radar_chart.dart
 class PersonalityBreakdown extends StatelessWidget {
   final PersonalityProfile profile;
 
-  const PersonalityBreakdown({super.key, required this.profile});
+  /// Kullanıcının cinsiyeti — karakter saç stilini belirler.
+  /// null geçilirse nötr gösterim kullanılır.
+  final String? gender;
+
+  const PersonalityBreakdown({
+    super.key,
+    required this.profile,
+    this.gender,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -24,9 +34,16 @@ class PersonalityBreakdown extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Dominant tip
-        Text(dominant.emoji, style: const TextStyle(fontSize: 64)),
-        const SizedBox(height: 8),
+        // ── Animasyonlu karakter illüstrasyonu ───────────────────────────
+        PersonalityCharacterWidget(
+          type: dominant,
+          gender: gender,
+          size: 210,
+        ),
+
+        const SizedBox(height: 12),
+
+        // Kişilik tipi adı
         Text(
           dominant.displayName,
           style: TextStyle(
@@ -36,6 +53,7 @@ class PersonalityBreakdown extends StatelessWidget {
           ),
         ),
 
+        // İkincil tip rozeti
         if (secondary != null) ...[
           const SizedBox(height: 6),
           Container(
@@ -60,7 +78,7 @@ class PersonalityBreakdown extends StatelessWidget {
 
         const SizedBox(height: 16),
 
-        // Açıklama
+        // ── Açıklama kartı ────────────────────────────────────────────────
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(18),
@@ -82,13 +100,7 @@ class PersonalityBreakdown extends StatelessWidget {
 
         const SizedBox(height: 20),
 
-        // ── Radar (Spider) Chart ─────────────────────────────────────────
-        //
-        // Skor çubukları zaten her tipin yüzdesini ayrı ayrı gösteriyor,
-        // ama "profilin genel şekli" tek bakışta görülmüyordu. Radar chart
-        // 5 ekseni (5 kişilik tipi) aynı anda gösterip bir beşgen çizerek
-        // bunu sağlıyor — özellikle mekan ziyaretleriyle profil zamanla
-        // değiştiğinde, şeklin nasıl evrildiğini görmek daha sezgisel.
+        // ── Radar (Spider) Chart ──────────────────────────────────────────
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 18),
@@ -121,7 +133,7 @@ class PersonalityBreakdown extends StatelessWidget {
 
         const SizedBox(height: 20),
 
-        // ── Skor Barları ─────────────────────────────────────────────────
+        // ── Skor Barları ──────────────────────────────────────────────────
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(18),
@@ -228,16 +240,4 @@ class PersonalityScoreBar extends StatelessWidget {
             child: Text(
               '%$percent',
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: isDominant ? FontWeight.w700 : FontWeight.w400,
-                color: isDominant
-                    ? context.colors.primary
-                    : context.colors.textSecondary,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+                f
