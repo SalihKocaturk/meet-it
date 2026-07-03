@@ -97,26 +97,25 @@ class _QuizPageState extends ConsumerState<QuizPage>
               // Üst bar: geri + ilerleme
               Row(
                 children: [
-                  if (quizState.currentQuestionIndex > 0)
-                    GestureDetector(
-                      onTap: _animateToPrev,
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: context.colors.card,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: context.colors.border),
-                        ),
-                        child: Icon(
-                          Iconsax.arrow_left_2,
-                          size: 16,
-                          color: context.colors.textPrimary,
-                        ),
+                  GestureDetector(
+                    onTap: quizState.currentQuestionIndex > 0
+                        ? _animateToPrev
+                        : () => Navigator.of(context).pop(),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: context.colors.card,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: context.colors.border),
                       ),
-                    )
-                  else
-                    SizedBox(width: 36),
+                      child: Icon(
+                        Iconsax.arrow_left_2,
+                        size: 16,
+                        color: context.colors.textPrimary,
+                      ),
+                    ),
+                  ),
                   SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -621,4 +620,4 @@ class _ScoreBar extends StatelessWidget {
     );
   }
 }
-                                                                                                                                                                                                                                                                              
+                                                                                                                                                                                                                                                                                                                
