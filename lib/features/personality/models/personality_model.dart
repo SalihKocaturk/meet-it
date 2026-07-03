@@ -31,7 +31,7 @@ extension PersonalityTypeX on PersonalityType {
       case PersonalityType.sosyalKelebek:
         return '🦋';
       case PersonalityType.sakinRuh:
-        return '🌿';
+        return '☕';
       case PersonalityType.maceraperest:
         return '🏔️';
       case PersonalityType.entelektuel:
@@ -1333,4 +1333,4 @@ const _venueMap = <String, List<VenueRecommendation>>{
       tags: ['kafe', 'sosyal'],
     ),
     VenueRecommendation(
-      name: 'Pa
+      name: 'Par
