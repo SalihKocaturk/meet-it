@@ -8,6 +8,7 @@ import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/models/user_friend_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
+import 'package:meetit/features/personality/widgets/personality_character.dart';
 import 'package:meetit/features/personality/widgets/personality_radar_chart.dart';
 
 /// Arkadaş listesindeki herkesle kişilik uyumunu (cosine similarity tabanlı
@@ -207,6 +208,7 @@ class FriendCompatibilityDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final me = ref.watch(currentUserProvider);
     return Scaffold(
       backgroundColor: context.colors.scaffold,
       appBar: AppBar(
@@ -232,18 +234,53 @@ class FriendCompatibilityDetailPage extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
           child: Column(
             children: [
-              // ── Animasyonlu kişilik ikonları + uyum skoru ─────────
+              // ── Yan yana kişilik karakterleri + uyum skoru ────────
+              //
+              // İki kullanıcının dominant tip karakteri (PersonalityCharacterWidget
+              // ile çizilen animasyonlu bitmoji figürü) yan yana gösterilir.
+              // Kendi karakterim kişisel cinsiyeti kullanır; arkadaşın cinsiyeti
+              // UserFriendModel'de tutulmadığından nötr gösterim yapılır.
               Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  _AnimatedPersonalityBubble(
-                    type: myProfile.dominantType,
-                    label: 'friend_compat.you_label'.tr(),
-                    delay: Duration.zero,
+                  // ── Ben ──────────────────────────────────────────────────
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        PersonalityCharacterWidget(
+                          type: myProfile.dominantType,
+                          gender: me?.gender,
+                          size: 130,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'friend_compat.you_label'.tr(),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: context.colors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          myProfile.dominantType.displayName,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(int.parse(
+                              myProfile.dominantType.colorHex
+                                  .replaceFirst('#', '0xFF'),
+                            )),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+
+                  // ── Orta: kalp + % ───────────────────────────────────────
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.only(bottom: 36),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -252,11 +289,11 @@ class FriendCompatibilityDetailPage extends ConsumerWidget {
                           color: context.colors.primary,
                           size: 22,
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Text(
                           '%$compatibility',
                           style: TextStyle(
-                            fontSize: 26,
+                            fontSize: 24,
                             fontWeight: FontWeight.w800,
                             color: context.colors.primary,
                           ),
@@ -264,55 +301,9 @@ class FriendCompatibilityDetailPage extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  _AnimatedPersonalityBubble(
-                    type: friendProfile.dominantType,
-                    label: friend.name,
-                    delay: const Duration(milliseconds: 700),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                _tierKey.tr(),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: context.colors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 24),
 
-              // ── Üst üste bindirilmiş radar chart ──────────────────────
-              //
-              // İki ayrı PersonalityBreakdown'daki skor çubukları yan yana
-              // kıyaslamayı zorlaştırıyordu (yukarı-aşağı kaydırmak
-              // gerekiyordu). Aynı radar üzerinde iki yarı saydam poligon
-              // çizerek örtüşme/farklılık tek bakışta görülüyor.
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                decoration: BoxDecoration(
-                  color: context.colors.card,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: context.colors.border),
-                ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 18),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'friend_compat.overlap_title'.tr(),
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: context.colors.textPrimary,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    PersonalityRadarChart(
-                      profile: myProfile,
-    
+                  // ── Arkadaş ──────────────────────────────────────────────
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+     
