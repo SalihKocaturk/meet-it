@@ -128,11 +128,10 @@ class AppConfig {
   /// gevşetilen bir "ilk eşik" yok, tek ve sabit bir taban puan var.
   static const double midpointMinRating = 3.5;
 
-  /// Döndürülecek maksimum mekan sayısı — kullanıcı talebi üzerine ("5
-  /// mekan göster, 10 bile çok fazla") sıkı bir üst sınır. Önceden 20'ye
-  /// kadar çekilip 4 sayfaya bölünüyordu; artık tek seferde en fazla bu
-  /// kadar mekan gösteriliyor, sayfalama yok.
-  static const int maxVenueResults = 5;
+  /// Döndürülecek maksimum mekan sayısı. 3 sonuç karar vermeyi
+  /// kolaylaştırır; 5'te seçim felci başlıyor. Önceden 20'ye kadar çekilip
+  /// 4 sayfaya bölünüyordu; artık tek seferde en fazla bu kadar gösteriliyor.
+  static const int maxVenueResults = 3;
 
   /// Ana sayfadaki "Yakınınızdaki Beğenilen Mekanlar" carousel'inde,
   /// kullanıcının kayıtlı konumundan en fazla bu kadar km uzaktaki yorumlar
@@ -144,3 +143,4 @@ class AppConfig {
   /// yorumunu öneri olarak gösterebiliyordu (gerçekte gidemeyeceği bir yer).
   static const double nearbyLikedVenuesRadiusKm = 10.0;
 }
+                                                    
