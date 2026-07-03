@@ -70,17 +70,16 @@ class _PersonalityCharacterWidgetState extends State<PersonalityCharacterWidget>
   }
 
   /// Paraşüt inişi tamamlanınca hafif sallanma animasyonuna geç.
+  /// Aynı controller'ı reuse eder — dispose timing problemi olmaz.
   void _onDescentComplete(AnimationStatus status) {
-    if (status == AnimationStatus.completed && mounted) {
-      final oldCtrl = _ctrl;
-      _ctrl = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 2600),
-      )..repeat(reverse: true);
+    if (status != AnimationStatus.completed || !mounted) return;
+    _ctrl.duration = const Duration(milliseconds: 2600);
+    _ctrl.reset(); // 0'dan başlat
+    setState(() {
       _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
-      setState(() => _landed = true);
-      oldCtrl.dispose();
-    }
+      _landed = true;
+    });
+    _ctrl.repeat(); // reverse olmadan — tam sin dalgası için
   }
 
   @override
@@ -187,8 +186,13 @@ class _CharacterPainter extends CustomPainter {
     // Diğerleri: ±5px yukarı-aşağı sallanma.
     canvas.save();
     if (type == PersonalityType.maceraperest && !landed) {
+      // Tek seferlik iniş: yukarıdan aşağıya süzülür
       canvas.translate(0, -s * 0.75 * (1 - anim));
+    } else if (type == PersonalityType.maceraperest && landed) {
+      // İniş bitti: tam sin dalgası → yukarı-aşağı sallanma (±4px)
+      canvas.translate(0, math.sin(anim * 2 * math.pi) * 4.0);
     } else {
+      // Diğer tipler: sin(anim·π) → küçük yukarı sallanma (±5px)
       canvas.translate(0, -math.sin(anim * math.pi) * 5.0);
     }
 
@@ -868,15 +872,4 @@ class _CharacterPainter extends CustomPainter {
     final offsets = [
       math.sin(anim * math.pi * 2) * s * 0.04,
       math.cos(anim * math.pi * 2) * s * 0.035,
-      math.sin(anim * math.pi * 2 + 0.8) * s * 0.028,
-    ];
-    final sizes = [s * 0.055, s * 0.045, s * 0.035];
-    final opacities = [0.85, 0.65, 0.45];
-
-    for (var i = 0; i < 3; i++) {
-      _butterfly(canvas, Offset(positions[i].dx, positions[i].dy + offsets[i]),
-          sizes[i], typeColor.withOpacity(opacities[i]));
-    }
-  }
-
-  void _butterfly(Canvas canvas, Offset center, double r, 
+      ma
