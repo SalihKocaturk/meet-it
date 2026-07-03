@@ -207,7 +207,6 @@ class FriendCompatibilityDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final me = ref.watch(currentUserProvider);
     return Scaffold(
       backgroundColor: context.colors.scaffold,
       appBar: AppBar(
@@ -233,35 +232,46 @@ class FriendCompatibilityDetailPage extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
           child: Column(
             children: [
-              // ── Uyum yüzdesi başlığı ──────────────────────────────────
+              // ── Animasyonlu kişilik ikonları + uyum skoru ─────────
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  CircularAvatar(
-                    name: me?.name ?? 'common.user'.tr(),
-                    photoUrl: me?.photoUrl,
-                    radius: 26,
+                  _AnimatedPersonalityBubble(
+                    type: myProfile.dominantType,
+                    label: 'friend_compat.you_label'.tr(),
+                    delay: Duration.zero,
                   ),
-                  const SizedBox(width: 8),
-                  Icon(Iconsax.heart, color: context.colors.primary, size: 22),
-                  const SizedBox(width: 8),
-                  CircularAvatar(
-                    name: friend.name,
-                    photoUrl: friend.photoUrl,
-                    radius: 26,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Iconsax.heart,
+                          color: context.colors.primary,
+                          size: 22,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '%$compatibility',
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                            color: context.colors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _AnimatedPersonalityBubble(
+                    type: friendProfile.dominantType,
+                    label: friend.name,
+                    delay: const Duration(milliseconds: 700),
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
-              Text(
-                'friend_compat.percent_match'.tr(namedArgs: {'percent': '$compatibility'}),
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: context.colors.primary,
-                ),
-              ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 10),
               Text(
                 _tierKey.tr(),
                 textAlign: TextAlign.center,
@@ -305,20 +315,4 @@ class FriendCompatibilityDetailPage extends ConsumerWidget {
                     const SizedBox(height: 8),
                     PersonalityRadarChart(
                       profile: myProfile,
-                      secondaryProfile: friendProfile,
-                      primaryLabel: 'friend_compat.you_label'.tr(),
-                      secondaryLabel: friend.name,
-                      size: 240,
-                    ),
-                  ],
-                ),
-              ),
-
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-                                         
+    
