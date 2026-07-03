@@ -37,28 +37,78 @@ class PersonalityRadarChart extends StatelessWidget {
     this.size = 260,
   });
 
+  /// Eksen etiketi konumlarını hesaplar — painter ile aynı formül.
+  List<Offset> _axisLabelOffsets() {
+    final double radius = size / 2 - 36;
+    final double labelRadius = radius * 1.18;
+    const int axisCount = 5;
+    const double startAngle = -math.pi / 2;
+    final double angleStep = (2 * math.pi) / axisCount;
+    return List.generate(
+      axisCount,
+      (i) => Offset(
+        size / 2 + labelRadius * math.cos(startAngle + angleStep * i),
+        size / 2 + labelRadius * math.sin(startAngle + angleStep * i),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final primaryColor = context.colors.primary;
-    // İkincil profil rengi: temadan bağımsız sabit bir turuncu — birincil
-    // mavi/ana renkle her zaman net ayrışsın diye kasıtlı olarak temaya
-    // bağlı değil.
     const secondaryColor = Color(0xFFFF8A3D);
+    final labelColor = context.colors.textSecondary;
+    final offsets = _axisLabelOffsets();
+    const types = PersonalityType.values;
+    const labelW = 58.0;
+    const labelH = 38.0;
 
     return Column(
       children: [
         SizedBox(
           width: size,
           height: size,
-          child: CustomPaint(
-            painter: _RadarChartPainter(
-              profile: profile,
-              secondaryProfile: secondaryProfile,
-              gridColor: context.colors.border,
-              labelColor: context.colors.textSecondary,
-              primaryColor: primaryColor,
-              secondaryColor: secondaryColor,
-            ),
+          child: Stack(
+            children: [
+              // ── Radar poligonu (etiket yok — painter sadece ızgara + poligon) ──
+              CustomPaint(
+                size: Size(size, size),
+                painter: _RadarChartPainter(
+                  profile: profile,
+                  secondaryProfile: secondaryProfile,
+                  gridColor: context.colors.border,
+                  primaryColor: primaryColor,
+                  secondaryColor: secondaryColor,
+                ),
+              ),
+              // ── Eksen etiketleri: Iconsax ikon + kısa isim ───────────────────
+              ...List.generate(types.length, (i) {
+                final pos = offsets[i];
+                return Positioned(
+                  left: pos.dx - labelW / 2,
+                  top:  pos.dy - labelH / 2,
+                  width: labelW,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(types[i].iconsaxIcon, size: 15, color: labelColor),
+                      const SizedBox(height: 2),
+                      Text(
+                        types[i].displayName,
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: labelColor,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
           ),
         ),
         if (secondaryProfile != null) ...[
@@ -106,7 +156,6 @@ class _RadarChartPainter extends CustomPainter {
   final PersonalityProfile profile;
   final PersonalityProfile? secondaryProfile;
   final Color gridColor;
-  final Color labelColor;
   final Color primaryColor;
   final Color secondaryColor;
 
@@ -114,7 +163,6 @@ class _RadarChartPainter extends CustomPainter {
     required this.profile,
     required this.secondaryProfile,
     required this.gridColor,
-    required this.labelColor,
     required this.primaryColor,
     required this.secondaryColor,
   });
@@ -184,67 +232,4 @@ class _RadarChartPainter extends CustomPainter {
       for (var i = 0; i < axisCount; i++) {
         final value = p.scores[_types[i]] ?? 0.0;
         final pt = pointFor(i, value);
-        points.add(pt);
-        if (i == 0) {
-          path.moveTo(pt.dx, pt.dy);
-        } else {
-          path.lineTo(pt.dx, pt.dy);
-        }
-      }
-      path.close();
-
-      canvas.drawPath(path, fillPaint);
-      canvas.drawPath(path, strokePaint);
-      for (final pt in points) {
-        canvas.drawCircle(pt, 3.2, dotPaint);
-      }
-    }
-
-    drawProfile(profile, primaryColor);
-    if (secondaryProfile != null) {
-      drawProfile(secondaryProfile!, secondaryColor);
-    }
-
-    // ── Eksen etiketleri (emoji + kısa isim) ─────────────────────────────
-    for (var i = 0; i < axisCount; i++) {
-      final type = _types[i];
-      final labelPoint = pointFor(i, 1.18);
-      final textPainter = TextPainter(
-        text: TextSpan(
-          children: [
-            TextSpan(
-              text: '${type.emoji}\n',
-              style: const TextStyle(fontSize: 14),
-            ),
-            TextSpan(
-              text: type.displayName,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: labelColor,
-              ),
-            ),
-          ],
-        ),
-        textAlign: TextAlign.center,
-        textDirection: TextDirection.ltr,
-      )..layout(maxWidth: 64);
-      textPainter.paint(
-        canvas,
-        Offset(
-          labelPoint.dx - textPainter.width / 2,
-          labelPoint.dy - textPainter.height / 2,
-        ),
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _RadarChartPainter oldDelegate) {
-    return oldDelegate.profile != profile ||
-        oldDelegate.secondaryProfile != secondaryProfile ||
-        oldDelegate.gridColor != gridColor ||
-        oldDelegate.primaryColor != primaryColor ||
-        oldDelegate.secondaryColor != secondaryColor;
-  }
-}
+        poi

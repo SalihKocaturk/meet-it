@@ -55,12 +55,8 @@ class FriendChip extends ConsumerWidget {
             ),
           ),
           if (friend.personalityProfile != null)
-            Text(
-              friend.personalityProfile!.dominantType.emoji,
-              style: const TextStyle(fontSize: 12),
-            ),
-        ],
-      ),
-    );
-  }
-}
+            Icon(
+              friend.personalityProfile!.dominantType.iconsaxIcon,
+              size: 13,
+              color: isSelected
+                  ? context.colors.pri

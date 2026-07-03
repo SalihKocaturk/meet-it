@@ -3,6 +3,8 @@
 import 'dart:math';
 
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/material.dart';
+import 'package:iconsax/iconsax.dart';
 
 /// Uygulamadaki kişilik tipleri
 enum PersonalityType {
@@ -63,6 +65,18 @@ extension PersonalityTypeX on PersonalityType {
         return '#FFEAA7';
     }
   }
+  /// Uygulamanın Iconsax icon setinden bu kişilik tipini temsil eden ikon.
+  /// Emoji yerine tüm UI'larda bu kullanılmalı.
+  IconData get iconsaxIcon {
+    switch (this) {
+      case PersonalityType.sosyalKelebek: return Iconsax.people;    // sosyal bağlantı
+      case PersonalityType.sakinRuh:      return Iconsax.moon;      // huzur/sakinlik
+      case PersonalityType.maceraperest:  return Iconsax.map_1;     // keşif/macera
+      case PersonalityType.entelektuel:   return Iconsax.book_1;    // bilgi/okuma
+      case PersonalityType.gurme:         return Iconsax.cup;       // yeme-içme
+    }
+  }
+
   // Not: Dart 3 enum'larında .name built-in olarak mevcuttur — override gerekmez.
 }
 
@@ -1319,28 +1333,4 @@ const _venueMap = <String, List<VenueRecommendation>>{
       tags: ['kafe', 'sosyal'],
     ),
     VenueRecommendation(
-      name: 'Park ve Açık Hava Alanı',
-      description: 'Doğal ortamda rahat ve keyifli buluşma.',
-      type: 'Park',
-      emoji: '🌳',
-      compatibilityScore: 0.75,
-      tags: ['park', 'doğa'],
-    ),
-    VenueRecommendation(
-      name: 'Alışveriş Merkezi Food Court',
-      description: 'Çeşitli seçenekler sunan merkezi buluşma noktası.',
-      type: 'Yemek',
-      emoji: '🛍️',
-      compatibilityScore: 0.70,
-      tags: ['yemek', 'alışveriş'],
-    ),
-    VenueRecommendation(
-      name: 'Sinema',
-      description: 'Her zaman bir klasik: birlikte film izlemek.',
-      type: 'Sinema',
-      emoji: '🎬',
-      compatibilityScore: 0.72,
-      tags: ['sinema', 'eğlence'],
-    ),
-  ],
-};
+      name: 'Park ve Açık Hava Al
