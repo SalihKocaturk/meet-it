@@ -70,10 +70,10 @@ extension PersonalityTypeX on PersonalityType {
   IconData get iconsaxIcon {
     switch (this) {
       case PersonalityType.sosyalKelebek: return Iconsax.people;    // sosyal bağlantı
-      case PersonalityType.sakinRuh:      return Iconsax.moon;      // huzur/sakinlik
-      case PersonalityType.maceraperest:  return Iconsax.map_1;     // keşif/macera
+      case PersonalityType.sakinRuh:      return Iconsax.candle;    // dingin/huzur/sıcaklık
+      case PersonalityType.maceraperest:  return Iconsax.airplane;  // seyahat/macera
       case PersonalityType.entelektuel:   return Iconsax.book_1;    // bilgi/okuma
-      case PersonalityType.gurme:         return Iconsax.cup;       // yeme-içme
+      case PersonalityType.gurme:         return Iconsax.glass_1;   // sofistike damak zevki
     }
   }
 
@@ -1333,4 +1333,4 @@ const _venueMap = <String, List<VenueRecommendation>>{
       tags: ['kafe', 'sosyal'],
     ),
     VenueRecommendation(
-      name: 'Park ve Açık Hava Al
+      name: 'P
