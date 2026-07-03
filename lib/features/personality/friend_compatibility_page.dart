@@ -136,7 +136,7 @@ class _FriendCompatTile extends StatelessWidget {
                     if (hasProfile) ...[
                       const SizedBox(height: 2),
                       Text(
-                        '${friendProfile.dominantType.emoji} ${friendProfile.dominantType.displayName}',
+                        friendProfile.dominantType.displayName,
                         style: TextStyle(
                           fontSize: 12,
                           color: context.colors.textSecondary,
@@ -321,3 +321,4 @@ class FriendCompatibilityDetailPage extends ConsumerWidget {
     );
   }
 }
+                                         

@@ -186,7 +186,7 @@ class _HistoryLegendRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${type.emoji} ${type.displayName}',
+                  type.displayName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -303,3 +303,4 @@ class _HistoryLinePainter extends CustomPainter {
     return oldDelegate.history != history;
   }
 }
+                   

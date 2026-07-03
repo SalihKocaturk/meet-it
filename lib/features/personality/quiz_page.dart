@@ -8,6 +8,7 @@ import 'package:meetit/core/router/app_routes.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/personality/providers/personality_provider.dart';
+import 'package:meetit/features/personality/widgets/personality_character.dart';
 
 class QuizPage extends ConsumerStatefulWidget {
   const QuizPage({super.key});
@@ -157,7 +158,7 @@ class _QuizPageState extends ConsumerState<QuizPage>
               // Başlık
               Center(
                 child: Text(
-                  '🧠 ${'quiz.title'.tr()}',
+                  'quiz.title'.tr(),
                   style: TextStyle(
                     fontSize: 13,
                     color: context.colors.primary,
@@ -342,9 +343,6 @@ class _ResultPage extends ConsumerWidget {
             children: [
               SizedBox(height: 40),
 
-              Text('🎉', style: TextStyle(fontSize: 48)),
-              SizedBox(height: 12),
-
               Text(
                 'quiz.profile_ready'.tr(),
                 style: TextStyle(
@@ -355,9 +353,13 @@ class _ResultPage extends ConsumerWidget {
               ),
               SizedBox(height: 16),
 
-              // Dominant tip
-              Text(dominant.emoji, style: TextStyle(fontSize: 64)),
-              SizedBox(height: 8),
+              // Dominant tip — animasyonlu karakter
+              PersonalityCharacterWidget(
+                type: dominant,
+                gender: ref.watch(currentUserProvider)?.gender,
+                size: 200,
+              ),
+              SizedBox(height: 10),
               Text(
                 dominant.displayName,
                 style: TextStyle(
@@ -381,7 +383,6 @@ class _ResultPage extends ConsumerWidget {
                   ),
                   child: Text(
                     'quiz.secondary_type'.tr(namedArgs: {
-                      'emoji': secondary.emoji,
                       'name': secondary.displayName,
                     }),
                     style: TextStyle(
@@ -560,13 +561,11 @@ class _ScoreBar extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          // Emoji + isim
+          // İsim
           SizedBox(
             width: 120,
             child: Row(
               children: [
-                Text(type.emoji, style: const TextStyle(fontSize: 16)),
-                SizedBox(width: 6),
                 Flexible(
                   child: Text(
                     type.displayName,
@@ -622,3 +621,4 @@ class _ScoreBar extends StatelessWidget {
     );
   }
 }
+                                                                                                                                                                                                                                                                              
