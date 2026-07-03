@@ -54,6 +54,15 @@ class PersonalityAnalysisPage extends ConsumerWidget {
           ),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(Iconsax.eye, color: context.colors.textSecondary),
+            tooltip: 'Kişilik Tiplerini Keşfet',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const CharacterPreviewPage()),
+            ),
+          ),
+        ],
       ),
       body: SafeArea(
         top: false,
@@ -199,16 +208,4 @@ class PersonalityAnalysisPage extends ConsumerWidget {
                             Icon(
                               Iconsax.arrow_right_3,
                               size: 16,
-                              color: context.colors.textSecondary,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPre
+                              color: context.colors.textSecon
