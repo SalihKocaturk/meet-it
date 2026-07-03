@@ -122,10 +122,7 @@ class PersonalityAnalysisPage extends ConsumerWidget {
 
                     const SizedBox(height: 16),
 
-                    PersonalityBreakdown(
-                      profile: profile,
-                      gender: currentUser?.gender,
-                    ),
+                    PersonalityBreakdown(profile: profile),
 
                     const SizedBox(height: 16),
 
@@ -233,4 +230,12 @@ class _EmptyState extends StatelessWidget {
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
- 
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

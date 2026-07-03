@@ -19,7 +19,6 @@
     "warning": "Uyarı",
     "loading": "Yükleniyor...",
     "no_result": "Sonuç bulunamadı",
-    "try_again": "Bir şeyler ters gitti, tekrar dene.",
     "skip": "Atla",
     "back": "Geri",
     "confirm": "Onayla",
@@ -542,8 +541,8 @@
     "review_liked": "{name}, \"{venue}\" yorumunu beğendi.",
     "friend_request": "{name} sana arkadaşlık isteği gönderdi.",
     "friend_accepted": "{name} arkadaşlık isteğini kabul etti!",
-    "meetup_invite": "{name} seninle buluşma yeri önerisi aldı!",
-    "venue_found": "{name} ile buluşma için mekan önerisi hazır!",
+    "meetup_invite": "{name} seninle buluşmak istiyor!",
+    "venue_found": "{name} buluşma için mekan buldu!",
     "just_now": "Az önce",
     "minutes_ago": "{n} dakika önce",
     "hours_ago": "{n} saat önce"

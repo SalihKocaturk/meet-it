@@ -21,6 +21,7 @@ import 'package:meetit/features/reviews/venue_detail_page.dart';
 
 import '../history/meeting_history_page.dart';
 import 'package:meetit/features/notifications/notifications_page.dart';
+
 class ProfileMenuPage extends ConsumerStatefulWidget {
   const ProfileMenuPage({super.key});
 
@@ -317,12 +318,16 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                             _MenuItem(
                               icon: Iconsax.heart,
                               title: 'profile.liked_reviews'.tr(),
+                              badge: likedReviews.isNotEmpty
+                                  ? likedReviews.length
+                                  : null,
                               onTap: () => Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (_) => _ReviewListPage(
                                     title: 'profile.liked_reviews'.tr(),
                                     reviews: likedReviews,
-                                    emptyText: 'profile.empty_liked_reviews'.tr(),
+                                    emptyText: 'profile.empty_liked_reviews'
+                                        .tr(),
                                   ),
                                 ),
                               ),
@@ -900,4 +905,3 @@ class _GridPlaceholder extends StatelessWidget {
     );
   }
 }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           

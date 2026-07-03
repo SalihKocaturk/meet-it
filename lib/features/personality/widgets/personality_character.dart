@@ -220,27 +220,40 @@ class _CharacterPainter extends CustomPainter {
   }
 
   void _drawLeafPlants(Canvas canvas, double s) {
-    final leafP = _fill(typeColor.withOpacity(0.22));
-    final stemP = _stroke(typeColor.withOpacity(0.30), s * 0.018);
+    final leafP = _fill(typeColor.withOpacity(0.28));
+    final stemP = _stroke(typeColor.withOpacity(0.40), s * 0.013);
 
-    void plant(double bx, double by, double dir) {
-      // Sap
-      final stem = Path()
-        ..moveTo(s * bx, s * by)
-        ..quadraticBezierTo(s * (bx + dir * 0.04), s * (by - 0.10), s * (bx + dir * 0.02), s * (by - 0.18));
-      canvas.drawPath(stem, stemP);
-      // Yaprak
-      canvas.drawOval(
-        Rect.fromCenter(
-          center: Offset(s * (bx + dir * 0.05), s * (by - 0.13)),
-          width: s * 0.09, height: s * 0.05,
-        ),
-        leafP,
-      );
+    void plant(double bx, double by) {
+      final x = s * bx;
+      final base = s * by;
+
+      // Dikey sap
+      canvas.drawLine(Offset(x, base), Offset(x, base - s * 0.22), stemP);
+
+      // Döndürülmüş yapraklar — canvas.save/restore + translate + rotate ile
+      void leaf(double offX, double offY, double angle, double w, double h) {
+        canvas.save();
+        canvas.translate(x + offX, base + offY);
+        canvas.rotate(angle);
+        canvas.drawOval(
+          Rect.fromCenter(center: Offset.zero, width: w, height: h),
+          leafP,
+        );
+        canvas.restore();
+      }
+
+      // Alt çift yaprak
+      leaf(-s * 0.042, -s * 0.088, -0.65, s * 0.092, s * 0.038);
+      leaf( s * 0.042, -s * 0.088,  0.65, s * 0.092, s * 0.038);
+      // Üst çift yaprak (biraz daha küçük)
+      leaf(-s * 0.030, -s * 0.158, -0.52, s * 0.072, s * 0.030);
+      leaf( s * 0.030, -s * 0.158,  0.52, s * 0.072, s * 0.030);
+      // Tepe yaprak (dikine — bitkinin ucunda)
+      leaf(0, -s * 0.225, 0.0, s * 0.034, s * 0.068);
     }
 
-    plant(0.10, 0.88, -1);
-    plant(0.88, 0.88,  1);
+    plant(0.11, 0.90);
+    plant(0.89, 0.90);
   }
 
   void _drawMiniShelves(Canvas canvas, double s) {
@@ -377,14 +390,15 @@ class _CharacterPainter extends CustomPainter {
     final headCY = s * 0.395;
     final r = s * 0.115;
 
-    // Ortak: üst yarım daire (tüm cinsiyetler)
+    // Üst yarım daire: startAngle=π (sol), sweepAngle=-π → saat tersine tepeden sağa
+    // (pozitif sweep saat yönü = alttan geçer, negatif = tepeden geçer)
     final capPath = Path();
     capPath.addArc(
       Rect.fromCircle(center: Offset(cx, headCY), radius: r + s * 0.005),
-      math.pi, math.pi, // üst yarım
+      math.pi, -math.pi, // TEPEden geçen üst yay
     );
-    capPath.lineTo(cx + r, headCY);
-    capPath.lineTo(cx - r, headCY);
+    capPath.lineTo(cx + r, headCY); // sağ kenar (arc bitti, zaten burada)
+    capPath.lineTo(cx - r, headCY); // sol kenara yatay çizgi
     capPath.close();
     canvas.drawPath(capPath, hairP);
 
@@ -637,23 +651,4 @@ class _CharacterPainter extends CustomPainter {
     canvas.drawOval(Rect.fromCenter(center: Offset(center.dx - r, center.dy - r * 0.45), width: r * 1.35, height: r), p);
     canvas.drawOval(Rect.fromCenter(center: Offset(center.dx + r, center.dy - r * 0.45), width: r * 1.35, height: r), p);
     // Alt kanatlar (daha küçük)
-    canvas.drawOval(Rect.fromCenter(center: Offset(center.dx - r * 0.7, center.dy + r * 0.30), width: r * 0.90, height: r * 0.65), _fill(color.withOpacity(color.opacity * 0.65)));
-    canvas.drawOval(Rect.fromCenter(center: Offset(center.dx + r * 0.7, center.dy + r * 0.30), width: r * 0.90, height: r * 0.65), _fill(color.withOpacity(color.opacity * 0.65)));
-    // Gövde
-    canvas.drawCircle(center, r * 0.13, _fill(_hairDark.withOpacity(0.55)));
-  }
-
-  void _drawIdeaBubbles(Canvas canvas, double s) {
-    final pts = [
-      Offset(s * 0.140, s * 0.200),
-      Offset(s * 0.820, s * 0.230),
-      Offset(s * 0.830, s * 0.380),
-    ];
-    final rs = [s * 0.025, s * 0.018, s * 0.015];
-
-    for (var i = 0; i < 3; i++) {
-      final yOff = math.sin((anim + i * 0.33) * math.pi) * s * 0.022;
-      canvas.drawCircle(
-        Offset(pts[i].dx, pts[i].dy + yOff),
-        rs[i],
-        _fill(typeColor.withOpacity(0.40 - i * 0.10))
+    canvas.drawOval(Rect.fromCenter(center: Offset(center.dx - r * 0.7, center.dy + r * 0.30), width: r * 0.90, height: r * 0.65), _fill(color.withOpacity(color.opacity * 0.

@@ -8,7 +8,6 @@ import 'package:meetit/core/router/app_routes.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/personality/providers/personality_provider.dart';
-import 'package:meetit/features/personality/widgets/personality_character.dart';
 
 class QuizPage extends ConsumerStatefulWidget {
   const QuizPage({super.key});
@@ -356,13 +355,9 @@ class _ResultPage extends ConsumerWidget {
               ),
               SizedBox(height: 16),
 
-              // Dominant tip — animasyonlu karakter
-              PersonalityCharacterWidget(
-                type: dominant,
-                gender: ref.watch(currentUserProvider)?.gender,
-                size: 200,
-              ),
-              SizedBox(height: 10),
+              // Dominant tip
+              Text(dominant.emoji, style: TextStyle(fontSize: 64)),
+              SizedBox(height: 8),
               Text(
                 dominant.displayName,
                 style: TextStyle(
@@ -615,4 +610,15 @@ class _ScoreBar extends StatelessWidget {
               '%$percent',
               style: TextStyle(
                 fontSize: 12,
-                fontWeight: isDominant ? FontWeight.w700 : FontW
+                fontWeight: isDominant ? FontWeight.w700 : FontWeight.w400,
+                color: isDominant
+                    ? context.colors.primary
+                    : context.colors.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

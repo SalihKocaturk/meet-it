@@ -127,19 +127,12 @@ class FriendsPage extends ConsumerWidget {
               ),
             ),
 
-            // Arama çubuğu — dokunulunca FriendCodePage'e git
+            // Arama çubuğu
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: GestureDetector(
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const FriendCodePage()),
-                ),
-                child: AbsorbPointer(
-                  child: _SearchBar(
-                    onChanged: (v) =>
-                        ref.read(friendsSearchProvider.notifier).state = v,
-                  ),
-                ),
+              child: _SearchBar(
+                onChanged: (v) =>
+                    ref.read(friendsSearchProvider.notifier).state = v,
               ),
             ),
 
@@ -820,4 +813,18 @@ class _ConnectionTile extends ConsumerWidget {
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-    
+                color: Colors.red.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Iconsax.profile_remove,
+                size: 16,
+                color: Colors.red,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
