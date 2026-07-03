@@ -490,9 +490,11 @@ class _CharacterPainter extends CustomPainter {
       cx - r - s * 0.01,
       headCY - r - s * 0.01,  // başın tepesinin biraz üstü
       cx + r + s * 0.01,
-      hairlineY + s * 0.006,  // yan saçla örtüşme boşluğunu kapatmak için biraz aşağı
+      hairlineY,               // tam hairline'da kes — yan saç buradan başlar
     ));
-    canvas.drawCircle(Offset(cx, headCY), r + s * 0.006, hairP);
+    // Dairenin yarıçapı tam r: hairlineY'de cap genişliği = hairlineX
+    // → yan saçın moveTo noktasıyla piksel-mükemmel örtüşür, boşluk kalmaz.
+    canvas.drawCircle(Offset(cx, headCY), r, hairP);
     canvas.restore();
 
     // ── Yan saç (kadın / nötr) ────────────────────────────────────────────────
@@ -866,8 +868,4 @@ class _CharacterPainter extends CustomPainter {
     canvas.drawLine(Offset(cx + domeR,        domeCY), Offset(s * 0.622, s * hY), stringP);
   }
 
-  void _drawButterflies(Canvas canvas, double s) {
-    final positions = [
-      Offset(s * 0.140, s * 0.230),
-      Offset(s * 0.790, s * 0.200),
-      Offset(s * 0.745, s * 0.360)
+  void _drawButterflies(Canvas canvas, doub
