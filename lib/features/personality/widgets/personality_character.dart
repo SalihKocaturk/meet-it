@@ -360,13 +360,13 @@ class _CharacterPainter extends CustomPainter {
     if (type == PersonalityType.maceraperest) {
       // Yürüme: her kare farklı konum — ayak uçları hesaplanıp ayakkabıya iletiliyor
       final walk = math.sin(anim * math.pi) * s * 0.045;
-      final leftFoot  = Offset(s * 0.400 - walk, s * 0.895);
-      final rightFoot = Offset(s * 0.580 + walk, s * 0.895);
+      final leftFoot  = Offset(s * 0.400 - walk, s * 0.912);
+      final rightFoot = Offset(s * 0.580 + walk, s * 0.912);
       canvas.drawLine(Offset(s * 0.445, s * 0.747), leftFoot,  legP);
       canvas.drawLine(Offset(s * 0.555, s * 0.747), rightFoot, legP);
       // Ayakkabılar ayak ucunu takip ediyor
-      canvas.drawOval(Rect.fromCenter(center: Offset(leftFoot.dx,  leftFoot.dy  + s * 0.008), width: s * 0.11, height: s * 0.044), shoeP);
-      canvas.drawOval(Rect.fromCenter(center: Offset(rightFoot.dx, rightFoot.dy + s * 0.008), width: s * 0.11, height: s * 0.044), shoeP);
+      canvas.drawOval(Rect.fromCenter(center: Offset(leftFoot.dx,  leftFoot.dy  + s * 0.022), width: s * 0.11, height: s * 0.044), shoeP);
+      canvas.drawOval(Rect.fromCenter(center: Offset(rightFoot.dx, rightFoot.dy + s * 0.022), width: s * 0.11, height: s * 0.044), shoeP);
     } else {
       // Bacak ucu y=0.900, ayakkabı merkezi y=0.942 → ayakkabı tam bacak ucunun ALTINDA
       canvas.drawLine(Offset(s * 0.445, s * 0.747), Offset(s * 0.405, s * 0.900), legP);
@@ -528,6 +528,37 @@ class _CharacterPainter extends CustomPainter {
     canvas.drawCircle(Offset(cx - s * 0.038, cy - s * 0.014), s * 0.006, _fill(Colors.white.withOpacity(0.8)));
     canvas.drawCircle(Offset(cx + s * 0.046, cy - s * 0.014), s * 0.006, _fill(Colors.white.withOpacity(0.8)));
 
+    // ── Gözlük (sadece entelektüel) ──────────────────────────────────────────
+    if (type == PersonalityType.entelektuel) {
+      const frameR  = 0.024;           // yarıçap katsayısı
+      final eyeXL   = cx - s * 0.042;
+      final eyeXR   = cx + s * 0.042;
+      final eyeYG   = cy - s * 0.008;
+      final glassP  = _stroke(_hairDark.withOpacity(0.72), s * 0.012);
+      final trimP   = _stroke(_hairDark.withOpacity(0.50), s * 0.009);
+      // Sol ve sağ çerçeve (dolgu yok, sadece kontur)
+      canvas.drawCircle(Offset(eyeXL, eyeYG), s * frameR, glassP);
+      canvas.drawCircle(Offset(eyeXR, eyeYG), s * frameR, glassP);
+      // Köprü (burun üstü)
+      canvas.drawLine(
+        Offset(eyeXL + s * frameR, eyeYG),
+        Offset(eyeXR - s * frameR, eyeYG),
+        trimP,
+      );
+      // Sol kulak çubuğu
+      canvas.drawLine(
+        Offset(eyeXL - s * frameR, eyeYG),
+        Offset(cx - s * 0.108, eyeYG + s * 0.006),
+        trimP,
+      );
+      // Sağ kulak çubuğu
+      canvas.drawLine(
+        Offset(eyeXR + s * frameR, eyeYG),
+        Offset(cx + s * 0.108, eyeYG + s * 0.006),
+        trimP,
+      );
+    }
+
     // ── Kirpikler (sadece kadın) ──────────────────────────────────────────────
     if (isFemale) {
       final lashP = _stroke(_hairDark, s * 0.008);
@@ -578,4 +609,283 @@ class _CharacterPainter extends CustomPainter {
     // Sol sayfa
     canvas.drawRRect(
       RRect.fromRectAndCorners(
-        Rect.fromLTRB
+        Rect.fromLTRB(bL, bT, cx - s * 0.010, bB),
+        topLeft: const Radius.circular(3), bottomLeft: const Radius.circular(3),
+      ),
+      _fill(_white),
+    );
+    // Sol sayfa satırları
+    final lineP = _stroke(const Color(0xFFCCBBAA), s * 0.010);
+    for (var i = 1; i <= 3; i++) {
+      final y = bT + (bB - bT) * i / 4.0;
+      canvas.drawLine(Offset(bL + s * 0.020, y), Offset(cx - s * 0.022, y), lineP);
+    }
+
+    // Sağ sayfa
+    canvas.drawRRect(
+      RRect.fromRectAndCorners(
+        Rect.fromLTRB(cx + s * 0.010, bT, bR, bB),
+        topRight: const Radius.circular(3), bottomRight: const Radius.circular(3),
+      ),
+      _fill(const Color(0xFFF5EDD8)),
+    );
+    for (var i = 1; i <= 3; i++) {
+      final y = bT + (bB - bT) * i / 4.0;
+      canvas.drawLine(Offset(cx + s * 0.022, y), Offset(bR - s * 0.020, y), lineP);
+    }
+
+    // Sırt
+    canvas.drawRect(
+      Rect.fromCenter(center: Offset(cx, (bT + bB) / 2), width: s * 0.022, height: bB - bT),
+      _fill(_bookSpine),
+    );
+  }
+
+  void _drawForkAndPlate(Canvas canvas, double s) {
+    // Çatal (sağ el yukarıda)
+    final forkX = s * 0.720, forkBot = s * 0.388, forkTop = s * 0.220;
+    final forkP = _stroke(const Color(0xFFCCCCCC), s * 0.022);
+    canvas.drawLine(Offset(forkX, forkBot), Offset(forkX, forkTop + s * 0.06), forkP);
+
+    // Çatal dişleri
+    final tineP = _stroke(const Color(0xFFCCCCCC), s * 0.014);
+    for (var i = -1; i <= 1; i++) {
+      canvas.drawLine(
+        Offset(forkX + i * s * 0.022, forkTop + s * 0.060),
+        Offset(forkX + i * s * 0.022, forkTop),
+        tineP,
+      );
+    }
+
+    // Tabak (sol el)
+    final plateC = Offset(s * 0.255, s * 0.645);
+    canvas.drawCircle(plateC, s * 0.090, _fill(const Color(0xFFF0F0F0)));
+    canvas.drawCircle(plateC, s * 0.090, _stroke(const Color(0xFFCCCCCC), s * 0.012));
+    // Tabaktaki yemek lekesi
+    canvas.drawCircle(Offset(plateC.dx, plateC.dy - s * 0.012), s * 0.038, _fill(typeColor.withOpacity(0.7)));
+    canvas.drawCircle(Offset(plateC.dx + s * 0.030, plateC.dy + s * 0.018), s * 0.022, _fill(typeColor.withOpacity(0.5)));
+    canvas.drawCircle(Offset(plateC.dx - s * 0.028, plateC.dy + s * 0.018), s * 0.018, _fill(typeColor.withOpacity(0.4)));
+  }
+
+  void _drawMug(Canvas canvas, double s) {
+    final mugC = Offset(s * 0.252, s * 0.640);
+    final mW = s * 0.110, mH = s * 0.120;
+
+    // Kupa gövdesi
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: mugC, width: mW, height: mH),
+        const Radius.circular(6),
+      ),
+      _fill(const Color(0xFFEEEEEE)),
+    );
+
+    // İçecek yüzeyi
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(mugC.dx, mugC.dy - mH * 0.36), width: mW * 0.82, height: mH * 0.22),
+      _fill(typeColor.withOpacity(0.55)),
+    );
+
+    // Kulp
+    canvas.drawArc(
+      Rect.fromCenter(center: Offset(mugC.dx + mW * 0.62, mugC.dy), width: mW * 0.65, height: mH * 0.60),
+      -math.pi / 2, math.pi, false,
+      _stroke(const Color(0xFFDDDDDD), s * 0.020),
+    );
+
+    // Buhar (animasyonlu)
+    final steamOff = anim * s * 0.038;
+    final steamP = _stroke(Colors.white.withOpacity(0.45 + anim * 0.25), s * 0.013);
+    final st1 = Path()
+      ..moveTo(mugC.dx - s * 0.018, mugC.dy - mH * 0.52 - steamOff)
+      ..quadraticBezierTo(
+        mugC.dx - s * 0.040, mugC.dy - mH * 0.72 - steamOff,
+        mugC.dx - s * 0.010, mugC.dy - mH * 0.90 - steamOff,
+      );
+    canvas.drawPath(st1, steamP);
+    final st2 = Path()
+      ..moveTo(mugC.dx + s * 0.018, mugC.dy - mH * 0.52 - steamOff * 0.75)
+      ..quadraticBezierTo(
+        mugC.dx + s * 0.038, mugC.dy - mH * 0.70 - steamOff * 0.75,
+        mugC.dx + s * 0.008, mugC.dy - mH * 0.88 - steamOff * 0.75,
+      );
+    canvas.drawPath(st2, steamP);
+  }
+
+  void _drawHikingStick(Canvas canvas, double s) {
+    // Sol elin anlık konumunu _drawArms ile aynı formülle hesapla
+    final swing = math.sin(anim * math.pi) * s * 0.03;
+    final handX = s * 0.295 + swing;
+    final handY = s * 0.660;
+    // Baston el noktasından yere uzanıyor (sol-aşağı yönde)
+    final tipX = handX - s * 0.055;
+    final tipY = s * 0.895;
+    canvas.drawLine(
+      Offset(handX, handY),
+      Offset(tipX, tipY),
+      _stroke(const Color(0xFF8B5E3C), s * 0.022),
+    );
+    // Metal uç
+    canvas.drawCircle(Offset(tipX, tipY), s * 0.013, _fill(const Color(0xFF555555)));
+  }
+
+  // ── Animasyonlu aksesuarlar ────────────────────────────────────────────────
+
+  void _drawAccents(Canvas canvas, double s) {
+    switch (type) {
+      case PersonalityType.sosyalKelebek:
+        _drawButterflies(canvas, s);
+        break;
+      case PersonalityType.entelektuel:
+        _drawIdeaBubbles(canvas, s);
+        break;
+      case PersonalityType.gurme:
+        _drawFoodSparkles(canvas, s);
+        break;
+      case PersonalityType.maceraperest:
+        _drawParachute(canvas, s);
+        break;
+      default:
+        break;
+    }
+  }
+
+  // ── Paraşüt (maceraperest) ────────────────────────────────────────────────
+  // Opaklık sin(anim·π): yüksekte (anim≈0.5) tam görünür,
+  // yere değerken (anim≈0 veya ≈1) sıfıra solar → doğal iniş hissi.
+  void _drawParachute(Canvas canvas, double s) {
+    final cx = s * _cx;
+
+    final opacity = math.sin(anim * math.pi).clamp(0.0, 1.0);
+    if (opacity < 0.02) return;
+
+    const domeRed   = Color(0xFFE53935); // kırmızı panel
+    const domeWhite = Color(0xFFF5F5F5); // beyaz panel
+    const numPanels = 6;
+
+    final domeCY = s * 0.185; // kubbenin alt merkezi (ip bağlantı hizası)
+    final domeR  = s * 0.165; // yarıçap
+
+    // ── 6 dilimli kubbe ───────────────────────────────────────────────────────
+    // sweepAngle pozitif → saat yönü → sol(π)→ tepe(3π/2)→ sağ(0): ÜST YAY ✓
+    for (var i = 0; i < numPanels; i++) {
+      final pStart = math.pi + i * (math.pi / numPanels);
+      final pSweep = math.pi / numPanels;
+      final color  = (i % 2 == 0) ? domeRed : domeWhite;
+
+      final p = Path()..moveTo(cx, domeCY);
+      p.arcTo(
+        Rect.fromCircle(center: Offset(cx, domeCY), radius: domeR),
+        pStart, pSweep, false,
+      );
+      p.close();
+      canvas.drawPath(p, _fill(color.withOpacity(opacity * 0.92)));
+    }
+
+    // Dış hat
+    canvas.drawArc(
+      Rect.fromCircle(center: Offset(cx, domeCY), radius: domeR),
+      math.pi, math.pi, false, // sol → tepe → sağ (pozitif sweep)
+      _stroke(_hairDark.withOpacity(opacity * 0.35), s * 0.009),
+    );
+
+    // Dilim ayırıcı çizgiler (merkez → kubbe kenarı)
+    for (var i = 0; i <= numPanels; i++) {
+      final angle = math.pi + i * (math.pi / numPanels);
+      canvas.drawLine(
+        Offset(cx, domeCY),
+        Offset(cx + domeR * math.cos(angle), domeCY + domeR * math.sin(angle)),
+        _stroke(_hairDark.withOpacity(opacity * 0.18), s * 0.007),
+      );
+    }
+
+    // Tepe hava deliği
+    canvas.drawCircle(
+      Offset(cx, domeCY - domeR + s * 0.015),
+      s * 0.013,
+      _fill(domeWhite.withOpacity(opacity * 0.90)),
+    );
+
+    // ── İpler: kubbenin alt kenarından karakter göğsüne ──────────────────────
+    final stringP = _stroke(
+      const Color(0xFF5D4037).withOpacity(opacity * 0.65),
+      s * 0.009,
+    );
+    const hY = 0.555; // göğüs / harness hizası
+
+    canvas.drawLine(Offset(cx - domeR,        domeCY), Offset(s * 0.378, s * hY), stringP);
+    canvas.drawLine(Offset(cx - domeR * 0.52, domeCY), Offset(s * 0.442, s * hY), stringP);
+    canvas.drawLine(Offset(cx - domeR * 0.08, domeCY), Offset(s * 0.492, s * hY), stringP);
+    canvas.drawLine(Offset(cx + domeR * 0.08, domeCY), Offset(s * 0.508, s * hY), stringP);
+    canvas.drawLine(Offset(cx + domeR * 0.52, domeCY), Offset(s * 0.558, s * hY), stringP);
+    canvas.drawLine(Offset(cx + domeR,        domeCY), Offset(s * 0.622, s * hY), stringP);
+  }
+
+  void _drawButterflies(Canvas canvas, double s) {
+    final positions = [
+      Offset(s * 0.140, s * 0.230),
+      Offset(s * 0.790, s * 0.200),
+      Offset(s * 0.745, s * 0.360),
+    ];
+    final offsets = [
+      math.sin(anim * math.pi * 2) * s * 0.04,
+      math.cos(anim * math.pi * 2) * s * 0.035,
+      math.sin(anim * math.pi * 2 + 0.8) * s * 0.028,
+    ];
+    final sizes = [s * 0.055, s * 0.045, s * 0.035];
+    final opacities = [0.85, 0.65, 0.45];
+
+    for (var i = 0; i < 3; i++) {
+      _butterfly(canvas, Offset(positions[i].dx, positions[i].dy + offsets[i]),
+          sizes[i], typeColor.withOpacity(opacities[i]));
+    }
+  }
+
+  void _butterfly(Canvas canvas, Offset center, double r, Color color) {
+    final p = _fill(color);
+    // Üst kanatlar
+    canvas.drawOval(Rect.fromCenter(center: Offset(center.dx - r, center.dy - r * 0.45), width: r * 1.35, height: r), p);
+    canvas.drawOval(Rect.fromCenter(center: Offset(center.dx + r, center.dy - r * 0.45), width: r * 1.35, height: r), p);
+    // Alt kanatlar (daha küçük)
+    canvas.drawOval(Rect.fromCenter(center: Offset(center.dx - r * 0.7, center.dy + r * 0.30), width: r * 0.90, height: r * 0.65), _fill(color.withOpacity(color.opacity * 0.65)));
+    canvas.drawOval(Rect.fromCenter(center: Offset(center.dx + r * 0.7, center.dy + r * 0.30), width: r * 0.90, height: r * 0.65), _fill(color.withOpacity(color.opacity * 0.65)));
+    // Gövde
+    canvas.drawCircle(center, r * 0.13, _fill(_hairDark.withOpacity(0.55)));
+  }
+
+  void _drawIdeaBubbles(Canvas canvas, double s) {
+    final pts = [
+      Offset(s * 0.140, s * 0.200),
+      Offset(s * 0.820, s * 0.230),
+      Offset(s * 0.830, s * 0.380),
+    ];
+    final rs = [s * 0.025, s * 0.018, s * 0.015];
+
+    for (var i = 0; i < 3; i++) {
+      final yOff = math.sin((anim + i * 0.33) * math.pi) * s * 0.022;
+      canvas.drawCircle(
+        Offset(pts[i].dx, pts[i].dy + yOff),
+        rs[i],
+        _fill(typeColor.withOpacity(0.40 - i * 0.10)),
+      );
+    }
+  }
+
+  void _drawFoodSparkles(Canvas canvas, double s) {
+    // Tabaktan yükselen küçük parıltılar
+    final sparkP = _fill(typeColor.withOpacity(0.45));
+    final positions = [
+      Offset(s * 0.240, s * 0.540),
+      Offset(s * 0.260, s * 0.510),
+      Offset(s * 0.280, s * 0.525),
+    ];
+    final animOff = anim * s * 0.030;
+    for (final pos in positions) {
+      canvas.drawCircle(Offset(pos.dx, pos.dy - animOff), s * 0.012, sparkP);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CharacterPainter old) =>
+      old.anim != anim || old.type != type || old.gender != gender;
+}
