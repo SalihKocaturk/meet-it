@@ -814,8 +814,8 @@ class _CharacterPainter extends CustomPainter {
     const domeWhite = Color(0xFFF5F5F5); // beyaz panel
     const numPanels = 6;
 
-    final domeCY = s * 0.195; // kubbenin alt merkezi (ip bağlantı hizası)
-    final domeR  = s * 0.200; // yarıçap — geniş, gerçekçi paraşüt profili
+    final domeCY = s * 0.210; // kubbenin alt merkezi (ip bağlantı hizası)
+    final domeR  = s * 0.240; // yarıçap — geniş, gerçekçi paraşüt profili
 
     // ── 6 dilimli kubbe ───────────────────────────────────────────────────────
     // sweepAngle pozitif → saat yönü → sol(π)→ tepe(3π/2)→ sağ(0): ÜST YAY ✓
