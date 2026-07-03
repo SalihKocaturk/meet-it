@@ -498,32 +498,36 @@ class _CharacterPainter extends CustomPainter {
     canvas.restore();
 
     // ── Yan saç (kadın / nötr) ────────────────────────────────────────────────
-    // Kök neden: eski iç kenar r*0.80–0.96 baş çemberinin IÇINE giriyordu
-    // → yüzün yanında koyu alan = sakal görünümü.
-    // Düzeltme: iç kenar tam cx ± r'da → baş çemberinin DIŞINDA, yüzle sıfır örtüşme.
+    // Başlangıç noktası cap'in biraz ÜSTÜNDE (hairlineY - r*0.18):
+    //   → cap ile piksel-mükemmel örtüşme garantisi (anti-aliasing gap yok).
+    // İç kenar biraz baş çemberinin içine girer (r*0.92):
+    //   → fazladan dolgunluk, sakal/overlap etkisi olmaz (cap üstünde cilt çizilir).
     if (gender == CharacterGender.female || gender == CharacterGender.neutral) {
       void sideHair(double dir) {
         final path = Path();
-        // Başlangıç: hairline seviyesindeki baş kenarı
-        path.moveTo(cx + dir * hairlineX, hairlineY);
 
-        // Dış kenar: aşağı ve dışa doğru genişleyen akış
+        // Başlangıç: hairline'ın biraz ÜSTÜ — cap ile örtüşerek gap'i kapatır
+        final topY = hairlineY - r * 0.18;
+        final topX = hairlineX * 0.94; // cap dairesinin bu y'deki genişliğine yakın
+
+        path.moveTo(cx + dir * topX, topY);
+
+        // Dış kenar: dolgun aşağı akış
         path.cubicTo(
-          cx + dir * (hairlineX + s * 0.012), headCY,             // üst — dışa açılmaya başlar
-          cx + dir * (r + s * 0.032),          headCY + r * 0.55, // orta — en geniş
-          cx + dir * (r + s * 0.018),          headCY + r * 1.00, // çene altı
+          cx + dir * (hairlineX + s * 0.020), headCY,             // üst — geniş başlangıç
+          cx + dir * (r + s * 0.042),          headCY + r * 0.55, // orta — en geniş
+          cx + dir * (r + s * 0.026),          headCY + r * 1.00, // çene altı
         );
         // Alt kıvrım
         path.quadraticBezierTo(
-          cx + dir * (r + s * 0.006), headCY + r * 1.14, // alt uç
-          cx + dir * r,               headCY + r * 0.98,  // iç alt — TAM baş kenarında
+          cx + dir * (r + s * 0.008), headCY + r * 1.16,
+          cx + dir * r,               headCY + r * 0.98,
         );
-        // İç kenar: cx ± r'da kal, yukarı dön — yüzle HİÇ örtüşmez
-        // (headCY'nin üstünde baş çemberi daralır; r'de kalmak = çemberin dışında kalmak)
+        // İç kenar: r'ye yakın kal, yukarı dön
         path.cubicTo(
-          cx + dir * r, headCY + r * 0.60,
-          cx + dir * r, headCY - r * 0.05,
-          cx + dir * hairlineX, hairlineY,  // hairline başlangıç noktasına dön
+          cx + dir * r,          headCY + r * 0.60,
+          cx + dir * r,          headCY - r * 0.05,
+          cx + dir * topX,       topY,               // aynı başlangıca dön
         );
         path.close();
         canvas.drawPath(path, hairP);
@@ -868,4 +872,4 @@ class _CharacterPainter extends CustomPainter {
     canvas.drawLine(Offset(cx + domeR,        domeCY), Offset(s * 0.622, s * hY), stringP);
   }
 
-  void _drawButterflies(Canvas canvas, doub
+  void _dr
