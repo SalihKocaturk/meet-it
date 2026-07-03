@@ -433,55 +433,65 @@ class _CharacterPainter extends CustomPainter {
   // ── Saç ───────────────────────────────────────────────────────────────────
 
   void _drawHair(Canvas canvas, double s) {
-    final hairP = _fill(_hairDark);
     final cx = s * _cx;
     final headCY = s * 0.395;
     final r = s * 0.115;
+    final hairP = _fill(_hairDark);
 
-    // Üst yarım daire: startAngle=π (sol), sweepAngle=-π → saat tersine tepeden sağa
-    // (pozitif sweep saat yönü = alttan geçer, negatif = tepeden geçer)
-    final capPath = Path();
-    capPath.addArc(
-      Rect.fromCircle(center: Offset(cx, headCY), radius: r + s * 0.005),
-      math.pi, -math.pi, // TEPEden geçen üst yay
-    );
-    capPath.lineTo(cx + r, headCY); // sağ kenar (arc bitti, zaten burada)
-    capPath.lineTo(cx - r, headCY); // sol kenara yatay çizgi
-    capPath.close();
-    canvas.drawPath(capPath, hairP);
+    // ── Saç şapkası ───────────────────────────────────────────────────────────
+    // addArc + lineTo + close() fill'i güvenilir değil; clipRect + drawCircle tercih edildi.
+    // hairlineY: kaşlar headCY - s*0.037 = 0.358 → hairline 0.347'de (kaşların üstünde).
+    const kH = 0.42; // hairline = headCY - r*kH
+    final hairlineY = headCY - r * kH;                    // ≈ 0.347
+    final hairlineX = r * math.sqrt(1 - kH * kH);        // ≈ r * 0.907 (hairline'ın baş kenarı)
 
+    canvas.save();
+    canvas.clipRect(Rect.fromLTRB(
+      cx - r - s * 0.01,
+      headCY - r - s * 0.01,  // başın tepesinin biraz üstü
+      cx + r + s * 0.01,
+      hairlineY,               // hairline'ın altını kes
+    ));
+    canvas.drawCircle(Offset(cx, headCY), r + s * 0.006, hairP);
+    canvas.restore();
+
+    // ── Yan saç (kadın / nötr) ────────────────────────────────────────────────
+    // Kök neden: eski iç kenar r*0.80–0.96 baş çemberinin IÇINE giriyordu
+    // → yüzün yanında koyu alan = sakal görünümü.
+    // Düzeltme: iç kenar tam cx ± r'da → baş çemberinin DIŞINDA, yüzle sıfır örtüşme.
     if (gender == CharacterGender.female || gender == CharacterGender.neutral) {
-      // Uzun saç: saç şapkasının (cap) alt kenarından aşağı akan perçemler
-      // Önceki sürüm headCY'nin üstünden başlıyordu → ekleme gibi görünüyordu.
-      // Şimdi tam cap alt kenarından (cx ± r, headCY) başlar → doğal uzun saç.
       void sideHair(double dir) {
         final path = Path();
-        // Başlangıç: saç şapkasının yan alt kenarı
-        path.moveTo(cx + dir * r, headCY);
-        // Dış yay: başın yanından aşağı doğru hafif dışa çıkarak akar
-        path.quadraticBezierTo(
-          cx + dir * (r + s * 0.028), headCY + r * 0.55,   // kontrol: dışa çıkma
-          cx + dir * (r + s * 0.018), headCY + r * 0.98,   // uç: çene altı
+        // Başlangıç: hairline seviyesindeki baş kenarı
+        path.moveTo(cx + dir * hairlineX, hairlineY);
+
+        // Dış kenar: aşağı ve dışa doğru genişleyen akış
+        path.cubicTo(
+          cx + dir * (hairlineX + s * 0.012), headCY,             // üst — dışa açılmaya başlar
+          cx + dir * (r + s * 0.032),          headCY + r * 0.55, // orta — en geniş
+          cx + dir * (r + s * 0.018),          headCY + r * 1.00, // çene altı
         );
-        // Alt kıvrım ve geri dönüş
+        // Alt kıvrım
         path.quadraticBezierTo(
-          cx + dir * (r + s * 0.005), headCY + r * 1.18,  // alt tepe
-          cx + dir * r * 0.80, headCY + r * 1.00,          // içe döner
+          cx + dir * (r + s * 0.006), headCY + r * 1.14, // alt uç
+          cx + dir * r,               headCY + r * 0.98,  // iç alt — TAM baş kenarında
         );
-        // İç yay: başın yanından yukarı doğru geri çıkar
-        path.quadraticBezierTo(
-          cx + dir * r * 0.90, headCY + r * 0.42,           // kontrol: içte yukarı
-          cx + dir * r * 0.96, headCY + r * 0.03,           // başlangıç noktasına yakın
+        // İç kenar: cx ± r'da kal, yukarı dön — yüzle HİÇ örtüşmez
+        // (headCY'nin üstünde baş çemberi daralır; r'de kalmak = çemberin dışında kalmak)
+        path.cubicTo(
+          cx + dir * r, headCY + r * 0.60,
+          cx + dir * r, headCY - r * 0.05,
+          cx + dir * hairlineX, hairlineY,  // hairline başlangıç noktasına dön
         );
         path.close();
         canvas.drawPath(path, hairP);
       }
 
-      sideHair(-1);
-      sideHair(1);
+      sideHair(-1); // sol
+      sideHair(1);  // sağ
     }
 
-    // Erkek: şakak oval kaldırıldı — kafanın yanından saç çıkıyormuş gibi görünüyordu
+    // Erkek / nötr male: sadece cap — şakak oval yok (kafadan çıkar görünüyordu)
   }
 
   // ── Yüz ───────────────────────────────────────────────────────────────────
@@ -568,26 +578,4 @@ class _CharacterPainter extends CustomPainter {
     // Sol sayfa
     canvas.drawRRect(
       RRect.fromRectAndCorners(
-        Rect.fromLTRB(bL, bT, cx - s * 0.010, bB),
-        topLeft: const Radius.circular(3), bottomLeft: const Radius.circular(3),
-      ),
-      _fill(_white),
-    );
-    // Sol sayfa satırları
-    final lineP = _stroke(const Color(0xFFCCBBAA), s * 0.010);
-    for (var i = 1; i <= 3; i++) {
-      final y = bT + (bB - bT) * i / 4.0;
-      canvas.drawLine(Offset(bL + s * 0.020, y), Offset(cx - s * 0.022, y), lineP);
-    }
-
-    // Sağ sayfa
-    canvas.drawRRect(
-      RRect.fromRectAndCorners(
-        Rect.fromLTRB(cx + s * 0.010, bT, bR, bB),
-        topRight: const Radius.circular(3), bottomRight: const Radius.circular(3),
-      ),
-      _fill(const Color(0xFFF5EDD8)),
-    );
-    for (var i = 1; i <= 3; i++) {
-      final y = bT + (bB - bT) * i / 4.0;
-      canv
+        Rect.fromLTRB
