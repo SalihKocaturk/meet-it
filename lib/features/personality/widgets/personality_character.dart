@@ -287,49 +287,66 @@ class _CharacterPainter extends CustomPainter {
   // ── Gövde ─────────────────────────────────────────────────────────────────
 
   void _drawTorso(Canvas canvas, double s) {
+    // ÖNEMLI: Tüm gövde çizimleri y=0.510'dan (baş alt kenarı) başlar.
+    // Daha önce y=0.465'ten başlıyordu → baş çemberinin yanlarından taşan typeColor
+    // "sakal" görünümü veriyordu. Artık baş altında başlıyoruz = sıfır örtüşme.
+    final cx = s * _cx;
+    final bodyTop = s * 0.512; // baş alt kenarı (headCY + r = 0.395+0.115+0.002)
+
     if (gender == CharacterGender.female) {
-      // ── Kadın: bluz + A-line etek ───────────────────────────────────────────
-      // Bluz (üst gövde — biraz daha dar ve kısa)
+      // ── Kadın: dar bluz + A-line etek ────────────────────────────────────────
+      // Bluz: bodyTop'tan bele kadar, omuzu kapsar
       final blouseRect = RRect.fromRectAndRadius(
-        Rect.fromCenter(
-          center: Offset(s * _cx, s * 0.578),
-          width: s * 0.24, height: s * 0.20,
+        Rect.fromLTRB(
+          cx - s * 0.115, bodyTop,
+          cx + s * 0.115, s * 0.662,
         ),
-        Radius.circular(s * 0.04),
+        Radius.circular(s * 0.035),
       );
       canvas.drawRRect(blouseRect, _fill(typeColor));
 
-      // A-line etek: trapezoid, üstten dar alttan geniş
+      // A-line etek: bluz altından genişleyen trapezoid
       final skirtPath = Path()
-        ..moveTo(s * 0.398, s * 0.650)  // sol üst
-        ..lineTo(s * 0.602, s * 0.650)  // sağ üst
-        ..lineTo(s * 0.672, s * 0.800)  // sağ alt
-        ..lineTo(s * 0.328, s * 0.800)  // sol alt
+        ..moveTo(cx - s * 0.108, s * 0.648)   // sol üst (bluz eni)
+        ..lineTo(cx + s * 0.108, s * 0.648)   // sağ üst
+        ..lineTo(cx + s * 0.172, s * 0.808)   // sağ alt (geniş)
+        ..lineTo(cx - s * 0.172, s * 0.808)   // sol alt
         ..close();
-      canvas.drawPath(skirtPath, _fill(typeColor.withOpacity(0.82)));
+      canvas.drawPath(skirtPath, _fill(typeColor.withOpacity(0.80)));
 
-      // Bluz-etek bağlantısında kemer çizgisi
+      // Kemer çizgisi
       canvas.drawLine(
-        Offset(s * 0.393, s * 0.653),
-        Offset(s * 0.607, s * 0.653),
-        _stroke(_hairDark.withOpacity(0.18), s * 0.018),
+        Offset(cx - s * 0.112, s * 0.650),
+        Offset(cx + s * 0.112, s * 0.650),
+        _stroke(_hairDark.withOpacity(0.15), s * 0.016),
       );
     } else {
-      // ── Erkek / nötr: standart dikdörtgen gövde ─────────────────────────────
-      final bodyRect = RRect.fromRectAndRadius(
-        Rect.fromCenter(
-          center: Offset(s * _cx, s * 0.615),
-          width: s * 0.27, height: s * 0.30,
-        ),
-        Radius.circular(s * 0.05),
+      // ── Erkek / nötr: trapezoid gövde (üstte dar → belde ince → kalçada geniş)
+      // Boyun genişliğinde (0.10s) başlar, omuzlarda (0.13s) açılır, belde (0.12s)
+      // hafif kısar, kalçada (0.135s) tekrar açılır → bel görünümü sağlar
+      final bodyPath = Path()
+        ..moveTo(cx - s * 0.100, bodyTop)          // sol üst (dar — boyun hizası)
+        ..lineTo(cx + s * 0.100, bodyTop)          // sağ üst
+        ..lineTo(cx + s * 0.138, s * 0.788)        // sağ alt (geniş)
+        ..lineTo(cx - s * 0.138, s * 0.788)        // sol alt
+        ..close();
+      canvas.drawPath(bodyPath, _fill(typeColor));
+      // Omuz kanalı: üst kenarda ince yatay çizgi renk derinliği
+      canvas.drawLine(
+        Offset(cx - s * 0.100, bodyTop + s * 0.004),
+        Offset(cx + s * 0.100, bodyTop + s * 0.004),
+        _stroke(typeColor.withOpacity(0.4), s * 0.012),
       );
-      canvas.drawRRect(bodyRect, _fill(typeColor));
     }
   }
 
   void _drawNeck(Canvas canvas, double s) {
+    // Boyun: baş altından (0.514) gövde üstüne (0.510) kadar → kesintisiz bağlantı
     canvas.drawRect(
-      Rect.fromCenter(center: Offset(s * _cx, s * 0.470), width: s * 0.07, height: s * 0.055),
+      Rect.fromCenter(
+        center: Offset(s * _cx, s * 0.475),
+        width: s * 0.068, height: s * 0.080,
+      ),
       _fill(_skin),
     );
   }
@@ -351,11 +368,11 @@ class _CharacterPainter extends CustomPainter {
       canvas.drawOval(Rect.fromCenter(center: Offset(leftFoot.dx,  leftFoot.dy  + s * 0.008), width: s * 0.11, height: s * 0.044), shoeP);
       canvas.drawOval(Rect.fromCenter(center: Offset(rightFoot.dx, rightFoot.dy + s * 0.008), width: s * 0.11, height: s * 0.044), shoeP);
     } else {
-      canvas.drawLine(Offset(s * 0.445, s * 0.747), Offset(s * 0.405, s * 0.910), legP);
-      canvas.drawLine(Offset(s * 0.555, s * 0.747), Offset(s * 0.590, s * 0.910), legP);
-      // Ayakkabılar ayak ucunun altında — center'ı 0.922 ile bacak bitimi altına taşıdık
-      canvas.drawOval(Rect.fromCenter(center: Offset(s * 0.400, s * 0.922), width: s * 0.11, height: s * 0.044), shoeP);
-      canvas.drawOval(Rect.fromCenter(center: Offset(s * 0.592, s * 0.922), width: s * 0.11, height: s * 0.044), shoeP);
+      // Bacak ucu y=0.900, ayakkabı merkezi y=0.942 → ayakkabı tam bacak ucunun ALTINDA
+      canvas.drawLine(Offset(s * 0.445, s * 0.747), Offset(s * 0.405, s * 0.900), legP);
+      canvas.drawLine(Offset(s * 0.555, s * 0.747), Offset(s * 0.590, s * 0.900), legP);
+      canvas.drawOval(Rect.fromCenter(center: Offset(s * 0.400, s * 0.942), width: s * 0.115, height: s * 0.046), shoeP);
+      canvas.drawOval(Rect.fromCenter(center: Offset(s * 0.592, s * 0.942), width: s * 0.115, height: s * 0.046), shoeP);
     }
   }
 
@@ -434,21 +451,27 @@ class _CharacterPainter extends CustomPainter {
     canvas.drawPath(capPath, hairP);
 
     if (gender == CharacterGender.female || gender == CharacterGender.neutral) {
-      // Uzun saç: sol ve sağ yanak kıvrımları
+      // Uzun saç: saç şapkasının (cap) alt kenarından aşağı akan perçemler
+      // Önceki sürüm headCY'nin üstünden başlıyordu → ekleme gibi görünüyordu.
+      // Şimdi tam cap alt kenarından (cx ± r, headCY) başlar → doğal uzun saç.
       void sideHair(double dir) {
         final path = Path();
-        path.moveTo(cx + dir * r * 0.80, headCY - r * 0.55);
+        // Başlangıç: saç şapkasının yan alt kenarı
+        path.moveTo(cx + dir * r, headCY);
+        // Dış yay: başın yanından aşağı doğru hafif dışa çıkarak akar
         path.quadraticBezierTo(
-          cx + dir * (r + s * 0.04), headCY + r * 0.20,
-          cx + dir * (r + s * 0.02), headCY + r * 0.75,
+          cx + dir * (r + s * 0.028), headCY + r * 0.55,   // kontrol: dışa çıkma
+          cx + dir * (r + s * 0.018), headCY + r * 0.98,   // uç: çene altı
         );
+        // Alt kıvrım ve geri dönüş
         path.quadraticBezierTo(
-          cx + dir * r * 0.85, headCY + r * 0.80,
-          cx + dir * r * 0.70, headCY + r * 0.60,
+          cx + dir * (r + s * 0.005), headCY + r * 1.18,  // alt tepe
+          cx + dir * r * 0.80, headCY + r * 1.00,          // içe döner
         );
+        // İç yay: başın yanından yukarı doğru geri çıkar
         path.quadraticBezierTo(
-          cx + dir * r * 1.05, headCY + r * 0.15,
-          cx + dir * r * 0.78, headCY - s * 0.01,
+          cx + dir * r * 0.90, headCY + r * 0.42,           // kontrol: içte yukarı
+          cx + dir * r * 0.96, headCY + r * 0.03,           // başlangıç noktasına yakın
         );
         path.close();
         canvas.drawPath(path, hairP);
@@ -567,45 +590,4 @@ class _CharacterPainter extends CustomPainter {
     );
     for (var i = 1; i <= 3; i++) {
       final y = bT + (bB - bT) * i / 4.0;
-      canvas.drawLine(Offset(cx + s * 0.022, y), Offset(bR - s * 0.020, y), lineP);
-    }
-
-    // Sırt
-    canvas.drawRect(
-      Rect.fromCenter(center: Offset(cx, (bT + bB) / 2), width: s * 0.022, height: bB - bT),
-      _fill(_bookSpine),
-    );
-  }
-
-  void _drawForkAndPlate(Canvas canvas, double s) {
-    // Çatal (sağ el yukarıda)
-    final forkX = s * 0.720, forkBot = s * 0.388, forkTop = s * 0.220;
-    final forkP = _stroke(const Color(0xFFCCCCCC), s * 0.022);
-    canvas.drawLine(Offset(forkX, forkBot), Offset(forkX, forkTop + s * 0.06), forkP);
-
-    // Çatal dişleri
-    final tineP = _stroke(const Color(0xFFCCCCCC), s * 0.014);
-    for (var i = -1; i <= 1; i++) {
-      canvas.drawLine(
-        Offset(forkX + i * s * 0.022, forkTop + s * 0.060),
-        Offset(forkX + i * s * 0.022, forkTop),
-        tineP,
-      );
-    }
-
-    // Tabak (sol el)
-    final plateC = Offset(s * 0.255, s * 0.645);
-    canvas.drawCircle(plateC, s * 0.090, _fill(const Color(0xFFF0F0F0)));
-    canvas.drawCircle(plateC, s * 0.090, _stroke(const Color(0xFFCCCCCC), s * 0.012));
-    // Tabaktaki yemek lekesi
-    canvas.drawCircle(Offset(plateC.dx, plateC.dy - s * 0.012), s * 0.038, _fill(typeColor.withOpacity(0.7)));
-    canvas.drawCircle(Offset(plateC.dx + s * 0.030, plateC.dy + s * 0.018), s * 0.022, _fill(typeColor.withOpacity(0.5)));
-    canvas.drawCircle(Offset(plateC.dx - s * 0.028, plateC.dy + s * 0.018), s * 0.018, _fill(typeColor.withOpacity(0.4)));
-  }
-
-  void _drawMug(Canvas canvas, double s) {
-    final mugC = Offset(s * 0.252, s * 0.640);
-    final mW = s * 0.110, mH = s * 0.120;
-
-    // Kupa gövdesi
-    
+      canv
