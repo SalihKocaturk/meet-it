@@ -287,14 +287,44 @@ class _CharacterPainter extends CustomPainter {
   // ── Gövde ─────────────────────────────────────────────────────────────────
 
   void _drawTorso(Canvas canvas, double s) {
-    final bodyRect = RRect.fromRectAndRadius(
-      Rect.fromCenter(
-        center: Offset(s * _cx, s * 0.615),
-        width: s * 0.27, height: s * 0.30,
-      ),
-      Radius.circular(s * 0.05),
-    );
-    canvas.drawRRect(bodyRect, _fill(typeColor));
+    if (gender == CharacterGender.female) {
+      // ── Kadın: bluz + A-line etek ───────────────────────────────────────────
+      // Bluz (üst gövde — biraz daha dar ve kısa)
+      final blouseRect = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(s * _cx, s * 0.578),
+          width: s * 0.24, height: s * 0.20,
+        ),
+        Radius.circular(s * 0.04),
+      );
+      canvas.drawRRect(blouseRect, _fill(typeColor));
+
+      // A-line etek: trapezoid, üstten dar alttan geniş
+      final skirtPath = Path()
+        ..moveTo(s * 0.398, s * 0.650)  // sol üst
+        ..lineTo(s * 0.602, s * 0.650)  // sağ üst
+        ..lineTo(s * 0.672, s * 0.800)  // sağ alt
+        ..lineTo(s * 0.328, s * 0.800)  // sol alt
+        ..close();
+      canvas.drawPath(skirtPath, _fill(typeColor.withOpacity(0.82)));
+
+      // Bluz-etek bağlantısında kemer çizgisi
+      canvas.drawLine(
+        Offset(s * 0.393, s * 0.653),
+        Offset(s * 0.607, s * 0.653),
+        _stroke(_hairDark.withOpacity(0.18), s * 0.018),
+      );
+    } else {
+      // ── Erkek / nötr: standart dikdörtgen gövde ─────────────────────────────
+      final bodyRect = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(s * _cx, s * 0.615),
+          width: s * 0.27, height: s * 0.30,
+        ),
+        Radius.circular(s * 0.05),
+      );
+      canvas.drawRRect(bodyRect, _fill(typeColor));
+    }
   }
 
   void _drawNeck(Canvas canvas, double s) {
@@ -321,10 +351,11 @@ class _CharacterPainter extends CustomPainter {
       canvas.drawOval(Rect.fromCenter(center: Offset(leftFoot.dx,  leftFoot.dy  + s * 0.008), width: s * 0.11, height: s * 0.044), shoeP);
       canvas.drawOval(Rect.fromCenter(center: Offset(rightFoot.dx, rightFoot.dy + s * 0.008), width: s * 0.11, height: s * 0.044), shoeP);
     } else {
-      canvas.drawLine(Offset(s * 0.445, s * 0.747), Offset(s * 0.405, s * 0.895), legP);
-      canvas.drawLine(Offset(s * 0.555, s * 0.747), Offset(s * 0.590, s * 0.895), legP);
-      canvas.drawOval(Rect.fromCenter(center: Offset(s * 0.400, s * 0.905), width: s * 0.11, height: s * 0.044), shoeP);
-      canvas.drawOval(Rect.fromCenter(center: Offset(s * 0.592, s * 0.905), width: s * 0.11, height: s * 0.044), shoeP);
+      canvas.drawLine(Offset(s * 0.445, s * 0.747), Offset(s * 0.405, s * 0.910), legP);
+      canvas.drawLine(Offset(s * 0.555, s * 0.747), Offset(s * 0.590, s * 0.910), legP);
+      // Ayakkabılar ayak ucunun altında — center'ı 0.922 ile bacak bitimi altına taşıdık
+      canvas.drawOval(Rect.fromCenter(center: Offset(s * 0.400, s * 0.922), width: s * 0.11, height: s * 0.044), shoeP);
+      canvas.drawOval(Rect.fromCenter(center: Offset(s * 0.592, s * 0.922), width: s * 0.11, height: s * 0.044), shoeP);
     }
   }
 
@@ -427,18 +458,7 @@ class _CharacterPainter extends CustomPainter {
       sideHair(1);
     }
 
-    if (gender == CharacterGender.male) {
-      // Erkek: kısa yanlarda şakak
-      final sideP = _fill(_hairDark);
-      canvas.drawOval(
-        Rect.fromCenter(center: Offset(cx - r + s * 0.012, headCY - s * 0.010), width: s * 0.038, height: s * 0.05),
-        sideP,
-      );
-      canvas.drawOval(
-        Rect.fromCenter(center: Offset(cx + r - s * 0.012, headCY - s * 0.010), width: s * 0.038, height: s * 0.05),
-        sideP,
-      );
-    }
+    // Erkek: şakak oval kaldırıldı — kafanın yanından saç çıkıyormuş gibi görünüyordu
   }
 
   // ── Yüz ───────────────────────────────────────────────────────────────────
@@ -446,24 +466,62 @@ class _CharacterPainter extends CustomPainter {
   void _drawFace(Canvas canvas, double s) {
     final cx = s * _cx;
     final cy = s * 0.395;
+    final isFemale = gender == CharacterGender.female;
 
-    // Gözler
-    canvas.drawCircle(Offset(cx - s * 0.042, cy - s * 0.010), s * 0.016, _fill(_hairDark));
-    canvas.drawCircle(Offset(cx + s * 0.042, cy - s * 0.010), s * 0.016, _fill(_hairDark));
+    // ── Kaşlar (her cinsiyet, şekil farklı) ──────────────────────────────────
+    final browP = _stroke(_hairDark.withOpacity(0.85), s * 0.012);
+    if (isFemale) {
+      // Kadın: kavisli, yüksek kaş
+      final leftBrow = Path()
+        ..moveTo(cx - s * 0.063, cy - s * 0.040)
+        ..quadraticBezierTo(cx - s * 0.042, cy - s * 0.054, cx - s * 0.022, cy - s * 0.040);
+      final rightBrow = Path()
+        ..moveTo(cx + s * 0.022, cy - s * 0.040)
+        ..quadraticBezierTo(cx + s * 0.042, cy - s * 0.054, cx + s * 0.063, cy - s * 0.040);
+      canvas.drawPath(leftBrow, browP);
+      canvas.drawPath(rightBrow, browP);
+    } else {
+      // Erkek/nötr: düz, hafif kalın kaş
+      canvas.drawLine(Offset(cx - s * 0.063, cy - s * 0.037), Offset(cx - s * 0.022, cy - s * 0.037), browP);
+      canvas.drawLine(Offset(cx + s * 0.022, cy - s * 0.037), Offset(cx + s * 0.063, cy - s * 0.037), browP);
+    }
+
+    // ── Gözler ───────────────────────────────────────────────────────────────
+    final eyeR = isFemale ? s * 0.018 : s * 0.015; // kadın gözü biraz daha büyük
+    canvas.drawCircle(Offset(cx - s * 0.042, cy - s * 0.008), eyeR, _fill(_hairDark));
+    canvas.drawCircle(Offset(cx + s * 0.042, cy - s * 0.008), eyeR, _fill(_hairDark));
 
     // Göz parıltısı
-    canvas.drawCircle(Offset(cx - s * 0.038, cy - s * 0.016), s * 0.006, _fill(Colors.white.withOpacity(0.8)));
-    canvas.drawCircle(Offset(cx + s * 0.046, cy - s * 0.016), s * 0.006, _fill(Colors.white.withOpacity(0.8)));
+    canvas.drawCircle(Offset(cx - s * 0.038, cy - s * 0.014), s * 0.006, _fill(Colors.white.withOpacity(0.8)));
+    canvas.drawCircle(Offset(cx + s * 0.046, cy - s * 0.014), s * 0.006, _fill(Colors.white.withOpacity(0.8)));
 
-    // Gülümseme
+    // ── Kirpikler (sadece kadın) ──────────────────────────────────────────────
+    if (isFemale) {
+      final lashP = _stroke(_hairDark, s * 0.008);
+      void lashes(double ex, double ey) {
+        final top = ey - eyeR;
+        // 3 kirpik: dış, orta, iç
+        canvas.drawLine(Offset(ex - s * 0.012, top + s * 0.002), Offset(ex - s * 0.018, top - s * 0.015), lashP);
+        canvas.drawLine(Offset(ex,             top             ), Offset(ex,             top - s * 0.018), lashP);
+        canvas.drawLine(Offset(ex + s * 0.012, top + s * 0.002), Offset(ex + s * 0.016, top - s * 0.015), lashP);
+      }
+      lashes(cx - s * 0.042, cy - s * 0.008);
+      lashes(cx + s * 0.042, cy - s * 0.008);
+    }
+
+    // ── Gülümseme ────────────────────────────────────────────────────────────
+    // Kadın: biraz daha küçük ve şirin; erkek: standart
+    final smileW = isFemale ? s * 0.030 : s * 0.038;
+    final smileH = isFemale ? s * 0.048 : s * 0.056;
     final smilePath = Path();
-    smilePath.moveTo(cx - s * 0.038, cy + s * 0.030);
-    smilePath.quadraticBezierTo(cx, cy + s * 0.056, cx + s * 0.038, cy + s * 0.030);
-    canvas.drawPath(smilePath, _stroke(const Color(0xFFBB7755), s * 0.016));
+    smilePath.moveTo(cx - smileW, cy + s * 0.030);
+    smilePath.quadraticBezierTo(cx, cy + smileH, cx + smileW, cy + s * 0.030);
+    canvas.drawPath(smilePath, _stroke(const Color(0xFFBB7755), s * 0.014));
 
-    // Yanak pembesi (opsiyonel, şirin görünüm)
-    canvas.drawCircle(Offset(cx - s * 0.068, cy + s * 0.025), s * 0.020, _fill(const Color(0xFFFFAA88).withOpacity(0.35)));
-    canvas.drawCircle(Offset(cx + s * 0.068, cy + s * 0.025), s * 0.020, _fill(const Color(0xFFFFAA88).withOpacity(0.35)));
+    // ── Yanak pembesi ────────────────────────────────────────────────────────
+    final cheekOpacity = isFemale ? 0.45 : 0.30;
+    canvas.drawCircle(Offset(cx - s * 0.068, cy + s * 0.022), s * 0.021, _fill(const Color(0xFFFFAA88).withOpacity(cheekOpacity)));
+    canvas.drawCircle(Offset(cx + s * 0.068, cy + s * 0.022), s * 0.021, _fill(const Color(0xFFFFAA88).withOpacity(cheekOpacity)));
   }
 
   // ── Aksesuarlar (prop) ────────────────────────────────────────────────────
@@ -550,105 +608,4 @@ class _CharacterPainter extends CustomPainter {
     final mW = s * 0.110, mH = s * 0.120;
 
     // Kupa gövdesi
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(center: mugC, width: mW, height: mH),
-        const Radius.circular(6),
-      ),
-      _fill(const Color(0xFFEEEEEE)),
-    );
-
-    // İçecek yüzeyi
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(mugC.dx, mugC.dy - mH * 0.36), width: mW * 0.82, height: mH * 0.22),
-      _fill(typeColor.withOpacity(0.55)),
-    );
-
-    // Kulp
-    canvas.drawArc(
-      Rect.fromCenter(center: Offset(mugC.dx + mW * 0.62, mugC.dy), width: mW * 0.65, height: mH * 0.60),
-      -math.pi / 2, math.pi, false,
-      _stroke(const Color(0xFFDDDDDD), s * 0.020),
-    );
-
-    // Buhar (animasyonlu)
-    final steamOff = anim * s * 0.038;
-    final steamP = _stroke(Colors.white.withOpacity(0.45 + anim * 0.25), s * 0.013);
-    final st1 = Path()
-      ..moveTo(mugC.dx - s * 0.018, mugC.dy - mH * 0.52 - steamOff)
-      ..quadraticBezierTo(
-        mugC.dx - s * 0.040, mugC.dy - mH * 0.72 - steamOff,
-        mugC.dx - s * 0.010, mugC.dy - mH * 0.90 - steamOff,
-      );
-    canvas.drawPath(st1, steamP);
-    final st2 = Path()
-      ..moveTo(mugC.dx + s * 0.018, mugC.dy - mH * 0.52 - steamOff * 0.75)
-      ..quadraticBezierTo(
-        mugC.dx + s * 0.038, mugC.dy - mH * 0.70 - steamOff * 0.75,
-        mugC.dx + s * 0.008, mugC.dy - mH * 0.88 - steamOff * 0.75,
-      );
-    canvas.drawPath(st2, steamP);
-  }
-
-  void _drawHikingStick(Canvas canvas, double s) {
-    // Sol elin anlık konumunu _drawArms ile aynı formülle hesapla
-    final swing = math.sin(anim * math.pi) * s * 0.03;
-    final handX = s * 0.295 + swing;
-    final handY = s * 0.660;
-    // Baston el noktasından yere uzanıyor (sol-aşağı yönde)
-    final tipX = handX - s * 0.055;
-    final tipY = s * 0.895;
-    canvas.drawLine(
-      Offset(handX, handY),
-      Offset(tipX, tipY),
-      _stroke(const Color(0xFF8B5E3C), s * 0.022),
-    );
-    // Metal uç
-    canvas.drawCircle(Offset(tipX, tipY), s * 0.013, _fill(const Color(0xFF555555)));
-  }
-
-  // ── Animasyonlu aksesuarlar ────────────────────────────────────────────────
-
-  void _drawAccents(Canvas canvas, double s) {
-    switch (type) {
-      case PersonalityType.sosyalKelebek:
-        _drawButterflies(canvas, s);
-        break;
-      case PersonalityType.entelektuel:
-        _drawIdeaBubbles(canvas, s);
-        break;
-      case PersonalityType.gurme:
-        _drawFoodSparkles(canvas, s);
-        break;
-      default:
-        break;
-    }
-  }
-
-  void _drawButterflies(Canvas canvas, double s) {
-    final positions = [
-      Offset(s * 0.140, s * 0.230),
-      Offset(s * 0.790, s * 0.200),
-      Offset(s * 0.745, s * 0.360),
-    ];
-    final offsets = [
-      math.sin(anim * math.pi * 2) * s * 0.04,
-      math.cos(anim * math.pi * 2) * s * 0.035,
-      math.sin(anim * math.pi * 2 + 0.8) * s * 0.028,
-    ];
-    final sizes = [s * 0.055, s * 0.045, s * 0.035];
-    final opacities = [0.85, 0.65, 0.45];
-
-    for (var i = 0; i < 3; i++) {
-      _butterfly(canvas, Offset(positions[i].dx, positions[i].dy + offsets[i]),
-          sizes[i], typeColor.withOpacity(opacities[i]));
-    }
-  }
-
-  void _butterfly(Canvas canvas, Offset center, double r, Color color) {
-    final p = _fill(color);
-    // Üst kanatlar
-    canvas.drawOval(Rect.fromCenter(center: Offset(center.dx - r, center.dy - r * 0.45), width: r * 1.35, height: r), p);
-    canvas.drawOval(Rect.fromCenter(center: Offset(center.dx + r, center.dy - r * 0.45), width: r * 1.35, height: r), p);
-    // Alt kanatlar (daha küçük)
-    canvas.drawOval(Rect.fromCenter(center: Offset(center.dx - r * 0.7, center.dy + r * 0.30), width: r * 0.90, height: r * 0.65), _fill(color.withOpacity(color.opacity * 0.
+    
