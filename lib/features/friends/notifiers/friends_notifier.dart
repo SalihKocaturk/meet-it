@@ -139,6 +139,7 @@ class FriendsNotifier extends Notifier<FriendsState> {
           addedAt: DateTime.now(),
           personalityProfile: u.personalityProfile,
           meetCount: meetCounts[u.uid] ?? 0,
+          gender: u.gender,
         );
         if (acceptedUids.contains(u.uid)) {
           connections.add(friend);

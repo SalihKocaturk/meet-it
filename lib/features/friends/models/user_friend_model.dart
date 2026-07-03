@@ -22,6 +22,11 @@ class UserFriendModel {
   /// sıralamak için kullanılır.
   final int meetCount;
 
+  /// Arkadaşın cinsiyeti — UserModel.gender'dan gelir, kişilik karakterinin
+  /// (PersonalityCharacterWidget) doğru saç/görünüm stiliyle gösterilmesi için
+  /// tutulur. null ise nötr karakter kullanılır.
+  final String? gender;
+
   const UserFriendModel({
     required this.uid,
     required this.name,
@@ -32,6 +37,7 @@ class UserFriendModel {
     this.lat,
     this.lng,
     this.meetCount = 0,
+    this.gender,
   });
 
   factory UserFriendModel.fromMap(Map<String, dynamic> map) {
@@ -52,6 +58,7 @@ class UserFriendModel {
       lat: (map['lat'] as num?)?.toDouble(),
       lng: (map['lng'] as num?)?.toDouble(),
       meetCount: (map['meetCount'] as num?)?.toInt() ?? 0,
+      gender: map['gender'] as String?,
     );
   }
 
@@ -66,6 +73,7 @@ class UserFriendModel {
       if (lat != null) 'lat': lat,
       if (lng != null) 'lng': lng,
       'meetCount': meetCount,
+      if (gender != null) 'gender': gender,
     };
   }
 
@@ -80,19 +88,8 @@ class UserFriendModel {
     double? lat,
     double? lng,
     int? meetCount,
+    String? gender,
   }) {
     return UserFriendModel(
       uid: uid ?? this.uid,
-      name: name ?? this.name,
-      photoUrl: photoUrl ?? this.photoUrl,
-      status: status ?? this.status,
-      addedAt: addedAt ?? this.addedAt,
-      personalityProfile: clearProfile
-          ? null
-          : (personalityProfile ?? this.personalityProfile),
-      meetCount: meetCount ?? this.meetCount,
-      lat: lat ?? this.lat,
-      lng: lng ?? this.lng,
-    );
-  }
-}
+      name: nam

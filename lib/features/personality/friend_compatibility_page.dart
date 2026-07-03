@@ -238,8 +238,8 @@ class FriendCompatibilityDetailPage extends ConsumerWidget {
               //
               // İki kullanıcının dominant tip karakteri (PersonalityCharacterWidget
               // ile çizilen animasyonlu bitmoji figürü) yan yana gösterilir.
-              // Kendi karakterim kişisel cinsiyeti kullanır; arkadaşın cinsiyeti
-              // UserFriendModel'de tutulmadığından nötr gösterim yapılır.
+              // Her iki tarafın cinsiyeti de DB'den (UserModel.gender) okunur
+              // ve UserFriendModel.gender üzerinden buraya taşınır.
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -306,4 +306,4 @@ class FriendCompatibilityDetailPage extends ConsumerWidget {
                   Expanded(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
-     
+                    
