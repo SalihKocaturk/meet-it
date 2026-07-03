@@ -47,6 +47,7 @@ class _PersonalityCharacterWidgetState extends State<PersonalityCharacterWidget>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _anim;
+  bool _landed = false; // maceraperest: iniş bitti mi?
 
   @override
   void initState() {
@@ -58,12 +59,27 @@ class _PersonalityCharacterWidgetState extends State<PersonalityCharacterWidget>
         duration: const Duration(seconds: 5),
       )..forward();
       _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+      _ctrl.addStatusListener(_onDescentComplete);
     } else {
       _ctrl = AnimationController(
         vsync: this,
         duration: const Duration(milliseconds: 2600),
       )..repeat(reverse: true);
       _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+    }
+  }
+
+  /// Paraşüt inişi tamamlanınca hafif sallanma animasyonuna geç.
+  void _onDescentComplete(AnimationStatus status) {
+    if (status == AnimationStatus.completed && mounted) {
+      final oldCtrl = _ctrl;
+      _ctrl = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 2600),
+      )..repeat(reverse: true);
+      _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+      setState(() => _landed = true);
+      oldCtrl.dispose();
     }
   }
 
@@ -111,6 +127,7 @@ class _PersonalityCharacterWidgetState extends State<PersonalityCharacterWidget>
               gender: charGender,
               anim: _anim.value,
               typeColor: typeColor,
+              landed: _landed,
             ),
           ),
         );
@@ -126,12 +143,14 @@ class _CharacterPainter extends CustomPainter {
   final CharacterGender gender;
   final double anim; // 0.0 → 1.0 (sinüzoid, Curves.easeInOut)
   final Color typeColor;
+  final bool landed; // maceraperest: iniş tamamlandı mı?
 
   _CharacterPainter({
     required this.type,
     required this.gender,
     required this.anim,
     required this.typeColor,
+    this.landed = false,
   });
 
   // ── Sabit renkler ──────────────────────────────────────────────────────────
@@ -158,19 +177,21 @@ class _CharacterPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final s = size.width;
 
-    // ── Animasyon ötelemesi ───────────────────────────────────────────────────
-    // Maceraperest: tek seferlik iniş (0.75s yukarıdan normale).
-    // Ayaklar başta canvas üstünde ~%19'da görünür, kafa canvas dışı.
-    // anim=0.26'dan itibaren harness ipleri girer, anim≈0.75'te kubbe girer.
-    // Diğerleri: küçük sallanma (±5px).
+    // ── Arka plan: translate dışında, sabit kalır ────────────────────────────
+    _drawBackground(canvas, s);
+
+    // ── Karakter animasyon ötelemesi ─────────────────────────────────────────
+    // Maceraperest (iniş sırasında): tek seferlik büyük iniş.
+    //   anim=0 → karakter 0.75s yukarıda (ayaklar ~%19'da görünür, kafa dışarı).
+    //   anim=1 → normal konumda. Sonra (landed=true) diğerleri gibi sallanır.
+    // Diğerleri: ±5px yukarı-aşağı sallanma.
     canvas.save();
-    if (type == PersonalityType.maceraperest) {
+    if (type == PersonalityType.maceraperest && !landed) {
       canvas.translate(0, -s * 0.75 * (1 - anim));
     } else {
       canvas.translate(0, -math.sin(anim * math.pi) * 5.0);
     }
 
-    _drawBackground(canvas, s);
     _drawLegs(canvas, s);
     _drawTorso(canvas, s);
     _drawArms(canvas, s);
@@ -858,18 +879,4 @@ class _CharacterPainter extends CustomPainter {
     }
   }
 
-  void _butterfly(Canvas canvas, Offset center, double r, Color color) {
-    final p = _fill(color);
-    // Üst kanatlar
-    canvas.drawOval(Rect.fromCenter(center: Offset(center.dx - r, center.dy - r * 0.45), width: r * 1.35, height: r), p);
-    canvas.drawOval(Rect.fromCenter(center: Offset(center.dx + r, center.dy - r * 0.45), width: r * 1.35, height: r), p);
-    // Alt kanatlar (daha küçük)
-    canvas.drawOval(Rect.fromCenter(center: Offset(center.dx - r * 0.7, center.dy + r * 0.30), width: r * 0.90, height: r * 0.65), _fill(color.withOpacity(color.opacity * 0.65)));
-    canvas.drawOval(Rect.fromCenter(center: Offset(center.dx + r * 0.7, center.dy + r * 0.30), width: r * 0.90, height: r * 0.65), _fill(color.withOpacity(color.opacity * 0.65)));
-    // Gövde
-    canvas.drawCircle(center, r * 0.13, _fill(_hairDark.withOpacity(0.55)));
-  }
-
-  void _drawIdeaBubbles(Canvas canvas, double s) {
-    final pts = [
-      Offs
+  void _butterfly(Canvas canvas, Offset center, double r, 
