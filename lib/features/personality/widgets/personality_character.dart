@@ -794,6 +794,9 @@ class _CharacterPainter extends CustomPainter {
   // Opaklık sin(anim·π): yüksekte (anim≈0.5) tam görünür,
   // yere değerken (anim≈0 veya ≈1) sıfıra solar → doğal iniş hissi.
   void _drawParachute(Canvas canvas, double s) {
+    // İniş tamamlandıysa (bob animasyonu) paraşüt hiç çizilmez.
+    if (landed) return;
+
     final cx = s * _cx;
 
     // Tek seferlik iniş: anim=0.85→1.0 arasında solar, sonra tamamen kaybolur.
@@ -870,6 +873,4 @@ class _CharacterPainter extends CustomPainter {
       Offset(s * 0.745, s * 0.360),
     ];
     final offsets = [
-      math.sin(anim * math.pi * 2) * s * 0.04,
-      math.cos(anim * math.pi * 2) * s * 0.035,
-      ma
+      
