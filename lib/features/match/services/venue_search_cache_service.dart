@@ -101,4 +101,63 @@ class VenueSearchCacheService {
       // Cache yazılamasa da arama sonucu kullanıcıya zaten döndü — sorun yok.
     }
   }
+  /// Son havuz genişleme zamanını döner; doküman yoksa veya `expandedAt`
+  /// alanı hiç yazılmamışsa `null` döner.
+  static Future<DateTime?> getExpandedAt({
+    required double lat,
+    required double lng,
+    required List<String> types,
+    required int radius,
+  }) async {
+    final key = _buildKey(lat: lat, lng: lng, types: types, radius: radius);
+    try {
+      final snap = await _firestore.collection(_collection).doc(key).get();
+      final ts = snap.data()?['expandedAt'] as Timestamp?;
+      return ts?.toDate();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Mevcut havuza `newPlaces`'i ekler (dedup + `maxSize` sınırı).
+  /// Firestore dokümanını `merge: true` ile günceller ve `expandedAt`'ı
+  /// tazeler. Gerçekten yeni mekan yoksa Firestore'a yazılmaz.
+  static Future<void> mergeExpand({
+    required double lat,
+    required double lng,
+    required List<String> types,
+    required int radius,
+    required List<PlaceResult> existing,
+    required List<PlaceResult> newPlaces,
+    required int maxSize,
+  }) async {
+    if (newPlaces.isEmpty) return;
+    final key = _buildKey(lat: lat, lng: lng, types: types, radius: radius);
+    final seen = <String>{};
+    final merged = <PlaceResult>[];
+    for (final p in existing) {
+      if (seen.add(p.placeId)) merged.add(p);
+    }
+    var added = 0;
+    for (final p in newPlaces) {
+      if (merged.length >= maxSize) break;
+      if (seen.add(p.placeId)) {
+        merged.add(p);
+        added++;
+      }
+    }
+    if (added == 0) return;
+    try {
+      await _firestore.collection(_collection).doc(key).set({
+        'places': merged.map((p) => p.toStorageMap()).toList(),
+        'expandedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      // ignore: avoid_print
+      print('[VenueSearchCacheService] 📈 Pool genişledi: '
+          '+$added yeni mekan, toplam=\${merged.length}');
+    } catch (e) {
+      // ignore: avoid_print
+      print('[VenueSearchCacheService] mergeExpand hatası: \$e');
+    }
+  }
 }

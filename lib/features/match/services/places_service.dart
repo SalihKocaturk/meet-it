@@ -984,18 +984,21 @@ class PlacesService {
       // yaparak ~200 benzersiz mekanı tek bir Firestore dokümanına yazar.
       // Sonraki aynı bölge+tip aramaları (farklı kullanıcılar da dahil)
       // hep bu büyük havuzdan karşılanır — Google'a bir daha gidilmez.
-      final groupResults = await VenueSearchCacheService.getCached(
-            lat: lat,
-            lng: lng,
-            types: group,
-            radius: _poolCacheRadius,
-          ) ??
-          await _fetchAndCacheNearby(
-            lat: lat,
-            lng: lng,
-            types: group,
-          );
-      rawResults.addAll(groupResults);
+      List<PlaceResult>? groupCached = await VenueSearchCacheService.getCached(
+        lat: lat,
+        lng: lng,
+        types: group,
+        radius: _poolCacheRadius,
+      );
+      if (groupCached == null) {
+        groupCached = await _fetchAndCacheNearby(lat: lat, lng: lng, types: group);
+      } else if (groupCached.length < _maxPoolSize) {
+        // Fire-and-forget: aylık genişleme — kullanıcıyı bekletme.
+        _maybeExpandAsync(
+          lat: lat, lng: lng, types: group, existing: groupCached,
+        ).ignore();
+      }
+      rawResults.addAll(groupCached);
     }
 
     final seen = <String>{};
@@ -1370,6 +1373,54 @@ class PlacesService {
   /// yararlanır. "Daha fazla kullanıcı = daha fazla mekan" değil,
   /// "daha fazla kullanıcı = daha az maliyet" demektir; mekan zenginliği
   /// tek seferlik geniş pool fetch'ten geliyor.
+  // ── Aylık havuz genişletme (fire-and-forget) ──────────────────────────────
+  //
+  // Koşullar sağlanırsa (30 gün geçmiş + havuz dolu değil) mevcut Firestore
+  // cache'ine yeni mekanlar ekler. Sadece dış 3 halkayı sorgular → 3 API
+  // çağrısı. Async çalışır, kullanıcının arama sonuçlarını geciktirmez.
+  //
+  // Bütçe tahmini: İstanbul'da ~150 aktif cache dokümanı × 3 çağrı/ay
+  // = ~450 API çağrısı/ay → 2000'lik limitle rahatça uyumlu.
+  static Future<void> _maybeExpandAsync({
+    required double lat,
+    required double lng,
+    required List<String> types,
+    required List<PlaceResult> existing,
+  }) async {
+    try {
+      final lastExpanded = await VenueSearchCacheService.getExpandedAt(
+        lat: lat, lng: lng, types: types, radius: _poolCacheRadius,
+      );
+      final isDue = lastExpanded == null ||
+          DateTime.now().difference(lastExpanded).inDays >= 30;
+      if (!isDue) return;
+      if (existing.length >= _maxPoolSize) return; // zaten dolu
+
+      // Sadece dış 3 halka: 7500, 10000, 15000 → 3 API çağrısı
+      final apiVersion = await PlacesApiVersionService.getActiveVersion();
+      final expansionRadii = _poolBuildRadii.reversed.take(3).toList();
+      final fresh = <PlaceResult>[];
+      for (final r in expansionRadii) {
+        final batch = apiVersion == PlacesApiVersion.legacy
+            ? await _fetchNearbyLegacy(lat: lat, lng: lng, types: types, radius: r)
+            : await _fetchNearbyNew(lat: lat, lng: lng, types: types, radius: r);
+        fresh.addAll(batch);
+      }
+      await VenueSearchCacheService.mergeExpand(
+        lat: lat,
+        lng: lng,
+        types: types,
+        radius: _poolCacheRadius,
+        existing: existing,
+        newPlaces: fresh,
+        maxSize: _maxPoolSize,
+      );
+    } catch (e) {
+      // ignore: avoid_print
+      print('[PlacesService] _maybeExpandAsync hata: \$e');
+    }
+  }
+
   static Future<List<PlaceResult>> _fetchAndCacheNearby({
     required double lat,
     required double lng,
