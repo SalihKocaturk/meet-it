@@ -114,18 +114,16 @@ class NotificationService {
         return;
       }
 
-      await _firestore.collection('fcmTokens').doc(uid).set({
-        'token': token,
-        'updatedAt': FieldValue.serverTimestamp(),
+      await _firestore.collection('users').doc(uid).update({
+        'fcmToken': token,
       });
       debugPrint('[NotificationService] FCM token Firestore\'a kaydedildi.');
 
       // Token yenilendiğinde (nadiren: uygulama yeniden kurulunca vb.) güncelle
       _messaging.onTokenRefresh.listen((newToken) async {
         try {
-          await _firestore.collection('fcmTokens').doc(uid).set({
-            'token': newToken,
-            'updatedAt': FieldValue.serverTimestamp(),
+          await _firestore.collection('users').doc(uid).update({
+            'fcmToken': newToken,
           });
           debugPrint('[NotificationService] FCM token yenilendi ve kaydedildi.');
         } catch (e) {
@@ -141,7 +139,9 @@ class NotificationService {
   /// (bu cihaza artık bildirim gönderilmesin).
   static Future<void> clearFcmToken(String uid) async {
     try {
-      await _firestore.collection('fcmTokens').doc(uid).delete();
+      await _firestore.collection('users').doc(uid).update({
+        'fcmToken': FieldValue.delete(),
+      });
       await _messaging.deleteToken();
     } catch (e) {
       debugPrint('[NotificationService] clearFcmToken hatası: $e');
@@ -230,4 +230,6 @@ class NotificationService {
   static void _onNotificationOpenedFromBackground(RemoteMessage message) {
     final type = message.data['type'];
     debugPrint('[NotificationService] Bildirimle uygulama açıldı: $type');
-    // TODO: GoRouter'a ba
+    // TODO: GoRouter'a bağla — friendsPage / homePage yönlendirmesi
+  }
+}

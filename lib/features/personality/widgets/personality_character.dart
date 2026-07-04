@@ -31,11 +31,21 @@ class PersonalityCharacterWidget extends StatefulWidget {
   final String? gender;
   final double size;
 
+  /// `true` → karakter yürüyerek büyüteçle arama yapar (loading ekranı için).
+  /// `false` → normal kişilik analizi animasyonu (varsayılan).
+  final bool searchMode;
+
+  /// `true` → karakter yatay olarak aynılanır (sağdan gelen arkadaş figürü
+  /// için). Loading sayfasında sağdaki karakter sola bakacak şekilde çizilir.
+  final bool flipX;
+
   const PersonalityCharacterWidget({
     super.key,
     required this.type,
     this.gender,
     this.size = 220,
+    this.searchMode = false,
+    this.flipX = false,
   });
 
   @override
@@ -52,7 +62,7 @@ class _PersonalityCharacterWidgetState extends State<PersonalityCharacterWidget>
   @override
   void initState() {
     super.initState();
-    if (widget.type == PersonalityType.maceraperest) {
+    if (widget.type == PersonalityType.maceraperest && !widget.searchMode) {
       // Tek seferlik paraşütle iniş: 5 saniye, yavaşlayarak iner (easeOut)
       _ctrl = AnimationController(
         vsync: this,
@@ -61,9 +71,10 @@ class _PersonalityCharacterWidgetState extends State<PersonalityCharacterWidget>
       _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
       _ctrl.addStatusListener(_onDescentComplete);
     } else {
+      // searchMode'da daha canlı: 1400ms — normal modda: 2600ms
       _ctrl = AnimationController(
         vsync: this,
-        duration: const Duration(milliseconds: 2600),
+        duration: Duration(milliseconds: widget.searchMode ? 1400 : 2600),
       )..repeat(reverse: true);
       _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
     }
@@ -106,7 +117,7 @@ class _PersonalityCharacterWidgetState extends State<PersonalityCharacterWidget>
     return AnimatedBuilder(
       animation: _anim,
       builder: (context, _) {
-        return Container(
+        final charWidget = Container(
           width: widget.size,
           height: widget.size,
           decoration: BoxDecoration(
@@ -127,9 +138,19 @@ class _PersonalityCharacterWidgetState extends State<PersonalityCharacterWidget>
               anim: _anim.value,
               typeColor: typeColor,
               landed: _landed,
+              searchMode: widget.searchMode,
             ),
           ),
         );
+        // flipX: sağdan gelen karakteri (arkadaş) sola bakacak şekilde aynıla
+        if (widget.flipX) {
+          return Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.diagonal3Values(-1, 1, 1),
+            child: charWidget,
+          );
+        }
+        return charWidget;
       },
     );
   }
@@ -142,7 +163,8 @@ class _CharacterPainter extends CustomPainter {
   final CharacterGender gender;
   final double anim; // 0.0 → 1.0 (sinüzoid, Curves.easeInOut)
   final Color typeColor;
-  final bool landed; // maceraperest: iniş tamamlandı mı?
+  final bool landed;     // maceraperest: iniş tamamlandı mı?
+  final bool searchMode; // tüm tipler: yürüyerek büyüteçle arama
 
   _CharacterPainter({
     required this.type,
@@ -150,6 +172,7 @@ class _CharacterPainter extends CustomPainter {
     required this.anim,
     required this.typeColor,
     this.landed = false,
+    this.searchMode = false,
   });
 
   // ── Sabit renkler ──────────────────────────────────────────────────────────
@@ -177,7 +200,8 @@ class _CharacterPainter extends CustomPainter {
     final s = size.width;
 
     // ── Arka plan: translate dışında, sabit kalır ────────────────────────────
-    _drawBackground(canvas, s);
+    // Arama modunda arka plan çizilmez; karakter sade şekilde yürür.
+    if (!searchMode) _drawBackground(canvas, s);
 
     // ── Karakter animasyon ötelemesi ─────────────────────────────────────────
     // Maceraperest (iniş sırasında): tek seferlik büyük iniş.
@@ -185,7 +209,10 @@ class _CharacterPainter extends CustomPainter {
     //   anim=1 → normal konumda. Sonra (landed=true) diğerleri gibi sallanır.
     // Diğerleri: ±5px yukarı-aşağı sallanma.
     canvas.save();
-    if (type == PersonalityType.maceraperest && !landed) {
+    if (searchMode) {
+      // Yürüme sırasında hafif yukarı-aşağı sekme (±3px, çift frekans)
+      canvas.translate(0, -math.sin(anim * math.pi * 2) * 3.0);
+    } else if (type == PersonalityType.maceraperest && !landed) {
       // Tek seferlik iniş: yukarıdan aşağıya süzülür
       canvas.translate(0, -s * 0.75 * (1 - anim));
     } else if (type == PersonalityType.maceraperest && landed) {
@@ -397,14 +424,13 @@ class _CharacterPainter extends CustomPainter {
     final legP = _stroke(_pants, s * 0.085);
     final shoeP = _fill(_shoe);
 
-    if (type == PersonalityType.maceraperest) {
-      // Yürüme: her kare farklı konum — ayak uçları hesaplanıp ayakkabıya iletiliyor
+    if (searchMode || type == PersonalityType.maceraperest) {
+      // Yürüme animasyonu: tüm tipler searchMode'da, maceraperest her zaman
       final walk = math.sin(anim * math.pi) * s * 0.045;
       final leftFoot  = Offset(s * 0.400 - walk, s * 0.912);
       final rightFoot = Offset(s * 0.580 + walk, s * 0.912);
       canvas.drawLine(Offset(s * 0.445, s * 0.747), leftFoot,  legP);
       canvas.drawLine(Offset(s * 0.555, s * 0.747), rightFoot, legP);
-      // Ayakkabılar ayak ucunu takip ediyor
       canvas.drawOval(Rect.fromCenter(center: Offset(leftFoot.dx,  leftFoot.dy  + s * 0.022), width: s * 0.11, height: s * 0.044), shoeP);
       canvas.drawOval(Rect.fromCenter(center: Offset(rightFoot.dx, rightFoot.dy + s * 0.022), width: s * 0.11, height: s * 0.044), shoeP);
     } else {
@@ -423,6 +449,17 @@ class _CharacterPainter extends CustomPainter {
 
     final ls = Offset(s * 0.365, s * 0.535); // sol omuz
     final rs = Offset(s * 0.635, s * 0.535); // sağ omuz
+
+    if (searchMode) {
+      // Arama pozu: sağ el büyüteç tutarak göz hizasına kaldırılmış,
+      // sol el yürüme dengesi için karşılıklı sallantı yapıyor.
+      final swing = math.sin(anim * math.pi) * s * 0.022;
+      // Sağ: kol yukarı-içe kalkık (büyüteç yüzün üzerinde)
+      canvas.drawLine(rs, Offset(s * 0.620, s * 0.432 - swing * 0.35), armP);
+      // Sol: yürüme dengesi — sağın tersi yönde sallanır
+      canvas.drawLine(ls, Offset(s * 0.285 - swing, s * 0.660), armP);
+      return;
+    }
 
     switch (type) {
       case PersonalityType.entelektuel:
@@ -637,12 +674,61 @@ class _CharacterPainter extends CustomPainter {
   // ── Aksesuarlar (prop) ────────────────────────────────────────────────────
 
   void _drawProp(Canvas canvas, double s) {
+    if (searchMode) {
+      _drawSearchMagnifier(canvas, s);
+      return;
+    }
     switch (type) {
       case PersonalityType.entelektuel: _drawBook(canvas, s); break;
       case PersonalityType.gurme:       _drawForkAndPlate(canvas, s); break;
       case PersonalityType.sakinRuh:    _drawMug(canvas, s); break;
       case PersonalityType.maceraperest: _drawHikingStick(canvas, s); break;
       case PersonalityType.sosyalKelebek: break; // kelebekler accent'ta
+    }
+  }
+
+  /// Büyüteç: arama modunda tüm tiplerin prop'u.
+  ///
+  /// Sağ kolun bitmesiyle aynı koordinattan başlar ve
+  /// yukarı-sağa doğru uzanır. Cam içinde nabız gibi titreşen bir
+  /// parıltı + dışarı yayılan iki "radar" halkası var.
+  void _drawSearchMagnifier(Canvas canvas, double s) {
+    final swing = math.sin(anim * math.pi) * s * 0.022;
+
+    // Sapın başladığı nokta (sağ el) — _drawArms ile senkron
+    final handleBase = Offset(s * 0.620, s * 0.432 - swing * 0.35);
+    // Mercek merkezi — yüzün üzerinde, sağ göz bölgesinde
+    final lensC = Offset(s * 0.548, s * 0.370 - swing * 0.35);
+    final lensR = s * 0.062;
+
+    // Sap
+    canvas.drawLine(
+      handleBase, lensC,
+      _stroke(const Color(0xFF7A5230), s * 0.026),
+    );
+
+    // Mercek cam alanı (hafif şeffaf)
+    canvas.drawCircle(lensC, lensR, _fill(Colors.white.withOpacity(0.14)));
+    // Mercek çerçevesi
+    canvas.drawCircle(lensC, lensR, _stroke(const Color(0xFF7A5230), s * 0.024));
+
+    // Cam içi yansıma: nabız gibi parlayan küçük daire
+    final shimmer = 0.28 + math.sin(anim * math.pi * 2) * 0.18;
+    canvas.drawCircle(
+      Offset(lensC.dx - lensR * 0.28, lensC.dy - lensR * 0.28),
+      lensR * 0.28,
+      _fill(Colors.white.withOpacity(shimmer)),
+    );
+
+    // Radar halkaları: mercekten dışarı yayılan iki ping dalgası
+    for (var i = 0; i < 2; i++) {
+      final t = (anim + i * 0.5) % 1.0; // 0→1, ofsetli
+      final r = lensR * (1.0 + t * 0.90);
+      final opacity = (1.0 - t) * 0.30;
+      canvas.drawCircle(
+        lensC, r,
+        _stroke(typeColor.withOpacity(opacity), s * 0.007),
+      );
     }
   }
 
@@ -778,6 +864,11 @@ class _CharacterPainter extends CustomPainter {
   // ── Animasyonlu aksesuarlar ────────────────────────────────────────────────
 
   void _drawAccents(Canvas canvas, double s) {
+    if (searchMode) {
+      // Arama modunda tip-spesifik aksesuarlar yerine zemin nokta efektleri
+      _drawSearchTrail(canvas, s);
+      return;
+    }
     switch (type) {
       case PersonalityType.sosyalKelebek:
         _drawButterflies(canvas, s);
@@ -793,6 +884,23 @@ class _CharacterPainter extends CustomPainter {
         break;
       default:
         break;
+    }
+  }
+
+  /// Yürürken ayakların gerisinde kalan küçük renk noktaları —
+  /// karakterin hareket ettiğini anlatan zemin izi.
+  void _drawSearchTrail(Canvas canvas, double s) {
+    final baseY = s * 0.950;
+    final offsets = [-s * 0.12, -s * 0.22, -s * 0.32];
+    for (var i = 0; i < offsets.length; i++) {
+      final phase = (anim + i * 0.28) % 1.0;
+      final opacity = (1.0 - phase) * 0.35;
+      final r = s * 0.012 * (1.0 - phase * 0.5);
+      canvas.drawCircle(
+        Offset(s * 0.50 + offsets[i], baseY),
+        r,
+        _fill(typeColor.withOpacity(opacity)),
+      );
     }
   }
 
@@ -869,4 +977,72 @@ class _CharacterPainter extends CustomPainter {
     canvas.drawLine(Offset(cx - domeR * 0.08, domeCY), Offset(s * 0.492, s * hY), stringP);
     canvas.drawLine(Offset(cx + domeR * 0.08, domeCY), Offset(s * 0.508, s * hY), stringP);
     canvas.drawLine(Offset(cx + domeR * 0.52, domeCY), Offset(s * 0.558, s * hY), stringP);
-    canvas.drawLine(Offset(cx + domeR,        domeCY), Offset(s * 
+    canvas.drawLine(Offset(cx + domeR,        domeCY), Offset(s * 0.622, s * hY), stringP);
+  }
+
+  void _drawButterflies(Canvas canvas, double s) {
+    final positions = [
+      Offset(s * 0.140, s * 0.230),
+      Offset(s * 0.790, s * 0.200),
+      Offset(s * 0.745, s * 0.360),
+    ];
+    final offsets = [
+      math.sin(anim * math.pi * 2) * s * 0.04,
+      math.cos(anim * math.pi * 2) * s * 0.035,
+      math.sin(anim * math.pi * 2 + 0.8) * s * 0.028,
+    ];
+    final sizes = [s * 0.055, s * 0.045, s * 0.035];
+    final opacities = [0.85, 0.65, 0.45];
+
+    for (var i = 0; i < 3; i++) {
+      _butterfly(canvas, Offset(positions[i].dx, positions[i].dy + offsets[i]),
+          sizes[i], typeColor.withOpacity(opacities[i]));
+    }
+  }
+
+  void _butterfly(Canvas canvas, Offset center, double r, Color color) {
+    final p = _fill(color);
+    // Üst kanatlar
+    canvas.drawOval(Rect.fromCenter(center: Offset(center.dx - r, center.dy - r * 0.45), width: r * 1.35, height: r), p);
+    canvas.drawOval(Rect.fromCenter(center: Offset(center.dx + r, center.dy - r * 0.45), width: r * 1.35, height: r), p);
+    // Alt kanatlar (daha küçük)
+    canvas.drawOval(Rect.fromCenter(center: Offset(center.dx - r * 0.7, center.dy + r * 0.30), width: r * 0.90, height: r * 0.65), _fill(color.withOpacity(color.opacity * 0.65)));
+    canvas.drawOval(Rect.fromCenter(center: Offset(center.dx + r * 0.7, center.dy + r * 0.30), width: r * 0.90, height: r * 0.65), _fill(color.withOpacity(color.opacity * 0.65)));
+    // Gövde
+    canvas.drawCircle(center, r * 0.13, _fill(_hairDark.withOpacity(0.55)));
+  }
+
+  void _drawIdeaBubbles(Canvas canvas, double s) {
+    final pts = [
+      Offset(s * 0.140, s * 0.200),
+      Offset(s * 0.820, s * 0.230),
+      Offset(s * 0.830, s * 0.380),
+    ];
+    final rs = [s * 0.025, s * 0.018, s * 0.015];
+
+    for (var i = 0; i < 3; i++) {
+      final yOff = math.sin((anim + i * 0.33) * math.pi) * s * 0.022;
+      canvas.drawCircle(
+        Offset(pts[i].dx, pts[i].dy + yOff),
+        rs[i],
+        _fill(typeColor.withOpacity(0.40 - i * 0.10)),
+      );
+    }
+  }
+
+  void _drawFoodSparkles(Canvas canvas, double s) {
+    // Tabaktan yükselen küçük parıltılar
+    final sparkP = _fill(typeColor.withOpacity(0.45));
+    final positions = [
+      Offset(s * 0.240, s * 0.540),
+      Offset(s * 0.260, s * 0.510),
+      Offset(s * 0.280, s * 0.525),
+    ];
+    final animOff = anim * s * 0.030;
+    for (final pos in positions) {
+      canvas.drawCircle(Offset(pos.dx, pos.dy - animOff), s * 0.012, sparkP);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CharacterPainter old) =
