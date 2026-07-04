@@ -7,6 +7,7 @@ import 'package:meetit/core/utils/important_action_guard.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/match/providers/venue_search_provider.dart';
+import 'package:meetit/features/match/pages/venue_search_loading_page.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 
 // ── "Mekan Bul" Sabit (Asılı) Alt Bar ────────────────────────────────────────
@@ -244,9 +245,12 @@ class _FindVenueButtonBarState extends ConsumerState<FindVenueButtonBar>
                             selectedMaxDistanceKmProvider,
                           );
 
-                          await ref
-                              .read(venueSearchProvider.notifier)
-                              .searchVenues(
+                          // Loading sayfasını aç — arama kendi içinde yapılır,
+                          // tamamlanınca otomatik pop olur.
+                          await Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              fullscreenDialog: true,
+                              builder: (_) => VenueSearchLoadingPage(
                                 userProfile: userProfile,
                                 friendProfile: friendProfile,
                                 selectedActivities: activities.toList(),
@@ -255,7 +259,9 @@ class _FindVenueButtonBarState extends ConsumerState<FindVenueButtonBar>
                                 userLat: userLoc?.lat,
                                 userLng: userLoc?.lng,
                                 maxVenueDistanceKm: maxDistanceKm,
-                              );
+                              ),
+                            ),
+                          );
 
                           if (!context.mounted) return;
 
