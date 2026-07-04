@@ -7,6 +7,7 @@ import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/services/places_api_version_service.dart';
 import 'package:meetit/features/match/services/venue_photo_cache_service.dart';
 import 'package:meetit/features/match/services/venue_search_cache_service.dart';
+import 'package:meetit/core/utils/geo_utils.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 
 /// Google Places Nearby Search API wrapper.
@@ -402,6 +403,42 @@ class PlacesService {
     List<PlaceResult> places,
   ) {
     return places.where((p) => !_hasRestrictedAccessName(p.name)).toList();
+  }
+
+  // ── Mesafe hard-cut filtresi ───────────────────────────────────────────────
+  //
+  // Cache daima _poolCacheRadius (15 km) ile keylenir — yani havuzda
+  // kullanıcının slider'dan seçtiğinden çok daha uzak mekanlar bulunabilir.
+  // Bu filtre, dedup sonrası havuzu kullanıcının gerçek radius seçimine
+  // kırpar: [searchLat, searchLng] merkezinden [maxRadiusM] metreyi aşan
+  // mekanlar tamamen çıkarılır.
+  //
+  // Fallback (geri dönüş) modu: havuz bu filtre sonrası _maxResultCount'tan
+  // az mekana düşerse filtre kaldırılır ve tüm havuz döndürülür — dar bir
+  // bölgede hiç sonuç çıkmaması yerine "biraz uzak ama geçerli" sonuçlar
+  // tercih edilir. Bu sayede kullanıcı "2km" seçip 1 mekan olan bir alanda
+  // bile boş ekranla karşılaşmaz.
+  static List<PlaceResult> _filterByDistance(
+    List<PlaceResult> places, {
+    required double searchLat,
+    required double searchLng,
+    required int maxRadiusM,
+  }) {
+    final maxKm = maxRadiusM / 1000.0;
+    final filtered = places.where((p) {
+      final km = GeoUtils.haversineKm(searchLat, searchLng, p.lat, p.lng);
+      return km <= maxKm;
+    }).toList();
+    // Havuz çok küçüldüyse kısıtı kaldır — boş ekran gösterme
+    if (filtered.length < _maxResultCount && filtered.length < places.length) {
+      // ignore: avoid_print
+      print(
+        '⚠️ Mesafe filtresi (${maxRadiusM}m) havuzu ${filtered.length} mekana '
+        'düşürdü — ${_maxResultCount} eşiğinin altında, kısıt kaldırılıyor.',
+      );
+      return places;
+    }
+    return filtered;
   }
 
   // ── Gece hayatı / kişilik uyumsuzluğu filtresi ────────────────────────────
@@ -899,6 +936,19 @@ class PlacesService {
 
     if (results.isEmpty) return [];
 
+    // ── Adım -1: Mesafe hard-cut ───────────────────────────────────────────
+    // Cache 15 km ile keylenir; kullanıcı daha dar bir radius seçmiş olabilir
+    // (örn. 2 km). Fiyat/tip filtrelemesinden ÖNCE mesafe sınırı uygulanır —
+    // hem daha hızlı (sonraki filtrelerin işleyeceği mekan sayısı azalır)
+    // hem de "2km seçtim ama 8km'deki mekan çıktı" durumunu engeller.
+    // Havuz çok küçülürse kısıt otomatik kaldırılır (bkz. _filterByDistance).
+    final distanceFiltered = _filterByDistance(
+      results,
+      searchLat: lat,
+      searchLng: lng,
+      maxRadiusM: searchRadius,
+    );
+
     // ── Adım 0: Fiyat filtresi (kümülatif) ────────────────────────────────
     // Cache'ten gelen ham havuz fiyata göre filtresiz olduğundan burada
     // uyguluyoruz. Kümülatif mantık: seçilen seviye "en fazla bu kadar
@@ -911,7 +961,7 @@ class PlacesService {
     // priceLevel null olan mekanlar her zaman dahil edilir çünkü Google'ın
     // bu bilgiyi döndürmemesi o mekanın pahalı olduğu anlamına gelmez
     // (parklar, müzeler, bazı kafeler genelde fiyat seviyesi taşımaz).
-    var priceFiltered = _filterByPrice(results, priceLevel);
+    var priceFiltered = _filterByPrice(distanceFiltered, priceLevel);
 
     // Fiyat filtresi havuzu çok küçülttüyse kısıtı kaldır.
     // Örn. Kadıköy'de ₺ mekan sayısı 5'ten azsa, daha pahalı mekanları da
@@ -921,7 +971,7 @@ class PlacesService {
       print('⚠️ Fiyat filtresi ($priceLevel) sonrası havuz yetersiz '
           '(${priceFiltered.length} < $_minPoolAfterPriceFilter) — '
           'fiyat kısıtı kaldırılıyor, tüm havuzdan devam ediliyor.');
-      priceFiltered = results;
+      priceFiltered = distanceFiltered;
     }
 
     // ── Adım 1: Kesinlikle istemediğimiz type'ları çıkar ─────────────────
@@ -974,6 +1024,7 @@ class PlacesService {
 
     // ignore: avoid_print
     print('🔍 PlacesService: raw=${results.length} '
+        'dist=${distanceFiltered.length}(≤${searchRadius}m) '
         'price=${priceFiltered.length} '
         'excl=${excludeFiltered.length} req=${filtered.length} '
         'name=${nameFiltered.length} uniLib=${libraryFiltered.length} '
@@ -1565,7 +1616,7 @@ class PlacesService {
   }) {
     //
     // BUG FİX: Önceden `types.addAll(userTypes); types.addAll(friendTypes);`
-    // şeklinde art arda ekleniyordu. Dart Set'i ekleme sırasını koruduğundan
+    // şeklinde art arda ekleniyordu. Dart Set'i ekleme sırasını
     // ve sonunda `take(...)` ile kesildiğinden, baskın tipler farklı
     // olduğunda kullanıcının 4 tipi havuzu doldurup arkadaşın tipinden sadece
     // 1 tanesine yer kalıyordu — yani "iki tarafa da uygun mekan ara"
@@ -1625,4 +1676,3 @@ class PlacesService {
     return types.take(6).toList();
   }
 }
-                                                                                                                         
