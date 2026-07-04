@@ -14,6 +14,7 @@ import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/providers/saved_venues_provider.dart';
 import 'package:meetit/features/match/services/places_service.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const _pageSize = 3;
 
@@ -158,12 +159,48 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
   // gösterilen mekan ID'lerini bellekte (uygulama kapanınca silinen, kısa
   // süreli) tutup bir sonraki aramada bu mekanları havuzdan çıkarıyoruz —
   // böylece bir öncekinden farklı bir mekan 1. sıraya çıkma şansı buluyor.
-  // Notifier instance app boyunca yaşadığı için bu hafıza "session" süresince
-  // kalıcıdır; kalıcı depolamaya (Firestore/SharedPreferences) YAZILMAZ.
+  // Uygulama yeniden başlatılsa bile aynı arkadaşla son görülen mekanlara
+  // dönmesin — SharedPreferences'a kalıcı olarak yazılıyor.
   static const int _maxHistoryPerKey = 9;
+  static const String _prefKeyPrefix = 'recently_shown_v1_';
   final Map<String, List<String>> _recentlyShownIds = {};
+  bool _historyLoaded = false;
 
   String _historyKey(String? friendUid) => friendUid ?? '__solo__';
+
+  /// SharedPreferences'tan tüm arkadaş geçmişlerini bir kez yükler.
+  Future<void> _loadHistory() async {
+    if (_historyLoaded) return;
+    _historyLoaded = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      for (final k in prefs.getKeys()) {
+        if (!k.startsWith(_prefKeyPrefix)) continue;
+        final friendKey = k.substring(_prefKeyPrefix.length);
+        final ids = prefs.getStringList(k) ?? [];
+        if (ids.isNotEmpty) _recentlyShownIds[friendKey] = ids;
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('[VenueSearch] SharedPreferences yükleme hatası: \$e');
+    }
+  }
+
+  /// Tek bir arkadaş kaydını SharedPreferences'a yazar (fire-and-forget).
+  Future<void> _saveHistory(String friendKey) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final ids = _recentlyShownIds[friendKey] ?? [];
+      if (ids.isEmpty) {
+        await prefs.remove('\$_prefKeyPrefix\$friendKey');
+      } else {
+        await prefs.setStringList('\$_prefKeyPrefix\$friendKey', ids);
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('[VenueSearch] SharedPreferences yazma hatası: \$e');
+    }
+  }
 
   void _recordShown(String? friendUid, List<PlaceResult> shown) {
     if (shown.isEmpty) return;
@@ -176,6 +213,8 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
     while (history.length > _maxHistoryPerKey) {
       history.removeAt(0);
     }
+    // Kalıcı olarak sakla (fire-and-forget — arama akışını bloklamaz)
+    _saveHistory(key).ignore();
   }
 
   // ── Davranışsal type boost haritası ──────────────────────────────────────
@@ -226,6 +265,9 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
       clearAll: true,
       clearDistanceWarning: true,
     );
+
+    // Uygulama yeniden başlatılmışsa geçmiş gösterilen mekanları yükle
+    await _loadHistory();
 
     // ── Kullanıcı konumu ───────────────────────────────────────────────────
     double myLat;
