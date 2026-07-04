@@ -7,6 +7,8 @@ import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/models/user_friend_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
+import 'package:meetit/features/main/main_page.dart';
+import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/personality/widgets/personality_character.dart';
 import 'package:meetit/features/personality/widgets/personality_radar_chart.dart';
@@ -228,6 +230,37 @@ class FriendCompatibilityDetailPage extends ConsumerWidget {
         ),
         centerTitle: true,
       ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+          child: SizedBox(
+            height: 52,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                ref.read(selectedFriendUidProvider.notifier).state = friend.uid;
+                ref.read(mainTabIndexProvider.notifier).state = 1;
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              },
+              icon: const Icon(Iconsax.location, size: 18),
+              label: Text(
+                '${friend.name} ile Buluş',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.colors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
       body: SafeArea(
         top: false,
         child: SingleChildScrollView(
@@ -306,4 +339,60 @@ class FriendCompatibilityDetailPage extends ConsumerWidget {
                   Expanded(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
-                    
+                      children: [
+                        PersonalityCharacterWidget(
+                          type: friendProfile.dominantType,
+                          gender: friend.gender,
+                          size: 130,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          friend.name,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: context.colors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          friendProfile.dominantType.displayName,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(int.parse(
+                              friendProfile.dominantType.colorHex
+                                  .replaceFirst('#', '0xFF'),
+                            )),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                _tierKey.tr(),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: context.colors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // ── Üst üste bindirilmiş radar chart ──────────────────────
+              //
+              // İki ayrı PersonalityBreakdown'daki skor çubukları yan yana
+              // kıyaslamayı zorlaştırıyordu (yukarı-aşağı kaydırmak
+              // gerekiyordu). Aynı radar üzerinde iki yarı saydam poligon
+              // çizerek örtüşme/farklılık tek bakışta görülüyor.
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                decoration: BoxDecoration(
+                  color: context.colors.card,
+                  borderRadius
