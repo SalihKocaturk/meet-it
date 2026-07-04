@@ -675,6 +675,52 @@ class PlacesService {
     return boost.clamp(0.0, 0.15);
   }
 
+  // ── Saat farkındalığı boost'u ─────────────────────────────────────────────
+  //
+  // Günün saatine göre o ana uygun mekan türlerine küçük pozitif bonus ekle.
+  // Maks. 0.08 — kasıtlı olarak küçük tutulmuştur: kişilik uyumu ve kalite
+  // skoru her zaman belirleyici olmaya devam etmeli; bu boost sadece eşit/
+  // yakın puanlı adaylar arasında zamansal uygunluğu hafifçe öne çıkarır.
+  //
+  // Dilimler (yerel saat):
+  //   Sabah   05–11: kafe, fırın, park            (kahvaltı / sabah yürüyüşü)
+  //   Öğleden 12–17: restoran, müze, galeri, AVM   (öğle + kültürel gezi)
+  //   Akşam   18–21: restoran, bar, sinema, bowling (akşam yemeği + eğlence)
+  //   Gece    22–04: bar, gece kulübü              (gece hayatı)
+  static const Map<String, double> _morningTypeBoost = {
+    'cafe': 0.08, 'bakery': 0.08, 'park': 0.05,
+  };
+  static const Map<String, double> _afternoonTypeBoost = {
+    'restaurant': 0.06, 'museum': 0.06, 'art_gallery': 0.06,
+    'shopping_mall': 0.04, 'movie_theater': 0.04,
+  };
+  static const Map<String, double> _eveningTypeBoost = {
+    'restaurant': 0.08, 'bar': 0.06,
+    'movie_theater': 0.07, 'bowling_alley': 0.06,
+  };
+  static const Map<String, double> _nightTypeBoost = {
+    'bar': 0.08, 'night_club': 0.08,
+  };
+
+  static double _timeOfDayBoost(PlaceResult place) {
+    final hour = DateTime.now().hour;
+    final Map<String, double> table;
+    if (hour >= 5 && hour < 12) {
+      table = _morningTypeBoost;
+    } else if (hour >= 12 && hour < 18) {
+      table = _afternoonTypeBoost;
+    } else if (hour >= 18 && hour < 22) {
+      table = _eveningTypeBoost;
+    } else {
+      table = _nightTypeBoost;
+    }
+    double boost = 0.0;
+    for (final t in place.types) {
+      boost += table[t] ?? 0.0;
+    }
+    return boost.clamp(0.0, 0.08);
+  }
+
   // ── İsim bazlı çeşitlilik grupları ────────────────────────────────────────
   //
   // "2 pizzacı veya 2 burgerci aynı anda çıkmasın" isteği için: final
@@ -1097,7 +1143,8 @@ class PlacesService {
           ratingScore * 0.4 +
           _landmarkBonus(place, userProfile, friendProfile) +
           _gymBrandBonus(place) +
-          _behavioralBoost(place, behavioralTypeBoosts);
+          _behavioralBoost(place, behavioralTypeBoosts) +
+          _timeOfDayBoost(place);
       return (place, total);
     }).toList();
 
