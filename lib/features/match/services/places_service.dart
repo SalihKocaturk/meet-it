@@ -62,10 +62,10 @@ class PlacesService {
   /// döndüreceğinden (uzaktaki iyi mekanlar dar çapta gelmez) dedup sonrası
   /// havuz büyür. 4 × 20 = en fazla 80 benzersiz / tip grubu →
   /// 3-4 tip grubuyla toplam ~200 hedefe ulaşılır.
-  static const List<int> _poolBuildRadii = [2000, 5000, 10000, 15000];
+  static const List<int> _poolBuildRadii = [500, 1000, 2000, 3000, 5000, 7500, 10000, 15000];
 
   /// Cache'e yazılacak maksimum havuz büyüklüğü.
-  static const int _maxPoolSize = 200;
+  static const int _maxPoolSize = 500;
 
   /// Fiyat filtresi uygulandıktan sonra kalan mekan sayısı bu eşiğin
   /// altına düşerse fiyat kısıtı kaldırılarak tüm havuzdan seçim yapılır
