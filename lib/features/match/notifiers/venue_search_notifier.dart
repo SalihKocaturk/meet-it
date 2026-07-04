@@ -661,7 +661,8 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
   // gibi oturmaya uygun bir type'ı da YOKSA hafifçe geriye itilir (tamamen
   // elenmez, sadece eşit mesafede gerçek bir "mekan"ın önüne geçmesin).
   static const List<String> _quickServiceNameKeywords = [
-    'büfe', 'fa    'döner ',
+    'büfe', 'fast food', 'lahmacun', 'dürüm', 'kebapçı', 'tost ', 'çorbacı',
+    'döner ',
   ];
 
   double _hangoutAdjustmentKm(PlaceResult place) {
