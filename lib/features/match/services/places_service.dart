@@ -185,6 +185,26 @@ class PlacesService {
     'spa':      {'spa', 'beauty_salon'},
   };
 
+  /// Fiyat filtresi — kümülatif "en fazla bu kadar pahalı" mantığı.
+  ///
+  /// Seçilen [maxPriceLevel] değerine göre izin verilen price level kümesi:
+  ///   null / 4 → filtre yok (hepsi)
+  ///   1 (ucuz)   → priceLevel ≤ 1
+  ///   2 (orta)   → priceLevel ≤ 2  (orta + ucuz)
+  ///   3 (pahalı) → priceLevel ≤ 3  (pahalı + orta + ucuz)
+  ///
+  /// priceLevel == null olan mekanlar (park, müze, vb.) her zaman dahil edilir;
+  /// Google fiyat bilgisi döndürmüyorsa bu mekanın pahalı olduğu anlamına gelmez.
+  static List<PlaceResult> _filterByPrice(
+    List<PlaceResult> places,
+    int? maxPriceLevel,
+  ) {
+    if (maxPriceLevel == null || maxPriceLevel >= 4) return places;
+    return places
+        .where((p) => p.priceLevel == null || p.priceLevel! <= maxPriceLevel)
+        .toList();
+  }
+
   /// Aktivite seçilmişse sonuçların o aktiviteye ait type'lardan en az birini
   /// taşımasını zorunlu kılar. False-positive sonuçları eler.
   static List<PlaceResult> _filterByRequiredTypes(
@@ -826,6 +846,10 @@ class PlacesService {
     final rawResults = <PlaceResult>[];
     for (final group in typeGroups) {
       if (group.isEmpty) continue;
+      // Cache-first (24 saat TTL): aynı bölge+tip kombinasyonu günde en fazla
+      // 1 kez Google'a gider. TTL sonrası taze çekim → yeni havuz → cache güncellenir.
+      // Randomness: _weightedDiverseSample her çağrıda yeni rastgele key üretir,
+      // aynı 20'lik havuzdan bile her aramada farklı 5 mekan seçilir.
       final groupResults = await VenueSearchCacheService.getCached(
             lat: lat,
             lng: lng,
@@ -853,9 +877,23 @@ class PlacesService {
 
     if (results.isEmpty) return [];
 
+    // ── Adım 0: Fiyat filtresi (kümülatif) ────────────────────────────────
+    // Cache'ten gelen ham havuz fiyata göre filtresiz olduğundan burada
+    // uyguluyoruz. Kümülatif mantık: seçilen seviye "en fazla bu kadar
+    // pahalı" anlamına gelir (ucuz aratıyorsan pahalılar çıkmasın;
+    // pahalı aratıyorsan ucuzlar da çıksın).
+    //   null / 4 (lüks) → filtre yok — hepsi dahil
+    //   1  (ucuz)  → priceLevel ≤ 1 (veya null=bilinmiyor)
+    //   2  (orta)  → priceLevel ≤ 2 (veya null)
+    //   3  (pahalı)→ priceLevel ≤ 3 (veya null)
+    // priceLevel null olan mekanlar her zaman dahil edilir çünkü Google'ın
+    // bu bilgiyi döndürmemesi o mekanın pahalı olduğu anlamına gelmez
+    // (parklar, müzeler, bazı kafeler genelde fiyat seviyesi taşımaz).
+    final priceFiltered = _filterByPrice(results, priceLevel);
+
     // ── Adım 1: Kesinlikle istemediğimiz type'ları çıkar ─────────────────
     final excludeFiltered = _filterExcluded(
-      results,
+      priceFiltered,
       searchingForLodging: searchingForLodging,
     );
 
@@ -903,6 +941,7 @@ class PlacesService {
 
     // ignore: avoid_print
     print('🔍 PlacesService: raw=${results.length} '
+        'price=${priceFiltered.length} '
         'excl=${excludeFiltered.length} req=${filtered.length} '
         'name=${nameFiltered.length} uniLib=${libraryFiltered.length} '
         'restricted=${restrictedFiltered.length} '
@@ -1234,13 +1273,10 @@ class PlacesService {
           .map((p) => PlaceResult.fromJson(p as Map<String, dynamic>))
           .toList();
 
-      // ⚠️ Places API (New) `searchNearby`, Legacy'nin min_price/max_price
-      // parametrelerinin karşılığını DESTEKLEMİYOR — fiyat filtresi bu
-      // yüzden istek değil, yanıt üzerinde uygulanıyor.
-      if (priceLevel != null) {
-        places = places.where((p) => p.priceLevel == priceLevel).toList();
-      }
-
+      // Fiyat filtresi burada DEĞİL, searchVenues() pipeline'ında uygulanıyor.
+      // Bu sayede cache her zaman tüm fiyat seviyelerindeki ham havuzu saklar;
+      // fiyat filtrelenmiş sonuçların cache'e yazılması diğer kullanıcıları
+      // etkilerdi (bkz. _filterByPrice / searchVenues Adım 0).
       return places;
     } catch (e) {
       // ignore: avoid_print
@@ -1334,10 +1370,7 @@ class PlacesService {
           .map((r) => PlaceResult.fromLegacyJson(r as Map<String, dynamic>))
           .toList();
 
-      if (priceLevel != null) {
-        places = places.where((p) => p.priceLevel == priceLevel).toList();
-      }
-
+      // Fiyat filtresi burada değil, searchVenues() Adım 0'da uygulanıyor.
       return places;
     } catch (e) {
       // ignore: avoid_print
@@ -1533,48 +1566,4 @@ class PlacesService {
     // Secondary tipler — daha geniş havuz.
     //
     // NOT: `secondaryType` getter'ı %10 gibi düşük bir eşikte bile ikincil
-    // tip döndürüyor (UI'da "ikincil eğilim" göstermek için makul bir eşik).
-    // Ama burada, arama havuzuna YENİ bir mekan kategorisi eklemek için bu
-    // çok düşük: "sakin ruh" kullanıcının %12 gibi zayıf bir "maceraperest"
-    // eğilimi olması, sonuçlara spor salonu/stadyum sokulmasına yol açıyordu.
-    // Bu yüzden burada daha sıkı, yerel bir eşik kullanıyoruz: ikincil eğilim
-    // gerçekten belirgin değilse (≥ %25) arama havuzuna katılmasın.
-    const secondaryPoolThreshold = 0.25;
-
-    final userSecondary = <String>[];
-    final friendSecondary = <String>[];
-    void collectSecondaryPool(
-      PersonalityProfile profile,
-      List<String> sink,
-    ) {
-      final ranked = profile.rankedTypes;
-      if (ranked.length < 2) return;
-      final second = ranked[1];
-      if (second.value >= secondaryPoolThreshold) {
-        sink.addAll(_personalityTypes[second.key] ?? []);
-      }
-    }
-
-    collectSecondaryPool(userProfile, userSecondary);
-    collectSecondaryPool(friendProfile, friendSecondary);
-
-    // İkincil havuzlar da aynı round-robin mantığıyla ekleniyor — aksi halde
-    // burada da kullanıcının ikincil tipi, arkadaşın ikincil tipinin önüne
-    // geçip aynı adaletsizliği ikincil seviyede tekrarlardı.
-    final maxSecondaryLen = userSecondary.length > friendSecondary.length
-        ? userSecondary.length
-        : friendSecondary.length;
-    for (var i = 0; i < maxSecondaryLen; i++) {
-      if (i < userSecondary.length) types.add(userSecondary[i]);
-      if (i < friendSecondary.length) types.add(friendSecondary[i]);
-    }
-
-    // NOT (2026-06-28): Artık tüm type'lar TEK bir Places API isteğine
-    // gömüldüğü için (`includedTypes` dizisi) tip sayısı ekstra HTTP çağrısı
-    // YARATMIYOR — bu sınır artık sadece `includedTypes` dizisinin
-    // kişilik/ortak tip dengesini bozmaması için var. Round-robin sayesinde
-    // 5 sınırı kullanıcı/arkadaş dengesini bozuyordu (4 kendi tipi + 1 karşı
-    // taraf); adil bir 50/50 bölünme için sınırı 6'ya çıkardık.
-    return types.take(6).toList();
-  }
-}
+    // tip döndürüyor (UI'da 
