@@ -1207,30 +1207,63 @@ class PlacesService {
       }
     }
 
-    // Bir profil için ağırlıklı kişilik uyum skoru: her kişilik tipinin
-    // ağırlığı × o tipin bu mekan type'larına verdiği toplam skor.
-    double profileScore(PersonalityProfile profile) {
-      double s = 0.0;
-      for (final entry in profile.scores.entries) {
-        final typeWeight = entry.value;
-        if (typeWeight <= 0) continue;
-        final placeScores = _personalityScores[entry.key] ?? {};
-        for (final placeType in place.types) {
-          final v = placeScores[placeType];
-          if (v != null) s += v * typeWeight;
-        }
+    // ── Cosine similarity (2026-07-04) ───────────────────────────────────────
+    //
+    // Önceki yaklaşım:  Σ(profil_ağırlığı × _personalityScores[tip][placeType])
+    // Sorun: normalize edilmiyordu, dolayısıyla "sakin ruh (0.9) + maceraperest
+    // (0.1)" profili her zaman "sakin ruh (0.5) + maceraperest (0.5)"
+    // profilinden daha yüksek skor veriyordu — baskın tip her zaman kazanıyordu.
+    //
+    // Yeni yaklaşım: cosine similarity
+    //   1. İki kullanıcı profilinin ortalaması → "hedef vektör" (personality space)
+    //   2. Mekan vektörü: her PersonalityType için, o tipin bu mekana verdiği
+    //      _personalityScores toplamı (place.types üzerinden).
+    //   3. cos(θ) = dot(hedef, mekan) / (|hedef| × |mekan|)
+    //
+    // Bu sayede "sakin ruh + maceraperest" çifti için hem parka (ikisine de
+    // ortak yüksek skor) hem de sadece bara (yalnızca sosyalKelebek'e yüksek)
+    // olan benzerlik doğru ayrıştırılır. Baskın tipin büyüklüğü değil,
+    // iki vektörün YÖN benzerliği belirleyici olur.
+
+    // 1. Hedef vektör: iki profilin ortalaması
+    final combined = <PersonalityType, double>{};
+    for (final pt in PersonalityType.values) {
+      final u = userProfile.scores[pt] ?? 0.0;
+      final f = friendProfile.scores[pt] ?? 0.0;
+      combined[pt] = (u + f) / 2.0;
+    }
+
+    // 2. Mekan vektörü: place.types → personality score toplamları
+    final venueVec = <PersonalityType, double>{};
+    for (final pt in PersonalityType.values) {
+      final placeScores = _personalityScores[pt] ?? {};
+      double v = 0.0;
+      for (final placeType in place.types) {
+        v += placeScores[placeType] ?? 0.0;
       }
-      return s;
+      venueVec[pt] = v;
     }
 
-    final combined =
-        (profileScore(userProfile) + profileScore(friendProfile)) / 2;
-
-    if (combined <= 0 && activityBonus <= 0) {
-      return 0.3; // eşleşme yoksa düşük ama sıfır değil
+    // 3. Cosine similarity: dot / (|combined| × |venue|)
+    double dot = 0.0;
+    double normC = 0.0;
+    double normV = 0.0;
+    for (final pt in PersonalityType.values) {
+      final c = combined[pt] ?? 0.0;
+      final v = venueVec[pt] ?? 0.0;
+      dot += c * v;
+      normC += c * c;
+      normV += v * v;
     }
 
-    return (combined + activityBonus).clamp(0.0, 1.0);
+    if (normC <= 0 || normV <= 0) {
+      // Hiç overlap yoksa düşük ama sıfır olmayan sabit — aktivite bonusu
+      // varsa onu ekle (tip eşleşmesi yeterli güvence).
+      return (activityBonus > 0 ? activityBonus : 0.3).clamp(0.0, 1.0);
+    }
+
+    final cosine = (dot / (math.sqrt(normC) * math.sqrt(normV))).clamp(0.0, 1.0);
+    return (cosine + activityBonus).clamp(0.0, 1.0);
   }
 
   // ── Google Places API (New) — Nearby Search HTTP ─────────────────────────
