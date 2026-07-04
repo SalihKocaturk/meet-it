@@ -235,4 +235,27 @@ class _EmptyState extends StatelessWidget {
             ElevatedButton(
               onPressed: onTakeQuiz,
               style: ElevatedButton.styleFrom(
-                backgroundColor: context.c
+                backgroundColor: context.colors.primary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: Text(
+                'match.take_quiz'.tr(),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

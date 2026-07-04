@@ -143,4 +143,3 @@ class AppConfig {
   /// yorumunu öneri olarak gösterebiliyordu (gerçekte gidemeyeceği bir yer).
   static const double nearbyLikedVenuesRadiusKm = 10.0;
 }
-                                                    

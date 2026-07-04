@@ -92,4 +92,17 @@ class UserFriendModel {
   }) {
     return UserFriendModel(
       uid: uid ?? this.uid,
-      name: nam
+      name: name ?? this.name,
+      photoUrl: photoUrl ?? this.photoUrl,
+      status: status ?? this.status,
+      addedAt: addedAt ?? this.addedAt,
+      personalityProfile: clearProfile
+          ? null
+          : (personalityProfile ?? this.personalityProfile),
+      meetCount: meetCount ?? this.meetCount,
+      lat: lat ?? this.lat,
+      lng: lng ?? this.lng,
+      gender: gender ?? this.gender,
+    );
+  }
+}

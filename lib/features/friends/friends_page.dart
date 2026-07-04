@@ -828,3 +828,22 @@ class _ConnectionTile extends ConsumerWidget {
                   ref.read(friendsProvider.notifier).removeFriend(friend.uid);
                 },
               );
+            },
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Iconsax.profile_remove,
+                size: 16,
+                color: Colors.red,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

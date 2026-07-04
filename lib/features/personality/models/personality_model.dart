@@ -1333,4 +1333,28 @@ const _venueMap = <String, List<VenueRecommendation>>{
       tags: ['kafe', 'sosyal'],
     ),
     VenueRecommendation(
-      name: 'Par
+      name: 'Park ve Açık Hava Alanı',
+      description: 'Doğal ortamda rahat ve keyifli buluşma.',
+      type: 'Park',
+      emoji: '🌳',
+      compatibilityScore: 0.75,
+      tags: ['park', 'doğa'],
+    ),
+    VenueRecommendation(
+      name: 'Alışveriş Merkezi Food Court',
+      description: 'Çeşitli seçenekler sunan merkezi buluşma noktası.',
+      type: 'Yemek',
+      emoji: '🛍️',
+      compatibilityScore: 0.70,
+      tags: ['yemek', 'alışveriş'],
+    ),
+    VenueRecommendation(
+      name: 'Sinema',
+      description: 'Her zaman bir klasik: birlikte film izlemek.',
+      type: 'Sinema',
+      emoji: '🎬',
+      compatibilityScore: 0.72,
+      tags: ['sinema', 'eğlence'],
+    ),
+  ],
+};

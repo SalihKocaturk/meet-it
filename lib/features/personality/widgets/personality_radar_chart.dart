@@ -232,4 +232,36 @@ class _RadarChartPainter extends CustomPainter {
       for (var i = 0; i < axisCount; i++) {
         final value = p.scores[_types[i]] ?? 0.0;
         final pt = pointFor(i, value);
-        poi
+        points.add(pt);
+        if (i == 0) {
+          path.moveTo(pt.dx, pt.dy);
+        } else {
+          path.lineTo(pt.dx, pt.dy);
+        }
+      }
+      path.close();
+
+      canvas.drawPath(path, fillPaint);
+      canvas.drawPath(path, strokePaint);
+      for (final pt in points) {
+        canvas.drawCircle(pt, 3.2, dotPaint);
+      }
+    }
+
+    drawProfile(profile, primaryColor);
+    if (secondaryProfile != null) {
+      drawProfile(secondaryProfile!, secondaryColor);
+    }
+    // Eksen etiketleri Stack+Positioned Flutter widgetları olarak çiziliyor
+    // (PersonalityRadarChart.build içinde) — painter sadece ızgara + poligon.
+  }
+
+  @override
+  bool shouldRepaint(covariant _RadarChartPainter oldDelegate) {
+    return oldDelegate.profile != profile ||
+        oldDelegate.secondaryProfile != secondaryProfile ||
+        oldDelegate.gridColor != gridColor ||
+        oldDelegate.primaryColor != primaryColor ||
+        oldDelegate.secondaryColor != secondaryColor;
+  }
+}

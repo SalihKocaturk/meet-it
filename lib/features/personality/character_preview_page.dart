@@ -186,4 +186,25 @@ class _GenderChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      ch
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? color : context.colors.card,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? color : context.colors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+            color: selected ? Colors.white : context.colors.textPrimary,
+          ),
+        ),
+      ),
+    );
+  }
+}

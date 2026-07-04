@@ -303,4 +303,3 @@ class _HistoryLinePainter extends CustomPainter {
     return oldDelegate.history != history;
   }
 }
-                   

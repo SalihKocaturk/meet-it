@@ -146,7 +146,7 @@ class _ProfileHeader extends ConsumerWidget {
           // Avatar + istatistikler
           Row(
             children: [
-              // Avatar
+              // Avatar — basınca profil düzenleme
               GestureDetector(
                 onTap: () => context.push(AppRoutes.editProfile),
                 child: Stack(
@@ -740,6 +740,8 @@ class _PlaceholderBox extends StatelessWidget {
     );
   }
 }
+
+// ── Boş tab ────────────────────────────────────────────────────────────────────
 
 class _EmptyTab extends StatelessWidget {
   final IconData icon;

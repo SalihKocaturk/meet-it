@@ -59,4 +59,11 @@ class FriendChip extends ConsumerWidget {
               friend.personalityProfile!.dominantType.iconsaxIcon,
               size: 13,
               color: isSelected
-                  ? context.colors.pri
+                  ? context.colors.primary
+                  : context.colors.hint,
+            ),
+        ],
+      ),
+    );
+  }
+}
