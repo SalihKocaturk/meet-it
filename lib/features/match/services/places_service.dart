@@ -1354,11 +1354,6 @@ class PlacesService {
       'language': 'tr',
       'key': AppConfig.googleMapsApiKey,
     };
-    if (priceLevel != null) {
-      params['minprice'] = '$priceLevel';
-      params['maxprice'] = '$priceLevel';
-    }
-
     final uri = Uri.parse(AppConfig.placesNearbySearchUrlLegacy)
         .replace(queryParameters: params);
 
@@ -1630,3 +1625,4 @@ class PlacesService {
     return types.take(6).toList();
   }
 }
+                                                                                                                         
