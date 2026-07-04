@@ -1710,13 +1710,49 @@ class PlacesService {
       if (groups.isNotEmpty) return groups;
     }
 
-    // ── MOD 2: Aktivite seçilmemişse SADECE kişiliğe göre, TEK grup ──────────
-    return [
-      _resolvePersonalityTypes(
-        userProfile: userProfile,
-        friendProfile: friendProfile,
-      ),
-    ];
+    // ── MOD 2: Aktivite seçilmemişse kişilik tipine göre — KİŞİ BAŞINA ayrı grup
+    //
+    // Eski davranış (TEK grup): hem kullanıcı hem arkadaşın tipleri tek bir
+    // `includedTypes` listesine birleştirilip TEK bir istekte gönderiliyordu.
+    // Kalabalık bölgelerde restaurant/bar gibi hacimli tipler 20'lik ham sonuç
+    // bütçesinin tamamını kaplar, sakinRuh/entelektüel tipleri (kafe, müze,
+    // kütüphane) için havuzda hiç yer kalmazdı.
+    //
+    // Yeni davranış (KİŞİ BAŞINA grup): her kullanıcının dominant kişilik tipi
+    // kendi 20'lik bütçeye sahip olur. Bu gruplar kalıcı önbellekte (bölge +
+    // tipler → Firestore) tutulur — aynı bölgede ilk aramadan sonra ek API
+    // maliyeti sıfırdır. Eğer ikisinin dominant tipi aynıysa tek istek yeterli
+    // (dedup ile tekrar edilmez). Güçlü ikincil eğilim (≥ %25 skor) varsa
+    // ilave grup eklenir; böylece karma profilli kullanıcılar da doğru
+    // kategorilerden sonuç alır.
+    final groups2 = <List<String>>[];
+    final addedKeys2 = <String>{};
+
+    void addProfileGroup(PersonalityProfile profile) {
+      // Dominant tip
+      final primary = _personalityTypes[profile.dominantType] ?? [];
+      if (primary.isNotEmpty) {
+        final key = ([...primary]..sort()).join(',');
+        if (addedKeys2.add(key)) groups2.add(primary);
+      }
+      // Güçlü ikincil tip (≥ %25)
+      final ranked = profile.rankedTypes;
+      if (ranked.length >= 2 && ranked[1].value >= 0.25) {
+        final sec = _personalityTypes[ranked[1].key] ?? [];
+        if (sec.isNotEmpty) {
+          final secKey = ([...sec]..sort()).join(',');
+          if (addedKeys2.add(secKey)) groups2.add(sec);
+        }
+      }
+    }
+
+    addProfileGroup(userProfile);
+    addProfileGroup(friendProfile);
+
+    if (groups2.isNotEmpty) return groups2;
+
+    // İki profil de tamamen boşsa (henüz quiz yapılmamış) genel fallback
+    return [_fallbackVenueTypes];
   }
 
   static List<String> _resolvePersonalityTypes({
@@ -1743,7 +1779,8 @@ class PlacesService {
     types.addAll(common);
 
     final userOnly = userTypes.where((t) => !common.contains(t)).toList();
-    final friendOnly = friendTypes.where(    final maxLen = userOnly.length > friendOnly.length
+    final friendOnly = friendTypes.where((t) => !common.contains(t)).toList();
+    final maxLen = userOnly.length > friendOnly.length
         ? userOnly.length
         : friendOnly.length;
     for (var i = 0; i < maxLen; i++) {
