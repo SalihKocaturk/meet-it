@@ -40,9 +40,9 @@ exports.sendPushNotification = onDocumentCreated(
       return;
     }
 
-    // Hedef kullanıcının FCM token'ını al
-    const userSnap = await db.collection("users").doc(uid).get();
-    const fcmToken = userSnap.data()?.fcmToken;
+    // Hedef kullanıcının FCM token'ını al (fcmTokens koleksiyonu — private)
+    const tokenSnap = await db.collection("fcmTokens").doc(uid).get();
+    const fcmToken = tokenSnap.data()?.token;
 
     if (!fcmToken) {
       console.log(`[sendPushNotification] ${uid} için FCM token bulunamadı.`);
@@ -119,9 +119,7 @@ exports.sendPushNotification = onDocumentCreated(
         error.code === "messaging/registration-token-not-registered" ||
         error.code === "messaging/invalid-registration-token"
       ) {
-        await db.collection("users").doc(uid).update({
-          fcmToken: admin.firestore.FieldValue.delete(),
-        });
+        await db.collection("fcmTokens").doc(uid).delete();
         console.log(`[sendPushNotification] Geçersiz token temizlendi: ${uid}`);
       }
     }
