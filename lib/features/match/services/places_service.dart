@@ -50,6 +50,27 @@ class PlacesService {
   /// çağrının döndürdüğü ham sonuç sayısını artırarak.
   static const int _rawFetchCount = 20;
 
+  /// Havuz cache'i için her zaman kullanılan sabit yarıçap.
+  /// Kullanıcının arama/mesafe tercihinden bağımsız olarak tüm cache girdileri
+  /// bu yarıçapla keylenir — bu sayede aynı bölgede farklı yarıçaplarla arama
+  /// yapan kullanıcılar tek bir büyük havuzu paylaşır.
+  static const int _poolCacheRadius = 15000;
+
+  /// Havuz oluşturulurken API'ye atılan kademeli yarıçaplar (metre).
+  /// Her adımda 20 ham sonuç çekilir; farklı yarıçaplar farklı mekanları
+  /// döndüreceğinden (uzaktaki iyi mekanlar dar çapta gelmez) dedup sonrası
+  /// havuz büyür. 4 × 20 = en fazla 80 benzersiz / tip grubu →
+  /// 3-4 tip grubuyla toplam ~200 hedefe ulaşılır.
+  static const List<int> _poolBuildRadii = [2000, 5000, 10000, 15000];
+
+  /// Cache'e yazılacak maksimum havuz büyüklüğü.
+  static const int _maxPoolSize = 200;
+
+  /// Fiyat filtresi uygulandıktan sonra kalan mekan sayısı bu eşiğin
+  /// altına düşerse fiyat kısıtı kaldırılarak tüm havuzdan seçim yapılır
+  /// ("Yakında ucuz yer yok ama şunlar var" mantığı).
+  static const int _minPoolAfterPriceFilter = 5;
+
   /// Bir mekanın gösterilebilmesi için sahip olması gereken minimum
   /// yorum (review) sayısı. Az yorumlu yerler genelde yanlış
   /// kategorize edilmiş, hiç işlemeyen/kapanmış ya da güvenilir bir
@@ -846,22 +867,23 @@ class PlacesService {
     final rawResults = <PlaceResult>[];
     for (final group in typeGroups) {
       if (group.isEmpty) continue;
-      // Cache-first (24 saat TTL): aynı bölge+tip kombinasyonu günde en fazla
-      // 1 kez Google'a gider. TTL sonrası taze çekim → yeni havuz → cache güncellenir.
-      // Randomness: _weightedDiverseSample her çağrıda yeni rastgele key üretir,
-      // aynı 20'lik havuzdan bile her aramada farklı 5 mekan seçilir.
+      // 🗄️ Geniş havuz cache (200 mekan hedefi):
+      // Cache, kullanıcının seçtiği yarıçaptan bağımsız olarak daima
+      // _poolCacheRadius (15 km) ile keylenir. İlk cache miss'te
+      // _fetchAndCacheNearby 4 farklı yarıçapta (2/5/10/15 km) API çağrısı
+      // yaparak ~200 benzersiz mekanı tek bir Firestore dokümanına yazar.
+      // Sonraki aynı bölge+tip aramaları (farklı kullanıcılar da dahil)
+      // hep bu büyük havuzdan karşılanır — Google'a bir daha gidilmez.
       final groupResults = await VenueSearchCacheService.getCached(
             lat: lat,
             lng: lng,
             types: group,
-            radius: searchRadius,
+            radius: _poolCacheRadius,
           ) ??
           await _fetchAndCacheNearby(
             lat: lat,
             lng: lng,
             types: group,
-            priceLevel: priceLevel,
-            radius: searchRadius,
           );
       rawResults.addAll(groupResults);
     }
@@ -889,7 +911,18 @@ class PlacesService {
     // priceLevel null olan mekanlar her zaman dahil edilir çünkü Google'ın
     // bu bilgiyi döndürmemesi o mekanın pahalı olduğu anlamına gelmez
     // (parklar, müzeler, bazı kafeler genelde fiyat seviyesi taşımaz).
-    final priceFiltered = _filterByPrice(results, priceLevel);
+    var priceFiltered = _filterByPrice(results, priceLevel);
+
+    // Fiyat filtresi havuzu çok küçülttüyse kısıtı kaldır.
+    // Örn. Kadıköy'de ₺ mekan sayısı 5'ten azsa, daha pahalı mekanları da
+    // göster — hiç sonuç göstermemek yerine seçenek sunmak tercih edilir.
+    if (priceLevel != null && priceFiltered.length < _minPoolAfterPriceFilter) {
+      // ignore: avoid_print
+      print('⚠️ Fiyat filtresi ($priceLevel) sonrası havuz yetersiz '
+          '(${priceFiltered.length} < $_minPoolAfterPriceFilter) — '
+          'fiyat kısıtı kaldırılıyor, tüm havuzdan devam ediliyor.');
+      priceFiltered = results;
+    }
 
     // ── Adım 1: Kesinlikle istemediğimiz type'ları çıkar ─────────────────
     final excludeFiltered = _filterExcluded(
@@ -1166,62 +1199,65 @@ class PlacesService {
       'places.location,places.types,places.rating,places.userRatingCount,'
       'places.priceLevel,places.regularOpeningHours.openNow,places.photos';
 
-  /// 💸 MALİYET DÜŞÜRME (2026-06-28): `_fetchNearbyNew`/`_fetchNearbyLegacy`
-  /// (aktif API'ye göre) ile Google'dan TAZE ham
-  /// sonuç havuzunu çeker, ardından bu havuzu `VenueSearchCacheService`
-  /// üzerinden 6 saatliğine önbelleğe yazar. Çağıran taraf (searchVenues)
-  /// önce cache'e bakıp burayı SADECE cache miss durumunda çağırıyor —
-  /// yani bu fonksiyon çalıştığında kesinlikle Google'a 1 istek gidecek,
-  /// ama bir DAHAKİ aynı konum+tip aramasında (TTL içinde) hiç gidilmeyecek.
+  /// 🗄️ GENİŞ HAVUZ OLUŞTURMA (2026-07-04):
+  /// `_poolBuildRadii` listesindeki her yarıçap için ayrı bir API çağrısı
+  /// yaparak (~4 çağrı × 20 = 80/tip grubu) geniş bir mekan havuzu oluşturur,
+  /// dedup + [_maxPoolSize] (200) sınırı uyguladıktan sonra tek bir Firestore
+  /// dokümanına ([_poolCacheRadius] ile keylenen) yazar.
+  ///
+  /// Bu YALNIZCA cache miss durumunda çalışır — bir kez yazıldıktan sonra
+  /// aynı bölgedeki tüm kullanıcılar Google'a hiç gitmeden bu havuzdan
+  /// yararlanır. "Daha fazla kullanıcı = daha fazla mekan" değil,
+  /// "daha fazla kullanıcı = daha az maliyet" demektir; mekan zenginliği
+  /// tek seferlik geniş pool fetch'ten geliyor.
   static Future<List<PlaceResult>> _fetchAndCacheNearby({
     required double lat,
     required double lng,
     required List<String> types,
-    int? priceLevel,
-    required int radius,
   }) async {
-    // 📍 DUAL API SWITCH (2026-06-28): Hangi API'nin kullanılacağı
-    // Firestore'dan okunuyor (bkz. PlacesApiVersionService) — alan yoksa/
-    // okunamazsa New API'ye düşülür. Bu sayede New ve Legacy'nin AYRI
-    // ücretsiz aylık kotaları, kod değiştirip yeniden derlemeye gerek
-    // kalmadan, Firestore'daki tek bir alan çevrilerek birleştirilebiliyor.
+    // 📍 DUAL API SWITCH: aktif API versiyonunu bir kez oku, tüm yarıçap
+    // döngüsünde tekrar Firestore'a gidilmesin.
     final apiVersion = await PlacesApiVersionService.getActiveVersion();
 
-    final fetched = apiVersion == PlacesApiVersion.legacy
-        ? await _fetchNearbyLegacy(
-            lat: lat,
-            lng: lng,
-            types: types,
-            priceLevel: priceLevel,
-            radius: radius,
-          )
-        : await _fetchNearbyNew(
-            lat: lat,
-            lng: lng,
-            types: types,
-            priceLevel: priceLevel,
-            radius: radius,
-          );
+    final allFetched = <PlaceResult>[];
 
-    // Sonucu kullanıcıya döndürmeyi bloklamamak için cache yazımı
-    // beklenebilir (zaten Firestore yazımı hızlı ve hatada sessizce
-    // yutuluyor) — burada await edip tutarlılığı garanti ediyoruz.
+    for (final r in _poolBuildRadii) {
+      final batch = apiVersion == PlacesApiVersion.legacy
+          ? await _fetchNearbyLegacy(lat: lat, lng: lng, types: types, radius: r)
+          : await _fetchNearbyNew(lat: lat, lng: lng, types: types, radius: r);
+      allFetched.addAll(batch);
+    }
+
+    // Dedup + havuz boyutu sınırı
+    final seen = <String>{};
+    final pool = <PlaceResult>[];
+    for (final p in allFetched) {
+      if (!seen.contains(p.placeId)) {
+        seen.add(p.placeId);
+        pool.add(p);
+        if (pool.length >= _maxPoolSize) break;
+      }
+    }
+
+    // ignore: avoid_print
+    print('🗄️ PlacesService pool built: types=$types '
+        'fetched=${allFetched.length} unique=${pool.length}');
+
     await VenueSearchCacheService.setCached(
       lat: lat,
       lng: lng,
       types: types,
-      radius: radius,
-      places: fetched,
+      radius: _poolCacheRadius,
+      places: pool,
     );
 
-    return fetched;
+    return pool;
   }
 
   static Future<List<PlaceResult>> _fetchNearbyNew({
     required double lat,
     required double lng,
     required List<String> types,
-    int? priceLevel,
     int? radius,
   }) async {
     final body = jsonEncode({
@@ -1306,7 +1342,6 @@ class PlacesService {
     required double lat,
     required double lng,
     required List<String> types,
-    int? priceLevel,
     int? radius,
   }) async {
     if (types.isEmpty) return [];
@@ -1541,9 +1576,8 @@ class PlacesService {
     // 1 tanesine yer kalıyordu — yani "iki tarafa da uygun mekan ara"
     // mantığı, ARANAN mekan kategorilerinde aslında kullanıcı tarafına ağır
     // basıyordu (skorlama iki profilin ortalamasını alsa da, havuzun kendisi
-    // zaten taraflı geliyordu). Çözüm: ortak olmayan tipleri round-robin
-    // (sırayla kullanıcı-arkadaş-kullanıcı-arkadaş) ekleyip her iki tarafa adil
-    // temsil hakkı veriyoruz.
+    // zaten taraflıydı). Çözüm: ortak olmayan tipleri round-robin ekleyip
+    // her iki tarafa adil temsil hakkı veriyoruz.
     final types = <String>{};
 
     final userTypes = _personalityTypes[userProfile.dominantType] ?? [];
@@ -1564,6 +1598,35 @@ class PlacesService {
     }
 
     // Secondary tipler — daha geniş havuz.
-    //
-    // NOT: `secondaryType` getter'ı %10 gibi düşük bir eşikte bile ikincil
-    // tip döndürüyor (UI'da 
+    // Eşik: ikincil eğilim >= %25 olmadıkça arama havuzuna girmesin.
+    const secondaryPoolThreshold = 0.25;
+
+    final userSecondary = <String>[];
+    final friendSecondary = <String>[];
+    void collectSecondaryPool(
+      PersonalityProfile profile,
+      List<String> sink,
+    ) {
+      final ranked = profile.rankedTypes;
+      if (ranked.length < 2) return;
+      final second = ranked[1];
+      if (second.value >= secondaryPoolThreshold) {
+        sink.addAll(_personalityTypes[second.key] ?? []);
+      }
+    }
+
+    collectSecondaryPool(userProfile, userSecondary);
+    collectSecondaryPool(friendProfile, friendSecondary);
+
+    // İkincil havuzlar da round-robin mantığıyla ekleniyor.
+    final maxSecondaryLen = userSecondary.length > friendSecondary.length
+        ? userSecondary.length
+        : friendSecondary.length;
+    for (var i = 0; i < maxSecondaryLen; i++) {
+      if (i < userSecondary.length) types.add(userSecondary[i]);
+      if (i < friendSecondary.length) types.add(friendSecondary[i]);
+    }
+
+    return types.take(6).toList();
+  }
+}
