@@ -652,6 +652,29 @@ class PlacesService {
     return 0.0;
   }
 
+  // ── Davranışsal boost: kullanıcının geçmiş tercihleri ─────────────────────
+  //
+  // Kullanıcının kaydettiği (SavedVenues) ve tarif aldığı (NavigatedVenues)
+  // mekanların type'ları zayıf bir "tercih sinyali" olarak kullanılır.
+  // VenueSearchNotifier bu type→boost haritasını inşa edip searchVenues'a
+  // parametre olarak geçirir; burada her mekan için toplam boost hesaplanır.
+  //
+  // Büyüklük kasıtlı olarak küçük tutulmuştur (≤ 0.15 × normalize edilmiş
+  // type frekansı) — kişilik uyumu ve kalite skoru her zaman belirleyici
+  // olmaya devam eder, davranışsal sinyal yalnızca eşit/yakın skorlu
+  // adaylar arasında hafif bir öncelik verir.
+  static double _behavioralBoost(
+    PlaceResult place,
+    Map<String, double> typeBoosts,
+  ) {
+    if (typeBoosts.isEmpty) return 0.0;
+    double boost = 0.0;
+    for (final t in place.types) {
+      boost += typeBoosts[t] ?? 0.0;
+    }
+    return boost.clamp(0.0, 0.15);
+  }
+
   // ── İsim bazlı çeşitlilik grupları ────────────────────────────────────────
   //
   // "2 pizzacı veya 2 burgerci aynı anda çıkmasın" isteği için: final
@@ -865,6 +888,10 @@ class PlacesService {
     double? minRating,
     Set<String> excludePlaceIds = const {},
     bool fallback = false,
+    /// Kullanıcının geçmiş tercihleri (kaydet + tarif al) type→boost haritası.
+    /// VenueSearchNotifier tarafından inşa edilir; boş geçilirse davranışsal
+    /// boost hesaplanmaz.
+    Map<String, double> behavioralTypeBoosts = const {},
   }) async {
     final typeGroups = _resolveTypeGroups(
       userProfile: userProfile,
@@ -1058,7 +1085,8 @@ class PlacesService {
 
     // ── Kişilik + rating kombinasyon skoru ─────────────────────────────────
     // + İstanbul landmark bonusu (bilinen/turistik mekanlar daha sık çıksın)
-    // + gym marka bonusu (Mac Fit gibi tanınmış bir zincir öne çıksın).
+    // + gym marka bonusu (Mac Fit gibi tanınmış bir zincir öne çıksın)
+    // + davranışsal boost (kullanıcının geçmiş kaydet/tarif al sinyali).
     final scored = pool.map((place) {
       final personalityScore = _personalityMatch(
         place, userProfile, friendProfile, selectedActivities,
@@ -1068,7 +1096,8 @@ class PlacesService {
       final total = personalityScore * 0.6 +
           ratingScore * 0.4 +
           _landmarkBonus(place, userProfile, friendProfile) +
-          _gymBrandBonus(place);
+          _gymBrandBonus(place) +
+          _behavioralBoost(place, behavioralTypeBoosts);
       return (place, total);
     }).toList();
 
@@ -1667,8 +1696,7 @@ class PlacesService {
     types.addAll(common);
 
     final userOnly = userTypes.where((t) => !common.contains(t)).toList();
-    final friendOnly = friendTypes.where((t) => !common.contains(t)).toList();
-    final maxLen = userOnly.length > friendOnly.length
+    final friendOnly = friendTypes.where(    final maxLen = userOnly.length > friendOnly.length
         ? userOnly.length
         : friendOnly.length;
     for (var i = 0; i < maxLen; i++) {

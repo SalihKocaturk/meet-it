@@ -11,6 +11,7 @@ import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/history/models/meeting_record.dart';
 import 'package:meetit/features/history/services/meeting_history_service.dart';
 import 'package:meetit/features/match/models/place_result.dart';
+import 'package:meetit/features/match/providers/saved_venues_provider.dart';
 import 'package:meetit/features/match/services/places_service.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 
@@ -177,6 +178,33 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
     }
   }
 
+  // ── Davranışsal type boost haritası ──────────────────────────────────────
+  //
+  // Kullanıcının kaydettiği (ağırlık 1) ve tarif aldığı (ağırlık 2, daha güçlü
+  // sinyal — kullanıcı gerçekten gitti) mekanların Google Places type'larını
+  // sayarak, her type için [0.0, 0.15] aralığında normalize edilmiş bir boost
+  // değeri üretir. Bu değer PlacesService.searchVenues'a geçilir ve ortak
+  // type'a sahip mekanların toplam skoruna küçük bir katkı eklenir.
+  //
+  // Boost kasıtlı olarak küçük tutulmuştur — kişilik uyumu ve kalite skoru
+  // her zaman belirleyici olmaya devam eder.
+  Map<String, double> _buildBehavioralBoosts() {
+    final saved = ref.read(savedVenuesProvider);
+    final navigated = ref.read(navigatedVenuesProvider);
+
+    final counts = <String, int>{};
+    for (final p in navigated) {
+      for (final t in p.types) counts[t] = (counts[t] ?? 0) + 2;
+    }
+    for (final p in saved) {
+      for (final t in p.types) counts[t] = (counts[t] ?? 0) + 1;
+    }
+
+    if (counts.isEmpty) return const {};
+    final maxCount = counts.values.reduce(max).toDouble();
+    return counts.map((k, v) => MapEntry(k, (v / maxCount) * 0.15));
+  }
+
   Future<void> searchVenues({
     required PersonalityProfile userProfile,
     required PersonalityProfile friendProfile,
@@ -297,6 +325,11 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
         ? (maxVenueDistanceKm * 1000).round()
         : AppConfig.defaultSearchRadius;
 
+    // Kullanıcının geçmiş tercihlerinden type→boost haritasını inşa et.
+    // Boş döner → PlacesService davranışsal boost uygulamaz (ilk kullanım /
+    // hiç kayıt/tarif yoksa), herhangi bir hata riski yok.
+    final behavioralBoosts = _buildBehavioralBoosts();
+
     try {
       // Orta nokta modunda (arkadaşla buluşma), ikisinin GERÇEKTEN arasında
       // kaliteli bir yer bulma şansını artırmak için taban bir puan şartı
@@ -311,6 +344,7 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
         radius: searchRadius,
         minRating: usingMidpoint ? AppConfig.midpointMinRating : null,
         excludePlaceIds: excludeIds,
+        behavioralTypeBoosts: behavioralBoosts,
       );
 
       // ── Maksimum mesafe filtresi (kullanıcı talebi) ───────────────────────
@@ -363,6 +397,7 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
           minRating: null,       // puan şartı yok
           excludePlaceIds: {},   // geçmiş hariç tutma yok
           fallback: true,        // kişilik tiplerini sallayıp generic ara
+          behavioralTypeBoosts: behavioralBoosts,
         );
 
         // Mesafe filtresini fallback sonuçlarına da uygula
@@ -626,8 +661,7 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
   // gibi oturmaya uygun bir type'ı da YOKSA hafifçe geriye itilir (tamamen
   // elenmez, sadece eşit mesafede gerçek bir "mekan"ın önüne geçmesin).
   static const List<String> _quickServiceNameKeywords = [
-    'büfe', 'fast food', 'lahmacun', 'dürüm', 'kebapçı', 'tost ', 'çorbacı',
-    'döner ',
+    'büfe', 'fa    'döner ',
   ];
 
   double _hangoutAdjustmentKm(PlaceResult place) {
