@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeetIt — Gizlilik Politikası</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #f8faf9; color: #1a2a22; line-height: 1.7; }
+  .container { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
+  .logo { display: flex; align-items: center; gap: 12px; margin-bottom: 40px; }
+  .logo-icon { width: 44px; height: 44px; background: #5CB58A; border-radius: 12px;
+               display: flex; align-items: center; justify-content: center;
+               color: white; font-weight: 800; font-size: 22px; }
+  .logo-name { font-size: 22px; font-weight: 700; color: #5CB58A; }
+  h1 { font-size: 28px; font-weight: 700; color: #1a2a22; margin-bottom: 8px; }
+  .subtitle { color: #5a7a6a; font-size: 15px; margin-bottom: 36px; }
+  h2 { font-size: 17px; font-weight: 700; color: #1a2a22; margin: 32px 0 10px;
+       padding-left: 14px; border-left: 3px solid #5CB58A; }
+  p { font-size: 15px; color: #2e4a3a; margin-bottom: 12px; }
+  ul { padding-left: 20px; margin-bottom: 12px; }
+  li { font-size: 15px; color: #2e4a3a; margin-bottom: 6px; }
+  .highlight { background: #edf7f2; border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; }
+  .contact { background: #5CB58A; color: white; border-radius: 12px;
+             padding: 20px 24px; margin-top: 40px; }
+  .contact a { color: #d4f5e5; }
+  footer { margin-top: 48px; font-size: 13px; color: #8aaa9a; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">
+    <div class="logo-icon">M</div>
+    <div class="logo-name">MeetIt</div>
+  </div>
+
+  <h1>Gizlilik Politikası</h1>
+  <p class="subtitle">Son güncelleme: Temmuz 2025</p>
+
+  <p>MeetIt uygulamasını ("Uygulama") kullandığınız için teşekkür ederiz. Bu Gizlilik Politikası, kişisel verilerinizi nasıl topladığımızı, kullandığımızı ve koruduğumuzu açıklar. Uygulamayı kullanarak bu politikayı kabul etmiş sayılırsınız.</p>
+
+  <h2>1. Topladığımız Veriler</h2>
+  <p><strong>Hesap bilgileri:</strong> Kayıt sırasında ad, e-posta adresi ve şifre (şifrelenmiş olarak saklanır). Google ile giriş yapıyorsanız Google hesabınızdan ad ve profil fotoğrafı alınır.</p>
+  <p><strong>Profil bilgileri:</strong> Seçtiğiniz cinsiyet ve konum (şehir/ilçe düzeyinde). Kesin GPS koordinatlarınız yalnızca mekan aramalarında anlık olarak kullanılır ve sunucularımızda saklanmaz.</p>
+  <p><strong>Kişilik testi verileri:</strong> Uygulama içindeki soruları yanıtlamanızla elde edilen kişilik profili puanları Firestore'da hesabınıza bağlı olarak saklanır.</p>
+  <p><strong>Kullanıcı tarafından oluşturulan içerik:</strong> Mekanlara bıraktığınız yorumlar, verdiğiniz puanlar ve mekan kayıtlarınız.</p>
+  <p><strong>Arkadaşlık verileri:</strong> Uygulamada arkadaş olarak eklediğiniz kullanıcılarla olan bağlantı bilgileri ve buluşma geçmişi.</p>
+  <p><strong>Cihaz bildirimleri:</strong> Push bildirimleri göndermek için Firebase Cloud Messaging (FCM) token'ı saklanır. Bu token yalnızca size bildirim iletmek amacıyla kullanılır.</p>
+
+  <h2>2. Verileri Nasıl Kullanıyoruz</h2>
+  <ul>
+    <li>Hesabınızı oluşturmak ve kimliğinizi doğrulamak</li>
+    <li>Kişilik profilinize ve konumunuza göre size uygun mekanlar önermek</li>
+    <li>Arkadaşlarınızla buluşma noktaları bulmak</li>
+    <li>Arkadaşlık istekleri ve buluşma davetiyeleri için bildirim göndermek</li>
+    <li>Uygulamayı iyileştirmek ve hataları gidermek</li>
+  </ul>
+
+  <h2>3. Üçüncü Taraf Hizmetler</h2>
+  <div class="highlight">
+    <p>Uygulama aşağıdaki üçüncü taraf hizmetleri kullanmaktadır. Bu hizmetlerin her birinin kendi gizlilik politikaları geçerlidir:</p>
+  </div>
+  <ul>
+    <li><strong>Firebase Authentication / Firestore / Cloud Messaging (Google LLC):</strong> Kimlik doğrulama, veri saklama ve push bildirimler için. <a href="https://firebase.google.com/support/privacy">Firebase Gizlilik Politikası</a></li>
+    <li><strong>Google Places API / Maps SDK:</strong> Mekan arama ve harita gösterimi için. <a href="https://policies.google.com/privacy">Google Gizlilik Politikası</a></li>
+    <li><strong>Google Sign-In:</strong> Opsiyonel Google hesabıyla giriş için.</li>
+  </ul>
+
+  <h2>4. Veri Paylaşımı</h2>
+  <p>Kişisel verilerinizi üçüncü taraflarla satmıyor, kiralıyor veya ticari amaçla paylaşmıyoruz. Verileriniz yalnızca yukarıda belirtilen üçüncü taraf hizmet sağlayıcılarıyla, hizmetin işleyişi için gerekli olduğu ölçüde paylaşılır.</p>
+  <p>Uygulama içinde diğer kullanıcılar tarafından görülebilen bilgiler: adınız, profil fotoğrafınız, kişilik tipiniz ve bıraktığınız mekan yorumları.</p>
+
+  <h2>5. Veri Saklama</h2>
+  <p>Hesabınızı sildiğinizde, kişisel verileriniz (hesap bilgileri, kişilik profili, mekan kayıtları ve buluşma geçmişi) Firestore'dan 30 gün içinde kalıcı olarak silinir. Bıraktığınız mekan yorumları, mekanın genel içerik bütünlüğü nedeniyle anonim olarak saklanabilir.</p>
+
+  <h2>6. Çocukların Gizliliği</h2>
+  <p>MeetIt, 13 yaşın altındaki çocuklara yönelik değildir ve bu yaş grubundan bilerek veri toplamıyoruz. 13 yaşın altında bir kullanıcının veri sağladığını fark edersek, söz konusu verileri derhal sileriz.</p>
+
+  <h2>7. Güvenlik</h2>
+  <p>Verilerinizi korumak için Firebase'in endüstri standardı güvenlik altyapısını kullanıyoruz. E-posta ile kaydolduysanız şifreniz Firebase tarafından hash'lenerek saklanır; biz dahil kimse ham şifrenizi göremez. Bununla birlikte, internet üzerinden hiçbir veri iletiminin %100 güvenli olmadığını hatırlatmak isteriz.</p>
+
+  <h2>8. Haklarınız</h2>
+  <p>Kişisel verilerinizle ilgili olarak aşağıdaki haklara sahipsiniz:</p>
+  <ul>
+    <li>Verilerinize erişim ve düzeltme talep etme</li>
+    <li>Verilerinizin silinmesini talep etme (hesabı silme yoluyla)</li>
+    <li>Veri işlemeye itiraz etme</li>
+  </ul>
+
+  <h2>9. Bu Politikadaki Değişiklikler</h2>
+  <p>Bu politikayı zaman zaman güncelleyebiliriz. Önemli değişiklikler olduğunda uygulama içinden veya e-posta ile bilgilendireceğiz. Değişiklikler bu sayfada yayımlandıktan sonra geçerli olur.</p>
+
+  <div class="contact">
+    <p><strong>İletişim</strong></p>
+    <p>Gizlilik politikamıza ilişkin sorularınız için: <a href="mailto:hafifsaglam61@gmail.com">hafifsaglam61@gmail.com</a></p>
+  </div>
+
+  <footer>© 2025 MeetIt. Tüm hakları saklıdır.</footer>
+</div>
+</body>
+</html>
