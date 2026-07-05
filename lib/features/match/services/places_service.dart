@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:http/http.dart' as http;
 import 'package:meetit/core/constants/app_config.dart';
 import 'package:meetit/features/match/models/place_result.dart';
+import 'package:meetit/features/match/services/api_usage_service.dart';
 import 'package:meetit/features/match/services/places_api_version_service.dart';
 import 'package:meetit/features/match/services/venue_photo_cache_service.dart';
 import 'package:meetit/features/match/services/venue_search_cache_service.dart';
@@ -1397,13 +1398,16 @@ class PlacesService {
       if (existing.length >= _maxPoolSize) return; // zaten dolu
 
       // Sadece dış 3 halka: 7500, 10000, 15000 → 3 API çağrısı
-      final apiVersion = await PlacesApiVersionService.getActiveVersion();
+      // 4 aşamalı yönetici hem API versiyonunu hem arama sayacını halleder.
+      final stage      = await ApiUsageService.currentStage();
+      final apiVersion = stage.apiVersion;
       final expansionRadii = _poolBuildRadii.reversed.take(3).toList();
       final fresh = <PlaceResult>[];
       for (final r in expansionRadii) {
         final batch = apiVersion == PlacesApiVersion.legacy
             ? await _fetchNearbyLegacy(lat: lat, lng: lng, types: types, radius: r)
             : await _fetchNearbyNew(lat: lat, lng: lng, types: types, radius: r);
+        ApiUsageService.recordSearchCall(isNew: stage.usesNewApi).ignore();
         fresh.addAll(batch);
       }
       await VenueSearchCacheService.mergeExpand(
@@ -1426,9 +1430,11 @@ class PlacesService {
     required double lng,
     required List<String> types,
   }) async {
-    // 📍 DUAL API SWITCH: aktif API versiyonunu bir kez oku, tüm yarıçap
-    // döngüsünde tekrar Firestore'a gidilmesin.
-    final apiVersion = await PlacesApiVersionService.getActiveVersion();
+    // 📍 4 AŞAMALI API SWITCH: stage hem versiyonu hem foto iznini belirler.
+    // In-memory cache (5 dk) sayesinde döngü boyunca Firestore'a tekrar
+    // gidilmez — PlacesApiVersionService'in yerini ApiUsageService aldı.
+    final stage      = await ApiUsageService.currentStage();
+    final apiVersion = stage.apiVersion;
 
     final allFetched = <PlaceResult>[];
 
@@ -1436,6 +1442,8 @@ class PlacesService {
       final batch = apiVersion == PlacesApiVersion.legacy
           ? await _fetchNearbyLegacy(lat: lat, lng: lng, types: types, radius: r)
           : await _fetchNearbyNew(lat: lat, lng: lng, types: types, radius: r);
+      // Her Nearby Search çağrısını say (Legacy şimdilik sayılmıyor)
+      ApiUsageService.recordSearchCall(isNew: stage.usesNewApi).ignore();
       allFetched.addAll(batch);
     }
 

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:meetit/features/match/models/place_result.dart';
+import 'package:meetit/features/match/services/api_usage_service.dart';
 
 /// 💸 MALİYET DÜŞÜRME (2026-06-28): Google Places "Photo Media" endpoint'i
 /// HER çağrıda ayrıca faturalanıyor (Nearby Search'ten BAĞIMSIZ bir SKU).
@@ -89,6 +90,17 @@ class VenuePhotoCacheService {
       return PlaceResult.buildPhotoUrl(photoName);
     }
 
+    // 📍 AŞAMA KONTROLÜ (2026-07-05): Firestore cache'i her zaman kontrol
+    // edildi (üstteki try-catch). Cache miss ise foto aşaması uygunsa devam,
+    // değilse direkt boş döndür — kota bitti, Google'a gitme.
+    final stage = await ApiUsageService.currentStage();
+    if (!stage.photosEnabled) {
+      // Fotoğrafsız bırak. Sonraki ayda kota yenilenince bu mekanlar
+      // natural backfill ile foto kazanır (searchVenues → resolvePhotoUrls
+      // → cache miss → aşama izin veriyorsa → Google → Storage → cache).
+      return '';
+    }
+
     // Cache miss — Google'dan SADECE BU SEFERLİK indir, sonra kalıcı olarak
     // Storage'a yükle ki bir DAHA hiç kimse için Google'a gidilmesin.
     try {
@@ -138,6 +150,11 @@ class VenuePhotoCacheService {
         'urls': {photoKey: downloadUrl},
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+
+      // 📍 SAYAÇ (2026-07-05): Başarılı foto çekimi — fire-and-forget.
+      // Stage.usesNewApi, fotoğrafın hangi API kotasından düşülmesi
+      // gerektiğini belirliyor.
+      ApiUsageService.recordPhotoFetch(isNew: stage.usesNewApi).ignore();
 
       return downloadUrl;
     } catch (e) {
