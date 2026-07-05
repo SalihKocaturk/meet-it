@@ -283,95 +283,38 @@ class AttemptMeetPage extends ConsumerWidget {
                 ),
               ),
 
-            // ── Üst: geri butonu + liste görünümüne geçiş ────────────────
+            // ── Üst: geri butonu ──────────────────────────────────────────
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // ARTIK Navigator.pop YOK: bu sayfa kendi route'u
-                    // olarak push EDİLMİYOR, match_page.dart'ın gövdesine
-                    // doğrudan gömülüyor (bkz. match_page.dart
-                    // showMapViewProvider). Bu yüzden "geri" tek başına
-                    // forma dönmek için sadece showVenuesProvider'ı false
-                    // yapıyor — eskiden burada Navigator.pop kullanılıyordu,
-                    // bu da YANLIŞ bir route'u (MatchPage'in altındaki
-                    // sayfayı) kapatmaya çalışıyordu.
-                    GestureDetector(
-                      onTap: () {
-                        ref.read(showVenuesProvider.notifier).state = false;
-                      },
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: context.colors.card,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.12),
-                              blurRadius: 8,
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          Iconsax.arrow_left_2,
-                          size: 16,
-                          color: Theme.of(context).brightness != Brightness.dark
-                              ? Colors.black87
-                              : Colors.white70,
-                        ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: GestureDetector(
+                    onTap: () {
+                      ref.read(showVenuesProvider.notifier).state = false;
+                    },
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: context.colors.card,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.12),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Iconsax.arrow_left_2,
+                        size: 16,
+                        color: Theme.of(context).brightness != Brightness.dark
+                            ? Colors.black87
+                            : Colors.white70,
                       ),
                     ),
-                    // Harita/liste görünümü TEK butonla yönetiliyor: burada
-                    // (haritadayken) sağ üstteki bu buton, aynı arama
-                    // sonuçlarını liste şeklinde gösteren
-                    // `VenueResultsView`'a geçer. Navigator KULLANILMIYOR —
-                    // sadece showMapViewProvider false yapılıyor
-                    // (showVenuesProvider zaten true, results modundan
-                    // çıkılmıyor, sadece alt görünüm değişiyor). Sonuçlar
-                    // zaten venueSearchProvider'da duruyor, tekrar arama
-                    // yapılmıyor.
-                    GestureDetector(
-                      onTap: () {
-                        ref.read(showMapViewProvider.notifier).state = false;
-                      },
-                      child: Container(
-                        height: 40,
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        decoration: BoxDecoration(
-                          color: context.colors.card,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.12),
-                              blurRadius: 6,
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Iconsax.element_4,
-                              size: 18,
-                              color: context.colors.textPrimary,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'match.list_view'.tr(),
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: context.colors.textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -463,3 +406,4 @@ class AttemptMeetPage extends ConsumerWidget {
     );
   }
 }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
