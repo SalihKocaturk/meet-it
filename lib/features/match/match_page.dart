@@ -18,7 +18,9 @@ import 'package:meetit/features/match/widgets/find_venue_button_bar.dart';
 import 'package:meetit/features/match/widgets/friend_chip.dart';
 import 'package:meetit/features/match/widgets/location_field.dart';
 import 'package:meetit/features/match/widgets/price_filter.dart';
+import 'package:meetit/features/match/pages/venue_search_loading_page.dart';
 import 'package:meetit/features/match/widgets/venue_results_view.dart';
+import 'package:meetit/features/personality/models/personality_model.dart';
 
 // Bu dosya artık SADECE MatchPage'i içeriyor — tüm alt widget'lar ve
 // MapLocationPickerPage feature klasör yapısına bölündü:
@@ -124,6 +126,40 @@ class MatchPage extends ConsumerWidget {
                                       ),
                                     ),
                                     const Spacer(),
+                                    // ── Önizleme butonu (simülasyon modu) ────
+                                    IconButton(
+                                      icon: Icon(
+                                        Iconsax.play_circle,
+                                        color: context.colors.primary,
+                                        size: 22,
+                                      ),
+                                      tooltip: 'Arama animasyonunu önizle',
+                                      onPressed: () {
+                                        final me = ref.read(currentUserProvider);
+                                        final fr = ref.read(selectedFriendProvider);
+                                        final myProfile =
+                                            me?.personalityProfile ??
+                                            PersonalityProfile.mock(
+                                                PersonalityType.maceraperest);
+                                        final frProfile =
+                                            fr?.personalityProfile ??
+                                            PersonalityProfile.mock(
+                                                PersonalityType.gurme);
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute<void>(
+                                            fullscreenDialog: true,
+                                            builder: (_) =>
+                                                VenueSearchLoadingPage(
+                                              userProfile: myProfile,
+                                              friendProfile: frProfile,
+                                              friendUid: fr?.uid,
+                                              selectedActivities: const [],
+                                              simulationMode: true,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
                                     IconButton(
                                       icon: Icon(
                                         Iconsax.clock,
@@ -281,7 +317,7 @@ class MatchPage extends ConsumerWidget {
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
                                         color: context.colors.textPrimary,
-                                      ),
+                                            ),
                                     ),
                                     SizedBox(height: 8),
                                     PriceFilter(),

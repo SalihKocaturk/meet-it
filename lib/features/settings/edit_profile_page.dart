@@ -207,7 +207,10 @@ class EditProfilePage extends ConsumerWidget {
       }
 
       if (!context.mounted) return;
-      if (!context.mounted) return;
+      // EditProfilePage context.push(AppRoutes.editProfile) ile açıldı —
+      // sayfayı kapatmak için GoRouter'ın context.pop()'u kullanılmalı,
+      // Navigator.of(context).pop() değil. Dialog (native showDialog) ise
+      // hâlâ Navigator ile kapanır.
       final nav = Navigator.of(context);
       showAppAlert(
         context: context,
@@ -216,8 +219,8 @@ class EditProfilePage extends ConsumerWidget {
         text: 'edit_profile.profile_updated'.tr(),
         confirmBtnColor: context.colors.primary,
         onConfirmBtnTap: () {
-          nav.pop(); // QuickAlert dialog'unu kapat
-          nav.pop(); // Edit Profile sayfasını kapat
+          nav.pop();                        // dialog'u kapat (native Navigator)
+          if (context.mounted) context.pop(); // sayfayı kapat (GoRouter)
         },
       );
     } catch (e) {

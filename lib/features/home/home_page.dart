@@ -16,6 +16,7 @@ import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/main/main_page.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/personality/friend_compatibility_page.dart';
+import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/personality/personality_analysis_page.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
@@ -347,10 +348,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   itemBuilder: (_, i) {
                     switch (i) {
                       case 0:
-                        return _PersonalityActionCard(
-                          icon: Iconsax.people,
-                          title: 'home.friend_compat'.tr(),
-                          subtitle: 'home.friend_compat_desc'.tr(),
+                        return _FriendCompatActionCard(
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => const FriendCompatibilityPage(),
@@ -382,6 +380,51 @@ class _HomePageState extends ConsumerState<HomePage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Arkadaşlarla Uyum Aksiyon Kartı (dinamik subtitle) ────────────────────────
+//
+// connectionsProvider + currentUserProvider'dan en yüksek uyumlu arkadaşı
+// hesaplar ve kartın alt yazısında gösterir ("Ali ile %87 uyum").
+// Veri yoksa (profil yok / arkadaş yok) statik çeviri metnine düşer.
+
+class _FriendCompatActionCard extends ConsumerWidget {
+  final VoidCallback onTap;
+  const _FriendCompatActionCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final myProfile = ref.watch(currentUserProvider)?.personalityProfile;
+    final friends = ref.watch(connectionsProvider);
+
+    String subtitle = 'home.friend_compat_desc'.tr();
+
+    if (myProfile != null && friends.isNotEmpty) {
+      UserFriendModel? bestFriend;
+      int bestCompat = 0;
+      for (final f in friends) {
+        final fp = f.personalityProfile;
+        if (fp != null) {
+          final c = myProfile.compatibilityWith(fp);
+          if (c > bestCompat) {
+            bestCompat = c;
+            bestFriend = f;
+          }
+        }
+      }
+      if (bestFriend != null) {
+        final firstName = bestFriend.name.split(' ').first;
+        subtitle = '$firstName ile %$bestCompat uyum';
+      }
+    }
+
+    return _PersonalityActionCard(
+      icon: Iconsax.people,
+      title: 'home.friend_compat'.tr(),
+      subtitle: subtitle,
+      onTap: onTap,
     );
   }
 }
