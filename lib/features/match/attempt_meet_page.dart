@@ -288,7 +288,7 @@ class AttemptMeetPage extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Align(
-                  alignment: Alignment.centerLeft,
+                  alignment: Alignment.topLeft,
                   child: GestureDetector(
                     onTap: () {
                       ref.read(showVenuesProvider.notifier).state = false;
