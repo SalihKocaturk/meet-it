@@ -654,3 +654,439 @@ class _WalkingStage extends StatelessWidget {
     required this.myType,
     required this.friendType,
     required this.walkCtrl,
+    required this.pulseCtrl,
+    required this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: walkCtrl,
+      builder: (_, __) => LayoutBuilder(
+        builder: (_, constraints) {
+          final w = constraints.maxWidth;
+          final h = constraints.maxHeight;
+          final pad = 6.0;
+          final lo = pad;
+          final hi = w - _charSize - pad;
+          final rawT = walkCtrl.value;
+          final pos = _remapWalkT(rawT);
+
+          final goingForward = walkCtrl.status != AnimationStatus.reverse;
+
+          final userX    = lo + (hi - lo) * pos;
+          final userFlip = !goingForward;
+          final friendX  = hi - (hi - lo) * pos;
+          final friendFlip = goingForward;
+
+          if (isSolo) {
+            final soloX = lo + (hi - lo) * (0.5 + 0.4 * math.sin(rawT * math.pi));
+            final soloY = 14.0 + math.sin(rawT * math.pi * 6) * 8.0;
+            return SizedBox(
+              width: w, height: h,
+              child: Stack(clipBehavior: Clip.none, children: [
+                Positioned.fill(child: _CityScapeWidget(color: accentColor)),
+                Positioned(left: w * 0.10, bottom: 46,
+                  child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: true)),
+                Positioned(left: w * 0.28, bottom: 54,
+                  child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: false)),
+                Positioned(left: w * 0.46, bottom: 44,
+                  child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: true)),
+                Positioned(left: w * 0.64, bottom: 56,
+                  child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: false)),
+                Positioned(left: w * 0.82, bottom: 46,
+                  child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: true)),
+                Positioned(
+                  left: soloX, bottom: soloY,
+                  child: PersonalityCharacterWidget(
+                    type: myType, gender: me?.gender as String?,
+                    size: _charSize, searchMode: true, flipX: userFlip)),
+              ]),
+            );
+          }
+
+          final userBob   = math.sin(pos * math.pi * 6) * 9.0;
+          final friendBob = math.sin(pos * math.pi * 6 + math.pi) * 9.0;
+
+          final dist = (userX - friendX).abs();
+          final push = (_charSize * 1.05 - dist).clamp(0.0, _charSize) * 0.46;
+          final userBottom   = (22.0 + userBob  + push).clamp(8.0, 90.0);
+          final friendBottom = (22.0 + friendBob - push).clamp(8.0, 90.0);
+
+          return SizedBox(
+            width: w, height: h,
+            child: Stack(clipBehavior: Clip.none, children: [
+              Positioned.fill(child: _CityScapeWidget(color: accentColor)),
+
+              Positioned(left: w * 0.06, bottom: 44,
+                child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: true)),
+              Positioned(left: w * 0.22, bottom: 54,
+                child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: false)),
+              Positioned(left: w * 0.38, bottom: 44,
+                child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: true)),
+              Positioned(left: w * 0.54, bottom: 56,
+                child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: false)),
+              Positioned(left: w * 0.70, bottom: 46,
+                child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: true)),
+              Positioned(left: w * 0.84, bottom: 52,
+                child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: false)),
+
+              Positioned(
+                left: userX, bottom: userBottom,
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  PersonalityCharacterWidget(
+                    type: myType, gender: me?.gender as String?,
+                    size: _charSize, searchMode: true, flipX: userFlip),
+                  const SizedBox(height: 3),
+                  Text(((me?.name ?? 'Sen') as String).split(' ').first,
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accentColor)),
+                ]),
+              ),
+
+              Positioned(
+                left: friendX, bottom: friendBottom,
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  PersonalityCharacterWidget(
+                    type: friendType, gender: friend?.gender as String?,
+                    size: _charSize, searchMode: true, flipX: friendFlip),
+                  const SizedBox(height: 3),
+                  Text(((friend?.name ?? '') as String).split(' ').first,
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accentColor)),
+                ]),
+              ),
+            ]),
+          );
+        },
+      ),
+    );
+  }
+
+  static double _remapWalkT(double rawT) {
+    if (rawT < 0.10) return rawT * 1.40;
+    if (rawT < 0.22) return 0.14 + (rawT - 0.10) * 0.500;
+    if (rawT < 0.42) return 0.20 + (rawT - 0.22) * 1.300;
+    if (rawT < 0.57) return 0.46 + (rawT - 0.42) * 0.533;
+    if (rawT < 0.75) return 0.54 + (rawT - 0.57) * 1.389;
+    if (rawT < 0.88) return 0.79 + (rawT - 0.75) * 0.462;
+    return (0.85 + (rawT - 0.88) * 1.250).clamp(0.0, 1.0);
+  }
+}
+
+// ── Gradient Progress Bar ─────────────────────────────────────────────────────
+
+class _GradientProgressBar extends StatelessWidget {
+  final double progress;
+  final double shimmer;
+  final Color  color;
+
+  const _GradientProgressBar({
+    required this.progress,
+    required this.shimmer,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 20,
+      child: CustomPaint(
+        painter: _ProgressPainter(
+          progress: progress,
+          shimmer: shimmer,
+          color: color,
+        ),
+        size: const Size(double.infinity, 20),
+      ),
+    );
+  }
+}
+
+class _ProgressPainter extends CustomPainter {
+  final double progress;
+  final double shimmer;
+  final Color  color;
+
+  const _ProgressPainter({
+    required this.progress,
+    required this.shimmer,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = size.height / 2;
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+          Rect.fromLTWH(0, 0, size.width, size.height), Radius.circular(r)),
+      Paint()..color = color.withOpacity(0.13),
+    );
+
+    if (progress <= 0.005) return;
+
+    final fillW    = size.width * progress.clamp(0.0, 1.0);
+    final fillRect = Rect.fromLTWH(0, 0, fillW, size.height);
+    final fillRRect = RRect.fromRectAndRadius(fillRect, Radius.circular(r));
+
+    canvas.drawRRect(
+      fillRRect,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [
+            color,
+            Color.lerp(color, Colors.white, 0.35)!,
+          ],
+        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
+    );
+
+    canvas.save();
+    canvas.clipRRect(fillRRect);
+    final shimW = size.width * 0.38;
+    final shimX = -shimW + shimmer * (size.width + shimW);
+    canvas.drawRect(
+      Rect.fromLTWH(shimX, 0, shimW, size.height),
+      Paint()
+        ..shader = LinearGradient(colors: [
+          Colors.white.withOpacity(0),
+          Colors.white.withOpacity(0.30),
+          Colors.white.withOpacity(0),
+        ]).createShader(Rect.fromLTWH(shimX, 0, shimW, size.height)),
+    );
+    canvas.restore();
+
+    if (progress > 0.02 && progress < 0.998) {
+      canvas.drawCircle(
+        Offset(fillW, size.height / 2),
+        size.height * 0.62,
+        Paint()
+          ..color = color.withOpacity(0.50)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+      );
+      canvas.drawCircle(
+        Offset(fillW, size.height / 2),
+        size.height * 0.26,
+        Paint()..color = Colors.white.withOpacity(0.80),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ProgressPainter old) =>
+      old.progress != progress || old.shimmer != shimmer;
+}
+
+// ── Adım Göstergesi ───────────────────────────────────────────────────────────
+
+class _StepDots extends StatelessWidget {
+  final double progress;
+  final Color  accentColor;
+
+  const _StepDots({required this.progress, required this.accentColor});
+
+  static const _labels     = ['Konum', 'Mekanlar', 'Filtreleme', 'Hazır'];
+  static const _thresholds = [0.20, 0.52, 0.78, 1.0];
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: List.generate(_labels.length, (i) {
+        final done   = progress >= _thresholds[i];
+        final active = !done && (i == 0 || progress >= _thresholds[i - 1]);
+        final col    = done
+            ? accentColor
+            : active
+                ? accentColor.withOpacity(0.48)
+                : Colors.grey.withOpacity(0.22);
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 340),
+              curve: Curves.easeOut,
+              width: done ? 24 : 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: col,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(height: 5),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 300),
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight:
+                    (done || active) ? FontWeight.w700 : FontWeight.w400,
+                color: col,
+              ),
+              child: Text(_labels[i]),
+            ),
+          ],
+        );
+      }),
+    );
+  }
+}
+
+// ── Kişilik Tipi Rozeti ───────────────────────────────────────────────────────
+
+class _PersonalityChip extends StatelessWidget {
+  final String name;
+  final PersonalityType type;
+  final Color color;
+
+  const _PersonalityChip({
+    required this.name,
+    required this.type,
+    required this.color,
+  });
+
+  static String _label(PersonalityType t) {
+    switch (t) {
+      case PersonalityType.entelektuel:   return 'Entelektüel';
+      case PersonalityType.sosyalKelebek: return 'Sosyal Kelebek';
+      case PersonalityType.sakinRuh:      return 'Sakin Ruh';
+      case PersonalityType.maceraperest:  return 'Maceraperest';
+      case PersonalityType.gurme:         return 'Gurme';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (name.isNotEmpty)
+          Text(
+            name,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: context.colors.textSecondary,
+            ),
+          ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.11),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: color.withOpacity(0.30)),
+          ),
+          child: Text(
+            _label(type),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Şehir Silüeti ─────────────────────────────────────────────────────────────
+
+class _CityScapeWidget extends StatelessWidget {
+  final Color color;
+  const _CityScapeWidget({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _CityScapePainter(color: color),
+      size: Size.infinite,
+    );
+  }
+}
+
+class _CityScapePainter extends CustomPainter {
+  final Color color;
+  const _CityScapePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final buildingP = Paint()..color = color.withOpacity(0.09);
+    final windowP   = Paint()..color = color.withOpacity(0.20);
+
+    const buildings = [
+      [0.02, 0.07, 0.38],
+      [0.10, 0.05, 0.28],
+      [0.16, 0.09, 0.50],
+      [0.26, 0.06, 0.35],
+      [0.33, 0.10, 0.58],
+      [0.44, 0.07, 0.44],
+      [0.52, 0.05, 0.32],
+      [0.58, 0.09, 0.54],
+      [0.68, 0.07, 0.40],
+      [0.76, 0.08, 0.48],
+      [0.85, 0.07, 0.36],
+      [0.93, 0.06, 0.29],
+    ];
+
+    final groundY = h * 0.76;
+
+    for (final b in buildings) {
+      final bx = w * b[0];
+      final bw = w * b[1];
+      final bh = h * b[2];
+      final rect = Rect.fromLTWH(bx, groundY - bh, bw, bh);
+      canvas.drawRect(rect, buildingP);
+
+      final cols = (bw / (w * 0.028)).floor().clamp(1, 3);
+      final rows = (bh / (h * 0.095)).floor().clamp(1, 5);
+      final wW = bw * 0.22;
+      final wH = h * 0.040;
+      for (var r = 0; r < rows; r++) {
+        for (var c = 0; c < cols; c++) {
+          final wx = bx + bw * (c + 0.5) / cols - wW / 2;
+          final wy = groundY - bh + bh * (r + 0.8) / (rows + 0.5) - wH / 2;
+          canvas.drawRect(Rect.fromLTWH(wx, wy, wW, wH), windowP);
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CityScapePainter old) => old.color != color;
+}
+
+// ── Nabız Atan Konum Pini ─────────────────────────────────────────────────────
+
+class _PulsingPin extends StatelessWidget {
+  final AnimationController pulseCtrl;
+  final Color color;
+  final bool evenPhase;
+
+  const _PulsingPin({
+    required this.pulseCtrl,
+    required this.color,
+    required this.evenPhase,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: pulseCtrl,
+      builder: (_, __) {
+        final raw = evenPhase ? pulseCtrl.value : (1.0 - pulseCtrl.value);
+        final scale = 0.72 + raw * 0.35;
+        final opacity = 0.42 + raw * 0.42;
+        return Transform.scale(
+          scale: scale,
+          child: Icon(
+            Icons.location_on_rounded,
+            color: color.withOpacity(opacity),
+            size: 20,
+          ),
+        );
+      },
+    );
+  }
+}
