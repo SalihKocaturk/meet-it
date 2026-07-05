@@ -33,11 +33,22 @@ class VenuePhotoCacheService {
 
   static const String _collection = 'venuePhotoCache';
 
-  /// `photoName` Google'ın "places/ChIJ.../photos/AUf1Q.." formatındaki
-  /// foto referansı — bu string'i Storage'da geçerli bir dosya adına
-  /// çevirmek için path ayraçlarını temizliyoruz.
-  static String _photoKey(String photoName) =>
-      photoName.replaceAll('/', '_').replaceAll(RegExp(r'[^A-Za-z0-9_\-]'), '');
+  /// `photoName` iki farklı formatta gelebilir:
+  ///   • New API:    "places/ChIJ.../photos/AUf1Q_yle3J" (kaynak adı)
+  ///   • Legacy API: "AUf1Q_yle3J"                       (referans ID)
+  ///
+  /// Her iki format için de aynı key üretmek üzere New API formatını
+  /// normalize ediyoruz: son path segmentini (referans ID'yi) alıyoruz.
+  /// Böylece aynı fiziksel fotoğraf her iki API'de de tek cache girişine
+  /// düşer — API geçişinde Storage'da duplikat dosya oluşmaz.
+  static String _photoKey(String photoName) {
+    // New API: "places/.../photos/REF" → "REF"
+    // Legacy:  "REF"                  → "REF" (değişmez)
+    final id = photoName.contains('/')
+        ? photoName.split('/').last
+        : photoName;
+    return id.replaceAll(RegExp(r'[^A-Za-z0-9_\-]'), '');
+  }
 
   /// Tek bir fotoğrafı çözümler: önbellekte varsa onu, yoksa Google'dan
   /// indirip Storage'a yükledikten sonra YENİ Storage URL'ini döner.
