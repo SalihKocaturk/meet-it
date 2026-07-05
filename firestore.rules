@@ -67,6 +67,19 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // API kullanım sayaçları — authenticated kullanıcılar yazar.
+    // Doküman henüz yoksa (resource == null) serbest yaz;
+    // varsa limit alanlarına dokunma.
+    match /appConfig/apiUsage {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && (
+        resource == null ||
+        !request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['photo_limit', 'search_new_limit', 'search_legacy_limit'])
+      );
+    }
+
+    // Diğer appConfig dokümanları (placesApi vb.) — sadece okunabilir.
     match /appConfig/{document=**} {
       allow read: if isSignedIn();
       allow write: if false;

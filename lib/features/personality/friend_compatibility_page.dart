@@ -395,4 +395,42 @@ class FriendCompatibilityDetailPage extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(vertical: 18),
                 decoration: BoxDecoration(
                   color: context.colors.card,
-                  borderRadius
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: context.colors.border),
+                ),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'friend_compat.overlap_title'.tr(),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: context.colors.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    PersonalityRadarChart(
+                      profile: myProfile,
+                      secondaryProfile: friendProfile,
+                      primaryLabel: 'friend_compat.you_label'.tr(),
+                      secondaryLabel: friend.name,
+                      size: 240,
+                    ),
+                  ],
+                ),
+              ),
+
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

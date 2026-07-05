@@ -5,27 +5,26 @@ import 'package:meetit/core/constants/app_config.dart';
 import 'package:meetit/core/utils/travel_time_estimator.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 
-/// Google Distance Matrix API ile GERÇEK (trafik tahminli) ulaşım süresi.
+/// Ulaşım süresi servisi.
 ///
-/// NOT: Kullanıcı kuş uçuşu (Haversine) tahmininin gerçekliği yansıtmadığını
-/// belirtti (örn. araya boğaz/köprü/tek yönlü yol girince tahmin çok
-/// sapabiliyor) — bu yüzden asıl veri kaynağı artık bu servis.
+/// ── MEVCUT DURUM ─────────────────────────────────────────────────────────────
+/// Google Distance Matrix API entegre edildi ancak şu an aktif DEĞİL —
+/// Cloud Console'da "Distance Matrix API" ayrıca etkinleştirilmesi gerekiyor
+/// ve bu yapılmadığında her istek REQUEST_DENIED döner. Bu yüzden her zaman
+/// Haversine (kuş uçuşu × 1.3 yol faktörü) tahminine düşülüyor.
 ///
-/// MALİYET KONTROLÜ: Mekan başına ayrı ayrı istek YAPILMIYOR. Bir arama
-/// sonucundaki TÜM mekanlar, mod başına TEK istekte (origins=1,
-/// destinations=N, `|` ile ayrılmış) gönderiliyor. Yani bir arama için
-/// toplam sadece 3 istek (driving + transit + walking) yapılır — mekan
-/// sayısından bağımsız. Üç mod isteği birbirinden bağımsız olduğu için
-/// `Future.wait` ile PARALEL gönderilir (sıralı olsaydı 3x gecikme olurdu).
+/// Tahminler UI'da "~" önekiyle gösterilir (bkz. `TravelEstimate.isApproximate`).
 ///
-/// FALLBACK: API devre dışıysa (Cloud Console'da "Distance Matrix API"
-/// etkinleştirilmemiş → REQUEST_DENIED), kota dolmuşsa (OVER_QUERY_LIMIT)
-/// ya da ağ hatası olursa, otomatik olarak kuş uçuşu tahminine
-/// (`travel_time_estimator.dart`) düşülür — kullanıcı hiçbir veri
-/// görmemek yerine yaklaşık bir süre görür ("~" öneki ile işaretlenir,
-/// bkz. `TravelEstimate.isApproximate`).
+/// ── GERÇEK ULAŞIM SÜRESİNE GEÇİŞ ────────────────────────────────────────────
+/// İleride Distance Matrix veya alternatif (Mapbox Directions, HERE Routing)
+/// aktif edilmek istenirse `_kUseRealApi = true` yapılmalı ve ilgili API
+/// Cloud Console'dan etkinleştirilmeli.
 class DistanceMatrixService {
   const DistanceMatrixService._();
+
+  /// `true` → gerçek API çağrısı yap (Distance Matrix)
+  /// `false` → doğrudan Haversine tahmine düş (mevcut default)
+  static const bool _kUseRealApi = false;
 
   static const List<String> _modes = ['driving', 'transit', 'walking'];
 
@@ -38,9 +37,8 @@ class DistanceMatrixService {
   }) async {
     if (destinations.isEmpty) return {};
 
-    // API key yoksa (örn. lokal geliştirme ortamı) API'ye hiç gitmeden
-    // doğrudan fallback'e düş — gereksiz başarısız istek atmayalım.
-    if (AppConfig.googleMapsApiKey.isEmpty) {
+    // Distance Matrix devre dışı veya API key yoksa → Haversine
+    if (!_kUseRealApi || AppConfig.googleMapsApiKey.isEmpty) {
       return _fallbackAll(originLat, originLng, destinations);
     }
 
@@ -73,8 +71,6 @@ class DistanceMatrixService {
         final walk = walkMinutesList[i];
 
         if (car == null && transit == null && walk == null) {
-          // Bu mekan için API'den HİÇBİR mod dönmedi (örn. API tamamen
-          // devre dışı/REQUEST_DENIED) — kuş uçuşu tahminine düş.
           final dest = destinations[i];
           final distanceKm = haversineKm(
             originLat,
@@ -94,7 +90,6 @@ class DistanceMatrixService {
       }
       return result;
     } catch (_) {
-      // Ağ hatası/timeout/parse hatası — tüm mekanlar için fallback'e düş.
       return _fallbackAll(originLat, originLng, destinations);
     }
   }

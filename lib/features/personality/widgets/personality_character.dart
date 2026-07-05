@@ -1045,4 +1045,7 @@ class _CharacterPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _CharacterPainter old) =
+  bool shouldRepaint(covariant _CharacterPainter old) =>
+      old.anim != anim || old.type != type || old.gender != gender ||
+      old.landed != landed || old.searchMode != searchMode;
+}
