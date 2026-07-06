@@ -202,6 +202,38 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
     }
   }
 
+
+  /// Firestore `venue_reviews` koleksiyonundan bu mekanlara ait
+  /// toplam beğeni sayısını çekip PlaceResult.communityLikes alanını doldurur.
+  /// Hata durumunda orijinal liste döner (beğeni verisi olmadan).
+  Future<List<PlaceResult>> _enrichWithCommunityLikes(
+    List<PlaceResult> venues,
+  ) async {
+    if (venues.isEmpty) return venues;
+    final placeIds = venues.map((v) => v.placeId).toList();
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('venue_reviews')
+          .where('placeId', whereIn: placeIds)
+          .get();
+
+      // placeId → toplam beğeni
+      final likes = <String, int>{};
+      for (final doc in snap.docs) {
+        final data = doc.data();
+        final pid = data['placeId'] as String? ?? '';
+        final likedBy = (data['likedBy'] as List?)?.length ?? 0;
+        likes[pid] = (likes[pid] ?? 0) + likedBy;
+      }
+
+      return venues
+          .map((v) => v.copyWith(communityLikes: likes[v.placeId] ?? 0))
+          .toList();
+    } catch (_) {
+      return venues; // sessizce devam — beğeni verisi olmadan göster
+    }
+  }
+
   void _recordShown(String? friendUid, List<PlaceResult> shown) {
     if (shown.isEmpty) return;
     final key = _historyKey(friendUid);
@@ -363,7 +395,9 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
     // kadar Places API çağrısına yol açıyordu. Kullanıcı talebi üzerine
     // ("tek arama yap") bu tamamen kaldırıldı: artık HER arama TEK bir
     // çapta, TEK seferde yapılıyor.
-    final searchRadius = maxVenueDistanceKm != null
+    // NOT: `var` — aşağıdaki Boğaz istisnası gerekirse bu çapı 3 km'ye
+    // genişletiyor (fallback arama da genişletilmiş çapı kullansın diye).
+    var searchRadius = maxVenueDistanceKm != null
         ? (maxVenueDistanceKm * 1000).round()
         : AppConfig.defaultSearchRadius;
 
@@ -387,35 +421,75 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
         minRating: usingMidpoint ? AppConfig.midpointMinRating : null,
         excludePlaceIds: excludeIds,
         behavioralTypeBoosts: behavioralBoosts,
+        // Fotolar burada ÇÖZÜMLENMEZ — aşağıdaki rota mesafesi filtresi
+        // bazı mekanları eleyebiliyor; gösterilmeyecek mekan için Photo API
+        // kotası harcamamak adına çözümleme, gösterilecek liste
+        // kesinleştikten sonra yapılır (bkz. resolvePhotosFor çağrıları).
+        resolvePhotos: false,
+        // Kullanıcı mesafe filtresi seçtiyse kuş uçuşu kırpması gevşetilmesin:
+        // sınır dışı adaylar zaten aşağıdaki rota filtresinde elenecek,
+        // örnekleme hakkını onlara harcamak sonuç sayısını düşürüyordu.
+        strictRadius: maxVenueDistanceKm != null,
       );
 
-      // ── Maksimum mesafe filtresi (kullanıcı talebi) ───────────────────────
-      // searchLat/searchLng zaten yukarıda hesaplanan nokta — iki kişi
-      // varsa ORTA NOKTA, tek başına modda kullanıcının kendi konumu.
-      // Bu sınırı aşan mekanlar TAMAMEN sonuçlardan çıkarılıyor (kullanıcı
-      // tercihi: alta itmek değil, doğrudan filtrelemek).
+      // ── Maksimum mesafe: KUŞ UÇUŞU ile, PlacesService içinde ─────────────
+      // Mesafe sınırı artık tamamen PlacesService'e geçilen `radius` +
+      // `strictRadius: true` ile, KUŞ UÇUŞU (Haversine) mesafeyle
+      // uygulanıyor — yani "1 km" seçildiyse örnekleme zaten sadece kuş
+      // uçuşu 1 km içindeki mekanlardan yapılıyor.
       //
-      // NOT: Kullanıcı kuş uçuşu (Haversine) mesafesinin yanlış sonuç
-      // verdiğini belirtti (örn. boğaz/köprü araya girince düz çizgi
-      // mesafe gerçek yol mesafesinden çok kısa kalıyordu) — bu yüzden
-      // filtre artık Google Distance Matrix'in GERÇEK (driving) rota
-      // mesafesini kullanıyor. Bu, ulaşım süresi chip'leri için yapılan
-      // ayrı çağrıdan (myLat/myLng kaynaklı, aşağıda) BAĞIMSIZ bir istek —
-      // o çağrı kullanıcının kendi konumundan, bu filtre ise arama
-      // noktasından (orta nokta/kendi konum) mesafe ölçüyor. API
-      // başarısız olursa otomatik olarak kuş uçuşuna düşülür (bkz.
-      // `DistanceMatrixService.fetchDistancesKm` içindeki fallback).
-      if (maxVenueDistanceKm != null) {
-        final realDistancesKm = await DistanceMatrixService.fetchDistancesKm(
-          originLat: searchLat,
-          originLng: searchLng,
-          destinations: results,
+      // NOT (2026-07-05, kullanıcı kararı): Önceden burada seçilen mekanlar
+      // Google Distance Matrix'in GERÇEK rota mesafesiyle bir kez daha sert
+      // filtreleniyordu. Rota mesafesi kuş uçuşundan her zaman uzun olduğu
+      // için bu ikinci eleme sonuç sayısını sürekli 1-2'ye düşürüyordu
+      // ("1 km seçtim, 1 mekan çıkıyor"). Kullanıcı talebi üzerine bu rota
+      // filtresi TAMAMEN kaldırıldı: kuş uçuşu 1 km içindeyse mekan
+      // gösterilir, yol 1.4 km tutsa da sorun değil. Distance Matrix artık
+      // yalnızca ulaşım süresi chip'leri için kullanılıyor (bkz.
+      // _fetchTravelEstimates) — mekan ELEMEK için değil.
+
+      // ── BOĞAZ İSTİSNASI / deniz problemi (kullanıcı talebi) ──────────────
+      // İstanbul'da iki kişinin orta noktası Boğaz'ın (ya da Haliç/Marmara')
+      // ORTASINA düşebiliyor. Kullanıcı 1 km gibi dar bir mesafe seçtiyse
+      // çapın neredeyse tamamı suda kalıyor ve tek mekan bile çıkmıyor.
+      // Koordinatın gerçekten suda olduğunu soracak ücretsiz bir servis yok;
+      // ama "orta nokta modu + dar filtre + SIFIR sonuç" bunun güvenilir bir
+      // sinyali (denizde mekan olmaz). Bu durumda çap 3 km'ye genişletilip
+      // BİR kez daha aranıyor — kıyıdaki mekanlar bulunabilsin. Havuz kalıcı
+      // cache'ten geldiği için bu genelde Google'a yeni bir çağrı değildir.
+      // Kullanıcıya da mevcut uyarı mekanizmasıyla (distanceWarning) haber
+      // veriliyor. Aynı genişletilmiş çap, gerekirse aşağıdaki fallback
+      // aramada da kullanılır (searchRadius güncellenir).
+      if (results.isEmpty &&
+          usingMidpoint &&
+          maxVenueDistanceKm != null &&
+          maxVenueDistanceKm < 3.0) {
+        // ignore: avoid_print
+        print('🌊 Boğaz istisnası: orta nokta çevresinde '
+            '${maxVenueDistanceKm}km içinde hiç mekan yok — 3 km deneniyor');
+        searchRadius = 3000;
+        results = await PlacesService.searchVenues(
+          lat: searchLat,
+          lng: searchLng,
+          userProfile: userProfile,
+          friendProfile: friendProfile,
+          selectedActivities: selectedActivities,
+          priceLevel: priceLevel,
+          radius: searchRadius,
+          minRating: AppConfig.midpointMinRating,
+          excludePlaceIds: excludeIds,
+          behavioralTypeBoosts: behavioralBoosts,
+          resolvePhotos: false,
+          strictRadius: true,
         );
-        results = results.where((p) {
-          final km = realDistancesKm[p.placeId] ??
-              _haversineKm(searchLat, searchLng, p.lat, p.lng);
-          return km <= maxVenueDistanceKm;
-        }).toList();
+        if (results.isNotEmpty) {
+          state = state.copyWith(
+            distanceWarning:
+                'Buluşma noktanız çevresinde seçtiğin mesafede mekan '
+                'bulunamadı (orta nokta denize denk gelmiş olabilir) — '
+                'arama çapı 3 km\'ye genişletildi.',
+          );
+        }
       }
 
       if (results.isEmpty) {
@@ -440,23 +514,13 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
           excludePlaceIds: {},   // geçmiş hariç tutma yok
           fallback: true,        // kişilik tiplerini sallayıp generic ara
           behavioralTypeBoosts: behavioralBoosts,
+          resolvePhotos: false,  // fotolar gösterim listesi kesinleşince
+          strictRadius: maxVenueDistanceKm != null,
         );
 
-        // Mesafe filtresini fallback sonuçlarına da uygula
-        if (maxVenueDistanceKm != null && fallbackResults.isNotEmpty) {
-          final fallbackDistancesKm =
-              await DistanceMatrixService.fetchDistancesKm(
-            originLat: searchLat,
-            originLng: searchLng,
-            destinations: fallbackResults,
-          );
-          fallbackResults = fallbackResults.where((p) {
-            final km = fallbackDistancesKm[p.placeId] ??
-                _haversineKm(searchLat, searchLng, p.lat, p.lng);
-            return km <= maxVenueDistanceKm;
-          }).toList();
-        }
-
+        // Mesafe sınırı fallback aramada da PlacesService içinde kuş uçuşu
+        // ile uygulanıyor (radius + strictRadius) — burada ekstra rota
+        // filtresi YOK (bkz. yukarıdaki 2026-07-05 notu).
         if (fallbackResults.isNotEmpty) {
           results = fallbackResults;
           // ignore: avoid_print
@@ -488,7 +552,7 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
         // sanki biraz daha uzakmış gibi geriye itiliyor. Mesafe hâlâ ana
         // belirleyici — bu sadece eşit/yakın mesafelerdeki sıralamayı
         // mantıklı hale getiren küçük bir düzeltme.
-        final sorted = List<PlaceResult>.from(results)
+        var sorted = List<PlaceResult>.from(results)
           ..sort((a, b) {
             final dA = _haversineKm(searchLat, searchLng, a.lat, a.lng) +
                 _hangoutAdjustmentKm(a);
@@ -496,6 +560,11 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
                 _hangoutAdjustmentKm(b);
             return dA.compareTo(dB);
           });
+        // Fotoğrafları SADECE gösterilecek nihai liste için çözümle
+        // (arama sırasında resolvePhotos: false ile ertelendi — mesafe
+        // filtresiyle elenen mekanlar için Photo API kotası harcanmadı).
+        sorted = await PlacesService.resolvePhotosFor(sorted);
+        sorted = await _enrichWithCommunityLikes(sorted);
         final midpoint = sorted.take(3).toList();
         final others = sorted.skip(3).toList();
 
@@ -524,17 +593,24 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
         // giderim" diye sorduğunda kendi konumundan süre görmek ister.
         _fetchTravelEstimates(myLat: myLat, myLng: myLng, venues: sorted);
       } else {
-        _recordShown(friendUid, results.take(3).toList());
+        // Fotoğraflar gösterilecek liste kesinleşince çözümlenir (aramada
+        // resolvePhotos: false ile ertelendi). PlacesService en fazla
+        // AppConfig.maxVenueResults (3) mekan döndürür; take(3) güvenlik ağı.
+        var shown =
+            await PlacesService.resolvePhotosFor(results.take(3).toList());
+        shown = await _enrichWithCommunityLikes(shown);
+
+        _recordShown(friendUid, shown);
 
         state = state.copyWith(
-          allVenues: results.take(3).toList(),
+          allVenues: shown,
           currentPage: 0,
           isLoading: false,
         );
 
         // Geçmiş kaydet (tek başına modda bildirim atlanır)
         _saveMeetingHistory(
-          allVenues: results,
+          allVenues: shown,
           friendUid: friendUid,
           selectedActivities: selectedActivities,
           searchLat: searchLat,
@@ -542,7 +618,7 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
           hasMidpoint: usingMidpoint,
         );
 
-        _fetchTravelEstimates(myLat: myLat, myLng: myLng, venues: results);
+        _fetchTravelEstimates(myLat: myLat, myLng: myLng, venues: shown);
       }
     } catch (e) {
       state = state.copyWith(

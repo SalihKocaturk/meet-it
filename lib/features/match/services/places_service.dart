@@ -19,8 +19,9 @@ import 'package:meetit/features/personality/models/personality_model.dart';
 ///   - Aynı kişi aynı aramayı 3 kez yapınca hep aynı ilk sonuçlar çıkmaz
 ///     (ama düşük kaliteli/garip yerler asla öne çıkmaz — havuz zaten
 ///     kalite + isim filtresinden geçmiş yerlerden oluşur).
-///   - Sonuç sayısı `AppConfig.maxVenueResults` (5) ile sınırlandırılır —
-///     sayfalama yok, kullanıcı talebi üzerine tek seferde en fazla 5 mekan.
+///   - Sonuç sayısı `AppConfig.maxVenueResults` (3) ile sınırlandırılır —
+///     sayfalama yok, kullanıcı talebi üzerine tek seferde en fazla 3 mekan
+///     (5 denendi, "seçim felci" yaratıyor diye 3'e düşürüldü).
 ///   - Aynı tür mekanlardan (pizza, burger, kebap vb.) birden fazlası
 ///     final listede yan yana/aynı anda çıkmaz — çeşitlilik korunur.
 class PlacesService {
@@ -31,13 +32,13 @@ class PlacesService {
   /// gösterilecek NİHAİ mekan sayısı bu sabitle sınırlanıyor.
   ///
   /// 📍 API ÇAĞRI TASARRUFU (2026-06-28): Önceden 20'ye kadar çekilip
-  /// sayfalama ile 4 sayfaya bölünüyordu ("10 bile çok fazla, 5 mekan
-  /// göster" talebi üzerine sıkıştırıldı).
+  /// sayfalama ile 4 sayfaya bölünüyordu; kademeli olarak bugünkü değere
+  /// (3 — bkz. AppConfig.maxVenueResults) sıkıştırıldı.
   static const int _maxResultCount = AppConfig.maxVenueResults;
 
   /// Google'a atılan TEK istekteki `maxResultCount` alanı — yani Google'dan
   /// istenen HAM (filtrelenmemiş) sonuç sayısı. Bu, [_maxResultCount]'tan
-  /// (nihai gösterim sayısı, 5) BİLE BİLE AYRI ve daha YÜKSEK tutuluyor.
+  /// (nihai gösterim sayısı, 3) BİLE BİLE AYRI ve daha YÜKSEK tutuluyor.
   ///
   /// 📍 NEDEN AYRI (2026-06-28): Artık tüm tip'ler (`includedTypes`) TEK bir
   /// istekte birleştiriliyor (bkz. `searchVenues()`), yani örn. kişilik
@@ -417,19 +418,29 @@ class PlacesService {
   // Fallback (geri dönüş) modu: havuz bu filtre sonrası _maxResultCount'tan
   // az mekana düşerse filtre kaldırılır ve tüm havuz döndürülür — dar bir
   // bölgede hiç sonuç çıkmaması yerine "biraz uzak ama geçerli" sonuçlar
-  // tercih edilir. Bu sayede kullanıcı "2km" seçip 1 mekan olan bir alanda
-  // bile boş ekranla karşılaşmaz.
+  // tercih edilir. Bu sayede kullanıcı bir alanda bile boş ekranla
+  // karşılaşmaz.
+  //
+  // [strict] = true → bu gevşetme YAPILMAZ. Kullanıcı açıkça bir mesafe
+  // filtresi seçtiğinde çağıran taraf (VenueSearchNotifier) sonuçları zaten
+  // GERÇEK rota mesafesiyle sert filtreliyor; burada kısıt gevşetilirse
+  // örnekleme 5-8 km'deki mekanlara harcanıyor ve rota filtresi hepsini
+  // birden eliyordu ("1 km seçtim, 1 mekan çıkıyor" şikayetinin kök
+  // sebeplerinden biri). Sınır dışı adaylara örnekleme hakkı harcamaktansa
+  // az ama geçerli adayla devam etmek doğru.
   static List<PlaceResult> _filterByDistance(
     List<PlaceResult> places, {
     required double searchLat,
     required double searchLng,
     required int maxRadiusM,
+    bool strict = false,
   }) {
     final maxKm = maxRadiusM / 1000.0;
     final filtered = places.where((p) {
       final km = GeoUtils.haversineKm(searchLat, searchLng, p.lat, p.lng);
       return km <= maxKm;
     }).toList();
+    if (strict) return filtered;
     // Havuz çok küçüldüyse kısıtı kaldır — boş ekran gösterme
     if (filtered.length < _maxResultCount && filtered.length < places.length) {
       // ignore: avoid_print
@@ -703,6 +714,27 @@ class PlacesService {
     'bar': 0.08, 'night_club': 0.08,
   };
 
+  /// Fiyat bonusu/cezası: uygulamanın hedef kitlesi büyük çoğunluğu
+  /// orta-düşük gelir grubundan oluştuğundan ucuz mekanlar öne çıkar,
+  /// çok pahalı mekanlar arka plana düşer.
+  ///   null → bilinmiyor (park, müze vb.) → nötr
+  ///   0    → ücretsiz                   → +0.08
+  ///   1    → ₺  (ucuz)                  → +0.06
+  ///   2    → ₺₺ (orta)                  → 0.0
+  ///   3    → ₺₺₺ (pahalı)               → -0.15
+  ///   4    → ₺₺₺₺ (çok pahalı)          → -0.28
+  static double _priceBonus(PlaceResult place) {
+    switch (place.priceLevel) {
+      case 0:    return 0.08;
+      case 1:    return 0.06;
+      case 3:    return -0.15;
+      case 4:    return -0.28;
+      case null:
+      case 2:
+      default:   return 0.0;
+    }
+  }
+
   static double _timeOfDayBoost(PlaceResult place) {
     final hour = DateTime.now().hour;
     final Map<String, double> table;
@@ -939,6 +971,15 @@ class PlacesService {
     /// VenueSearchNotifier tarafından inşa edilir; boş geçilirse davranışsal
     /// boost hesaplanmaz.
     Map<String, double> behavioralTypeBoosts = const {},
+    /// false → foto çözümleme ATLANIR; çağıran taraf, gösterilecek mekanlar
+    /// kesinleştikten sonra [resolvePhotosFor] ile kendisi çözümler.
+    /// (Mesafe filtresi gibi SONRADAN eleme yapan akışlarda, elenecek
+    /// mekanlar için Photo API kotası boşa harcanmasın diye eklendi.)
+    bool resolvePhotos = true,
+    /// true → kuş uçuşu mesafe kırpması havuz küçük kalsa bile GEVŞETİLMEZ.
+    /// Kullanıcı açıkça mesafe filtresi seçtiğinde kullanılır (bkz.
+    /// _filterByDistance içindeki açıklama).
+    bool strictRadius = false,
   }) async {
     final typeGroups = _resolveTypeGroups(
       userProfile: userProfile,
@@ -1024,6 +1065,7 @@ class PlacesService {
       searchLat: lat,
       searchLng: lng,
       maxRadiusM: searchRadius,
+      strict: strictRadius,
     );
 
     // ── Adım 0: Fiyat filtresi (kümülatif) ────────────────────────────────
@@ -1148,7 +1190,8 @@ class PlacesService {
           _landmarkBonus(place, userProfile, friendProfile) +
           _gymBrandBonus(place) +
           _behavioralBoost(place, behavioralTypeBoosts) +
-          _timeOfDayBoost(place);
+          _timeOfDayBoost(place) +
+          _priceBonus(place);
       return (place, total);
     }).toList();
 
@@ -1178,7 +1221,30 @@ class PlacesService {
     // komple kayboluyordu. Artık HER mekan kendi try-catch'i içinde işleniyor:
     // bir mekanın fotoları çözümlenemezse o mekan SADECE fotosuz (boş
     // photoReferences) olarak listede kalır, diğer mekanlar etkilenmez.
-    final cachedList = await Future.wait(finalList.map((place) async {
+    if (!resolvePhotos) {
+      // Foto çözümleme çağıran tarafa bırakıldı — mesafe filtresi gibi
+      // sonradan eleme yapan akışlar, SADECE gerçekten gösterilecek mekanlar
+      // için resolvePhotosFor() çağırıp Photo API kotasını korur.
+      // ignore: avoid_print
+      print('🔍 PlacesService final (foto ertelendi): ${finalList.length} mekan');
+      return finalList;
+    }
+
+    final cachedList = await resolvePhotosFor(finalList);
+
+    // ignore: avoid_print
+    print('🔍 PlacesService final: ${cachedList.length} mekan');
+    return cachedList;
+  }
+
+  /// Mekan listesinin kart önizleme + galeri (≤ [_maxGalleryPhotos])
+  /// fotoğraflarını paylaşımlı global önbellek (VenuePhotoCacheService)
+  /// üzerinden çözümler. `searchVenues(resolvePhotos: false)` ile ertelenen
+  /// çözümlemeyi, gösterilecek mekanlar kesinleşince çağıran taraf yapar.
+  static Future<List<PlaceResult>> resolvePhotosFor(
+    List<PlaceResult> places,
+  ) {
+    return Future.wait(places.map((place) async {
       final namesToCache =
           place.photoReferences.isNotEmpty
               ? place.photoReferences.take(_maxGalleryPhotos).toList()
@@ -1216,10 +1282,6 @@ class PlacesService {
         return place.copyWith(photoReference: '', photoReferences: []);
       }
     }));
-
-    // ignore: avoid_print
-    print('🔍 PlacesService final: ${cachedList.length} mekan');
-    return cachedList;
   }
 
   static final math.Random _rng = math.Random();

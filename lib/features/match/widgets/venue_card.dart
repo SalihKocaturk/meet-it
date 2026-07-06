@@ -164,6 +164,50 @@ class VenueCard extends ConsumerWidget {
                   ],
                 ),
 
+
+                // ── MeetIt community badge ───────────────────────────────────
+                if (place.communityLikes >= 3)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F5E9),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: context.colors.primary.withOpacity(0.35),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.favorite_rounded,
+                                size: 11,
+                                color: context.colors.primary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'MeetIt'te \${place.communityLikes} beğeni',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: context.colors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                 SizedBox(height: 10),
 
                 // Alt satır: tip etiketi + puan + durum + harita butonu

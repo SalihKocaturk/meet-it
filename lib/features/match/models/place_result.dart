@@ -30,6 +30,9 @@ class PlaceResult {
   final double lng;
   final bool isOpenNow;
   final int? priceLevel; // 0=ücretsiz, 1=₺, 2=₺₺, 3=₺₺₺, 4=₺₺₺₺
+  /// MeetIt kullanıcılarının bu mekana yaptığı toplam beğeni sayısı.
+  /// PlacesService'den değil, VenueSearchNotifier'dan Firestore'dan doldurulur.
+  final int communityLikes;
 
   const PlaceResult({
     required this.placeId,
@@ -44,6 +47,7 @@ class PlaceResult {
     required this.lng,
     this.isOpenNow = false,
     this.priceLevel,
+    this.communityLikes = 0,
   });
 
   /// Çoğunlukla `photoReference`/`photoReferences` alanlarını ham Google
@@ -63,6 +67,7 @@ class PlaceResult {
     double? lng,
     bool? isOpenNow,
     int? priceLevel,
+    int? communityLikes,
   }) {
     return PlaceResult(
       placeId: placeId ?? this.placeId,
@@ -77,6 +82,7 @@ class PlaceResult {
       lng: lng ?? this.lng,
       isOpenNow: isOpenNow ?? this.isOpenNow,
       priceLevel: priceLevel ?? this.priceLevel,
+      communityLikes: communityLikes ?? this.communityLikes,
     );
   }
 
