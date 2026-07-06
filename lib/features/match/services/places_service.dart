@@ -725,15 +725,27 @@ class PlacesService {
   ///   4    → ₺₺₺₺ (çok pahalı)          → -0.28
   static double _priceBonus(PlaceResult place) {
     switch (place.priceLevel) {
-      case 0:    return 0.08;
-      case 1:    return 0.06;
-      case 3:    return -0.15;
-      case 4:    return -0.28;
-      case null:
-      case 2:
+      case 1:    return 0.06;   // ₺ — ucuz, hedef kitle için ideal
+      case 3:    return -0.15;  // ₺₺₺ — pahalı
+      case 4:    return -0.28;  // ₺₺₺₺ — çok pahalı
+      case 0:    // ücretsiz (genellikle park) → nötr, park cezası ayrıca uygulanır
+      case null: // bilinmiyor → nötr
+      case 2:    // ₺₺ — orta → nötr
       default:   return 0.0;
     }
   }
+
+  /// Park cezası: az bilinen/az yorumlanan parklar geriye atılır.
+  /// Sadece çok fazla yorumu olan landmark parklar (≥500 yorum) nötr kalır;
+  /// Yıldız Parkı, Emirgan Korusu, Gülhane Parkı gibi yerler bu gruba girer.
+  static double _parkDeprioritization(PlaceResult place) {
+    if (!place.types.contains('park')) return 0.0;
+    final reviews = place.userRatingsTotal ?? 0;
+    if (reviews >= 500) return 0.0;   // landmark park → nötr
+    if (reviews >= 150) return -0.18; // orta büyüklükte park
+    return -0.32;                      // küçük/az bilinen park
+  }
+
 
   static double _timeOfDayBoost(PlaceResult place) {
     final hour = DateTime.now().hour;
@@ -1191,7 +1203,8 @@ class PlacesService {
           _gymBrandBonus(place) +
           _behavioralBoost(place, behavioralTypeBoosts) +
           _timeOfDayBoost(place) +
-          _priceBonus(place);
+          _priceBonus(place) +
+          _parkDeprioritization(place);
       return (place, total);
     }).toList();
 
