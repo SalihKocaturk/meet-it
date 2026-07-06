@@ -1,4 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -16,30 +17,33 @@ import 'firebase_options.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Google Maps renderer'ı açıkça başlat — belirtilmezse SurfaceProducer
-  // backend'i "skip updating surface" döngüsüne giriyor ve harita beyaz kalıyor.
+  // Google Maps renderer'i acikca baslat
   if (!kIsWeb) {
     final mapsImpl = GoogleMapsFlutterPlatform.instance;
     if (mapsImpl is GoogleMapsFlutterAndroid) {
       try {
         await mapsImpl.initializeWithRenderer(AndroidMapRenderer.latest);
-      } catch (_) {
-        // Hot restart sırasında renderer zaten başlatılmışsa
-        // PlatformException("Renderer already initialized") geliyor — sessizce geç.
-      }
+      } catch (_) {}
     }
   }
 
   await EasyLocalization.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Push bildirim servisini başlat (FCM token + izin + ön plan handler)
+  // App Check: debug modda debug provider, release'de Play Integrity
+  await FirebaseAppCheck.instance.activate(
+    androidProvider: kDebugMode
+        ? AndroidProvider.debug
+        : AndroidProvider.playIntegrity,
+  );
+
+  // Push bildirim servisini baslat
   await NotificationService.initialize();
 
-  // 3-katmanlı ağ izleyiciyi başlat (connectivity_plus + HEAD check + Firestore)
+  // 3-katmanli ag izleyiciyi baslat
   NetworkService.instance.init();
 
-  // Firestore boşsa mock kullanıcılar ekle
+  // Firestore bossa mock kullanicilari ekle
   await FirestoreSeedService.seedIfEmpty();
 
   runApp(
