@@ -11,7 +11,14 @@ import 'package:meetit/features/personality/providers/personality_provider.dart'
 import 'package:meetit/features/personality/widgets/personality_character.dart';
 
 class QuizPage extends ConsumerStatefulWidget {
-  const QuizPage({super.key});
+  /// [fromGuard]: true ise quiz, `ensurePersonalityReady` tarafından
+  /// Navigator.push ile açılmıştır. Bu durumda tamamlanınca
+  /// `context.go` yerine `Navigator.pop(true)` yapılmalı — aksi takdirde
+  /// GoRouter location değişir ama üstteki Material route'lar stack'te
+  /// kalır ve ekran donuk görünür.
+  final bool fromGuard;
+
+  const QuizPage({super.key, this.fromGuard = false});
 
   @override
   ConsumerState<QuizPage> createState() => _QuizPageState();
@@ -76,7 +83,7 @@ class _QuizPageState extends ConsumerState<QuizPage>
     final quizState = ref.watch(quizProvider);
 
     if (quizState.isCompleted && quizState.result != null) {
-      return _ResultPage(result: quizState.result!);
+      return _ResultPage(result: quizState.result!, fromGuard: widget.fromGuard);
     }
 
     final question = quizState.currentQuestion;
@@ -323,8 +330,9 @@ class _OptionTile extends StatelessWidget {
 
 class _ResultPage extends ConsumerWidget {
   final PersonalityProfile result;
+  final bool fromGuard;
 
-  const _ResultPage({required this.result});
+  const _ResultPage({required this.result, this.fromGuard = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -488,12 +496,32 @@ class _ResultPage extends ConsumerWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () async {
+                    // Navigator/router referanslarını async gap'ten ÖNCE yakala.
+                    // `setPersonalityProfile` beklendikten sonra authProvider
+                    // state'i değişir → GoRouter rebuilder → context.mounted
+                    // false döner. Önceden yakalanan referanslar bu durumdan
+                    // etkilenmez.
+                    final navigator = Navigator.of(context);
+                    final router = GoRouter.of(context);
+
                     // Kişilik profilini auth state'e kaydet (SharedPreferences'a da yazar)
                     await ref
                         .read(authProvider.notifier)
                         .setPersonalityProfile(result);
-                    if (!context.mounted) return;
-                    context.go(AppRoutes.main);
+
+                    if (fromGuard) {
+                      // Quiz, ensurePersonalityReady tarafından Navigator.push
+                      // ile açıldı. context.go YAPMA — GoRouter location değişir
+                      // ama Material route stack'te QuizIntroPage + QuizPage
+                      // kalır ve ekran donuk görünür. Bunun yerine pop(true) ile
+                      // QuizIntroPage'e "tamamlandı" sinyali ver; o da pop(true)
+                      // ile guard'a döner ve orijinal işlem (mekan arama) devam eder.
+                      if (navigator.mounted) navigator.pop(true);
+                    } else {
+                      // Quiz, GoRoute üzerinden doğrudan açıldı (Settings'teki
+                      // "Testi Tekrar Al" gibi). Normal GoRouter navigasyonu yap.
+                      router.go(AppRoutes.main);
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: context.colors.primary,

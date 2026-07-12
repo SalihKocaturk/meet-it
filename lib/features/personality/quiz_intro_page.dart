@@ -19,7 +19,10 @@ class QuizIntroPage extends StatelessWidget {
 
   Future<void> _onStart(BuildContext context) async {
     final completed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const QuizPage()),
+      // fromGuard: true → QuizPage tamamlanınca context.go değil
+      // Navigator.pop(true) yapacak; bu sayede GoRouter/Navigator
+      // stack karışıklığı oluşmaz.
+      MaterialPageRoute(builder: (_) => const QuizPage(fromGuard: true)),
     );
     if (!context.mounted) return;
     Navigator.of(context).pop(completed ?? false);

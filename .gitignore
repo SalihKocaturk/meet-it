@@ -42,7 +42,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-
+/android/meetit-release.jks
+/android/key.properties
 # Firebase / Google Services (contains API keys — add manually)
 google-services.json
 GoogleService-Info.plist
