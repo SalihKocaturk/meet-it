@@ -5,28 +5,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/router/app_routes.dart';
+import 'package:meetit/core/utils/validators.dart';
 import 'package:meetit/core/widgets/app_alert.dart';
 import 'package:meetit/core/widgets/app_text_field.dart';
-import 'package:meetit/core/utils/validators.dart';
 import 'package:meetit/core/widgets/langauge_switcher.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/auth/providers/sign_up_form_provider.dart';
-import 'package:meetit/features/match/match_page.dart' show MapLocationPickerPage;
-import 'package:meetit/features/match/providers/match_provider.dart';
+import 'package:meetit/features/auth/widgets/gender_dropdown.dart';
+import 'package:meetit/features/match/providers/match_provider.dart' show UserLocation;
+import 'package:meetit/features/auth/widgets/sign_up_email_field.dart';
+import 'package:meetit/features/auth/widgets/sign_up_location_field.dart';
 
 class SignUpPage extends ConsumerWidget {
   const SignUpPage({super.key});
-
-  static const _genderCodes = ['male', 'female', 'other'];
-
-  String _genderLabel(String code) {
-    switch (code) {
-      case 'male':   return 'auth.gender_male'.tr();
-      case 'female': return 'auth.gender_female'.tr();
-      case 'other':  return 'auth.gender_other'.tr();
-      default:       return code;
-    }
-  }
 
   Future<void> _onSignUp(BuildContext context, WidgetRef ref) async {
     final name = ref.read(signUpNameControllerProvider).text.trim();
@@ -53,10 +44,6 @@ class SignUpPage extends ConsumerWidget {
       return;
     }
 
-    // Format kontrolü: boş değil ama "asd@asd" gibi geçersiz bir adres
-    // girilmişse, Firebase'e hiç gitmeden burada durdur — aksi halde hesap
-    // oluşturma/doğrulama maili gönderme adımı anlaşılmaz bir hatayla
-    // başarısız oluyordu.
     if (!Validators.isValidEmail(email)) {
       showAppAlert(
         context: context,
@@ -82,9 +69,7 @@ class SignUpPage extends ConsumerWidget {
       return;
     }
 
-    await ref
-        .read(authProvider.notifier)
-        .signUp(
+    await ref.read(authProvider.notifier).signUp(
           email: email,
           password: password,
           name: name,
@@ -110,12 +95,6 @@ class SignUpPage extends ConsumerWidget {
       return;
     }
 
-    // NOT: Kayıt sonrası artık ZORUNLU olarak email doğrulama sayfasına
-    // yönlendirmiyoruz (kullanıcı şikayeti: uygulamayı hiç görmeden
-    // doğrulamaya hapsoluyordu). Direkt ana uygulamaya gidiyoruz; email
-    // doğrulaması ve kişilik testi artık sadece kullanıcı "önemli" bir
-    // işlem denediğinde (arkadaş ekleme, mekan arama) devreye giriyor —
-    // bkz. `important_action_guard.dart`.
     showAppAlert(
       context: context,
       type: AppAlertType.success,
@@ -134,11 +113,8 @@ class SignUpPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isLoading = ref.watch(authLoadingProvider);
     final selectedGender = ref.watch(signUpGenderProvider);
-
     final nameCtrl = ref.watch(signUpNameControllerProvider);
-    final emailCtrl = ref.watch(signUpEmailControllerProvider);
     final passwordCtrl = ref.watch(signUpPasswordControllerProvider);
-    final locationCtrl = ref.watch(signUpLocationControllerProvider);
     final ageCtrl = ref.watch(signUpAgeControllerProvider);
 
     return Scaffold(
@@ -177,7 +153,7 @@ class SignUpPage extends ConsumerWidget {
                   color: context.colors.textPrimary,
                 ),
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text(
                 'auth.fill_form_desc'.tr(),
                 style: TextStyle(
@@ -196,7 +172,7 @@ class SignUpPage extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
 
-              _SignUpEmailField(controller: emailCtrl),
+              const SignUpEmailField(),
               const SizedBox(height: 16),
 
               AppTextField(
@@ -208,7 +184,7 @@ class SignUpPage extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
 
-              _SignUpLocationField(locationCtrl: locationCtrl),
+              const SignUpLocationField(),
               const SizedBox(height: 16),
 
               AppTextField(
@@ -219,72 +195,14 @@ class SignUpPage extends ConsumerWidget {
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.next,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-              // Cinsiyet dropdown
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'auth.gender'.tr(),
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: context.colors.textSecondary,
-                    ),
-                  ),
-                  SizedBox(height: 6),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedGender,
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: context.colors.card,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(
-                          color: context.colors.border,
-                          width: 1.2,
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(
-                          color: context.colors.border,
-                          width: 1.2,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(
-                          color: context.colors.primary,
-                          width: 1.6,
-                        ),
-                      ),
-                    ),
-                    hint: Text(
-                      'auth.gender_hint'.tr(),
-                      style: TextStyle(
-                        color: context.colors.hint,
-                        fontSize: 14,
-                      ),
-                    ),
-                    items: _genderCodes
-                        .map((code) => DropdownMenuItem(
-                              value: code,
-                              child: Text(_genderLabel(code)),
-                            ))
-                        .toList(),
-                    onChanged: (v) =>
-                        ref.read(signUpGenderProvider.notifier).state = v,
-                  ),
-                ],
+              GenderDropdown(
+                value: selectedGender,
+                onChanged: (v) =>
+                    ref.read(signUpGenderProvider.notifier).state = v,
               ),
-
-              SizedBox(height: 32),
+              const SizedBox(height: 32),
 
               SizedBox(
                 width: double.infinity,
@@ -317,8 +235,7 @@ class SignUpPage extends ConsumerWidget {
                         ),
                 ),
               ),
-
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -339,12 +256,8 @@ class SignUpPage extends ConsumerWidget {
                   ),
                 ],
               ),
-
               const SizedBox(height: 16),
-
-              // Dil seçici kart
               const Center(child: LanguageSwitcherCard()),
-
               const SizedBox(height: 16),
             ],
           ),
@@ -353,132 +266,4 @@ class SignUpPage extends ConsumerWidget {
     );
   }
 }
-
-// ── Canlı Email Format Doğrulaması ──────────────────────────────────────────
-//
-// Önceden email format hatası sadece "Kayıt Ol" tuşuna basılınca
-// gösteriliyordu (kullanıcı şikayeti: çok geç fark ediliyor). Artık alan
-// odaktan çıktığında (doldurduktan hemen sonra) bir kez kontrol edilir;
-// bu ilk kontrolden sonra her tuş vuruşunda hata mesajı canlı güncellenir
-// (yanlış email düzeltilince hata anında kaybolur). İlk kez dokunulmadan
-// (alana hiç girip çıkmadan) hata göstermiyoruz — kullanıcı daha yazmaya
-// başlamadan kırmızı uyarı görmesin diye.
-class _SignUpEmailField extends StatefulWidget {
-  const _SignUpEmailField({required this.controller});
-
-  final TextEditingController controller;
-
-  @override
-  State<_SignUpEmailField> createState() => _SignUpEmailFieldState();
-}
-
-class _SignUpEmailFieldState extends State<_SignUpEmailField> {
-  final FocusNode _focusNode = FocusNode();
-  bool _touched = false;
-  String? _errorText;
-
-  @override
-  void initState() {
-    super.initState();
-    _focusNode.addListener(_onFocusChange);
-  }
-
-  void _onFocusChange() {
-    if (!_focusNode.hasFocus) {
-      setState(() {
-        _touched = true;
-        _validate();
-      });
-    }
-  }
-
-  void _validate() {
-    final text = widget.controller.text.trim();
-    if (text.isEmpty || Validators.isValidEmail(text)) {
-      _errorText = null;
-    } else {
-      _errorText = 'validation.invalid_email_message'.tr();
-    }
-  }
-
-  void _onChanged(String _) {
-    if (!_touched) return;
-    setState(_validate);
-  }
-
-  @override
-  void dispose() {
-    _focusNode.removeListener(_onFocusChange);
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AppTextField(
-      controller: widget.controller,
-      focusNode: _focusNode,
-      label: 'auth.email'.tr(),
-      hint: 'auth.email_hint'.tr(),
-      prefixIcon: Iconsax.message,
-      keyboardType: TextInputType.emailAddress,
-      textInputAction: TextInputAction.next,
-      errorText: _errorText,
-      onChanged: _onChanged,
-    );
-  }
-}
-
-// ── Kayıt Sırasında Gerçek Konum Seçimi ─────────────────────────────────────
-//
-// Düz metin alanı yerine, uygulamanın diğer yerlerinde (Match, Settings)
-// kullanılan harita tabanlı konum seçiciyi (MapLocationPickerPage) burada
-// da kullanıyoruz. Henüz Firebase hesabı oluşturulmadığı için seçilen
-// lat/lng `signUpPickedLocationProvider`'da tutulur; hesap oluşturulduktan
-// SONRA AuthNotifier.signUp() bunu UserModel'e yazar (bkz. _onSignUp).
-class _SignUpLocationField extends ConsumerWidget {
-  final TextEditingController locationCtrl;
-
-  const _SignUpLocationField({required this.locationCtrl});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final picked = ref.watch(signUpPickedLocationProvider);
-    final hasCoords = picked?.hasCoords ?? false;
-
-    Future<void> pickLocation() async {
-      final result = await Navigator.of(context).push<UserLocation>(
-        MaterialPageRoute(builder: (_) => const MapLocationPickerPage()),
-      );
-      if (result == null) return;
-      ref.read(signUpPickedLocationProvider.notifier).state = result;
-      // Doğrulama mantığı hâlâ text controller'a bakıyor — senkron tutuyoruz.
-      locationCtrl.text = result.text;
-    }
-
-    // Diğer alanlarla (isim, e-posta, şifre) aynı düz text field görünümü —
-    // ama dokunulduğunda klavye yerine harita seçiciyi (MapLocationPickerPage)
-    // açar ve seçilen konumu alana yazar. AbsorbPointer, alanın kendisinin
-    // odak/klavye almasını engelleyip dokunuşu dıştaki GestureDetector'a
-    // bırakır.
-    return GestureDetector(
-      onTap: pickLocation,
-      child: AbsorbPointer(
-        child: AppTextField(
-          controller: locationCtrl,
-          label: 'auth.city_location'.tr(),
-          hint: 'auth.location_hint'.tr(),
-          prefixIcon: hasCoords
-              ? Iconsax.location
-              : Iconsax.location,
-          suffixIcon: Icon(
-            Iconsax.arrow_right_3,
-            size: 18,
-            color: context.colors.hint,
-          ),
-          readOnly: true,
-        ),
-      ),
-    );
-  }
-}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         

@@ -47,3 +47,13 @@ final signUpGenderProvider = StateProvider.autoDispose<String?>((ref) => null);
 // olarak yazılır (bkz. sign_up_page.dart _onSignUp).
 final signUpPickedLocationProvider =
     StateProvider.autoDispose<UserLocation?>((ref) => null);
+
+// ── Email canlı doğrulama state'leri ─────────────────────────────────────────
+// SignUpEmailField (ConsumerWidget) tarafından kullanılır.
+// `touched`: alan odaktan ilk kez çıktığında true olur — daha önce hata
+// gösterme. `emailError`: geçersizse hata metni, geçerliyse/boşsa null.
+final signUpEmailTouchedProvider =
+    StateProvider.autoDispose<bool>((ref) => false);
+
+final signUpEmailErrorProvider =
+    StateProvider.autoDispose<String?>((ref) => null);
