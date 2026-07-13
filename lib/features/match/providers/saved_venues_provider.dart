@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/services/venue_photo_cache_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -229,18 +231,9 @@ class NavigatedVenuesNotifier extends Notifier<List<PlaceResult>> {
         'addedAt': FieldValue.serverTimestamp(),
       });
     } catch (_) {}
-  }
 
-  Future<void> _persistLocal(List<PlaceResult> list) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(
-      _kKey,
-      list.map((p) => jsonEncode(p.toStorageMap())).toList(),
-    );
-  }
-}
-
-final navigatedVenuesProvider =
-    NotifierProvider<NavigatedVenuesNotifier, List<PlaceResult>>(
-  NavigatedVenuesNotifier.new,
-);
+    // ── Kişilik profilini tarif alınan mekana göre evrilt ────────────────────
+    //
+    // Tarif al = 1x etki (learningRate: 0.03).
+    // Yorum yaz = 2x etki (learningRate: 0.06, bkz. review_notifier.dart).
+    // Her ikisi de mekan�

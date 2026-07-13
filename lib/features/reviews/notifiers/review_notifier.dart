@@ -182,7 +182,6 @@ class ReviewNotifier extends Notifier<ReviewState> {
       unawaited(
         PlacesService.fetchPhotoUrls(venue.placeId).catchError((e) {
           // ignore: avoid_print
-          print('[ReviewNotifier] proaktif foto önbellekleme hatası: $e');
           return <String>[];
         }),
       );
@@ -285,10 +284,32 @@ final reviewProvider = NotifierProvider<ReviewNotifier, ReviewState>(
   ReviewNotifier.new,
 );
 
-// ── Mekana göre yorumlar ──────────────────────────────────────────────────────
+// ── Mekana göre yorumlar (tek seferlik, geriye dönük uyumluluk) ──────────────
 final venueReviewsProvider =
     FutureProvider.family<List<VenueReviewModel>, String>((ref, placeId) async {
   return ref.read(reviewProvider.notifier).loadReviewsForVenue(placeId);
+});
+
+// ── Mekana göre yorumlar — GERÇEK ZAMANLI STREAM ─────────────────────────────
+//
+// `.snapshots()` ile Firestore'daki her değişikliği (beğeni ekleme/kaldırma,
+// yorum silme, yeni yorum) tüm cihazlara anında yansıtır.
+// `venueReviewsProvider` (FutureProvider) yerine bu kullanılmalı — özellikle
+// beğeni sayısının canlı güncellenmesi için gerekli.
+// Composite index sorunu burada da aynı: sadece `where` + client-side sort.
+final venueReviewsStreamProvider =
+    StreamProvider.family<List<VenueReviewModel>, String>((ref, placeId) {
+  return FirebaseFirestore.instance
+      .collection('venue_reviews')
+      .where('placeId', isEqualTo: placeId)
+      .snapshots()
+      .map((snap) {
+    final reviews = snap.docs
+        .map((d) => VenueReviewModel.fromMap(d.id, d.data()))
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return reviews;
+  });
 });
 
 // ── Kullanıcının kendi yorumları ──────────────────────────────────────────────
@@ -321,33 +342,4 @@ final myReviewsProvider =
 // sebebiydi. Çözüm: index gerektirmeyen basit bir sorgu + client-side sort.
 final topReviewsProvider = FutureProvider<List<VenueReviewModel>>((ref) async {
   try {
-    final snap = await FirebaseFirestore.instance
-        .collection('venue_reviews')
-        .limit(50)
-        .get();
-    var reviews = snap.docs
-        .map((d) => VenueReviewModel.fromMap(d.id, d.data()))
-        .toList();
-
-    final me = ref.watch(currentUserProvider);
-    final myLat = me?.lat;
-    final myLng = me?.lng;
-    if (myLat != null && myLng != null) {
-      reviews = reviews.where((r) {
-        if (r.lat == null || r.lng == null) return false;
-        final distanceKm =
-            GeoUtils.haversineKm(myLat, myLng, r.lat!, r.lng!);
-        return distanceKm <= AppConfig.nearbyLikedVenuesRadiusKm;
-      }).toList();
-    }
-
-    reviews.sort((a, b) {
-      final ratingCmp = b.rating.compareTo(a.rating);
-      if (ratingCmp != 0) return ratingCmp;
-      return b.createdAt.compareTo(a.createdAt);
-    });
-    return reviews.take(15).toList();
-  } catch (e) {
-    return [];
-  }
-});
+    fi

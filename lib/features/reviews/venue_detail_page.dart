@@ -87,7 +87,8 @@ class VenueDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final reviewsAsync = ref.watch(venueReviewsProvider(placeId));
+    // Stream provider: beğeni/silme/yeni yorum tüm cihazlara anında yansır.
+    final reviewsAsync = ref.watch(venueReviewsStreamProvider(placeId));
     final navigatedVenues = ref.watch(navigatedVenuesProvider);
     final hasVisited = navigatedVenues.any((v) => v.placeId == placeId);
     // Spam'i önlemek için bir kullanıcı bir mekana sadece BİR yorum
@@ -705,8 +706,8 @@ class _ReviewTileState extends ConsumerState<_ReviewTile>
   }
 
   Future<void> _toggleLike(WidgetRef ref, String uid) async {
+    // Stream provider otomatik güncellediği için invalidate'e gerek yok.
     await ref.read(reviewProvider.notifier).toggleLike(review.id, uid);
-    ref.invalidate(venueReviewsProvider(review.placeId));
   }
 
   // Çift dokunma: Instagram'da olduğu gibi SADECE beğenir, asla beğeniyi
@@ -731,7 +732,7 @@ class _ReviewTileState extends ConsumerState<_ReviewTile>
       onConfirmBtnTap: () async {
         Navigator.pop(context);
         await ref.read(reviewProvider.notifier).deleteReview(review.id);
-        ref.invalidate(venueReviewsProvider(review.placeId));
+        // venueReviewsStreamProvider stream olduğu için invalidate gerekmez.
         ref.invalidate(myReviewsProvider(uid));
         ref.invalidate(topReviewsProvider);
       },
@@ -977,8 +978,8 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
           venuePhotoUrlOverride: widget.overridePhotoUrl,
         );
 
-    // İlgili providerları geçersiz kıl, yeni yorum (eklendiyse) hemen görünsün.
-    ref.invalidate(venueReviewsProvider(widget.venue.placeId));
+    // venueReviewsStreamProvider stream olduğu için invalidate gerekmez;
+    // yeni yorum Firestore'a yazıldı mı yazılmadı mı stream kendisi yakalıyor.
     ref.invalidate(myReviewsProvider(user.uid));
     ref.invalidate(topReviewsProvider);
 
@@ -1217,14 +1218,4 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
                             color: Colors.white,
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
+                  
