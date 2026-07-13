@@ -338,28 +338,15 @@ class PlaceResult {
     return '₺' * priceLevel!;
   }
 
-  /// Tip etiketini Türkçeye çevir
-  String get primaryTypeLabel {
-    const typeMap = {
-      'restaurant': 'Restoran',
-      'cafe': 'Kafe',
-      'bar': 'Bar',
-      'museum': 'Müze',
-      'art_gallery': 'Galeri',
-      'park': 'Park',
-      'gym': 'Spor Salonu',
-      'movie_theater': 'Sinema',
-      'bowling_alley': 'Bowling',
-      'night_club': 'Gece Kulübü',
-      'library': 'Kütüphane',
-      'bakery': 'Pastane',
-      'amusement_park': 'Eğlence Parkı',
-      'shopping_mall': 'AVM',
-      'spa': 'Spa',
-    };
-    for (final type in types) {
-      if (typeMap.containsKey(type)) return typeMap[type]!;
-    }
-    return 'Mekan';
-  }
-}
+  /// Tanınan ilk Google Places tipini döndürür (ham string).
+  ///
+  /// `types` listesi Google tarafından öncelik sırasına göre değil, bazen
+  /// 'food', 'point_of_interest', 'establishment' gibi jenerik tiplerle
+  /// başlayacak şekilde gelebilir — bu getter bilinen tipler arasından ilkini
+  /// seçer. [primaryTypeLabel] Türkçe gösterim için bu değeri kullanır.
+  String? get primaryType {
+    const knownTypes = {
+      'restaurant', 'cafe', 'bar', 'museum', 'art_gallery', 'park',
+      'gym', 'movie_theater', 'bowling_alley', 'night_club', 'library',
+      'bakery', 'amusement_park', 'shopping_mall', 'spa',
+      'tourist_att

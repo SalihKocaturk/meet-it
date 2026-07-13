@@ -158,7 +158,7 @@ class ReviewNotifier extends Notifier<ReviewState> {
             venuePhotoUrlOverride == null ? venue.photoReference : null,
         lat: venue.lat,
         lng: venue.lng,
-        venueType: venue.types.isNotEmpty ? venue.types.first : null,
+        venueType: venue.primaryType,
         rating: rating,
         comment: comment,
         photoUrl: photoUrl,
@@ -342,4 +342,4 @@ final myReviewsProvider =
 // sebebiydi. Çözüm: index gerektirmeyen basit bir sorgu + client-side sort.
 final topReviewsProvider = FutureProvider<List<VenueReviewModel>>((ref) async {
   try {
-    fi
+    final snap = await FirebaseFiresto
