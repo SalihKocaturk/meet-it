@@ -54,11 +54,16 @@ class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
     });
   }
 
-  List<String> _genders() => [
-        'auth.gender_male'.tr(),
-        'auth.gender_female'.tr(),
-        'auth.gender_other'.tr(),
-      ];
+  static const _genderCodes = ['male', 'female', 'other'];
+
+  String _genderLabel(String code) {
+    switch (code) {
+      case 'male':   return 'auth.gender_male'.tr();
+      case 'female': return 'auth.gender_female'.tr();
+      case 'other':  return 'auth.gender_other'.tr();
+      default:       return code;
+    }
+  }
 
   /// Google'dan/Firestore'dan gelen mevcut (kısmi) verilerle formu
   /// doldurur — kullanıcı zaten bildiğimiz hiçbir şeyi tekrar yazmasın.
@@ -301,8 +306,11 @@ class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
                         fontSize: 14,
                       ),
                     ),
-                    items: _genders()
-                        .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                    items: _genderCodes
+                        .map((code) => DropdownMenuItem(
+                              value: code,
+                              child: Text(_genderLabel(code)),
+                            ))
                         .toList(),
                     onChanged: (v) => ref
                         .read(completeProfileGenderProvider.notifier)

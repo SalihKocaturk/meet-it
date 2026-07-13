@@ -3,14 +3,22 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/services/ad_service.dart';
+import 'package:meetit/core/widgets/ad_banner_widget.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/match/providers/venue_search_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/personality/widgets/personality_character.dart';
+
+// Debug'da reklam yerleşimini önizlemek için bu sabiti geçici olarak
+// `true` yap (commit'leme, sadece local test amaçlı).
+// ignore: constant_identifier_names
+const _kShowAdInDebug = false;
 
 // ── Sayfa ─────────────────────────────────────────────────────────────────────
 
@@ -67,15 +75,18 @@ class _VenueSearchLoadingPageState
   late final AnimationController _shimmerCtrl;  // progress bar shimmer
   late final AnimationController _pulseCtrl;    // merkez pin nabzı
   late final AnimationController _walkCtrl;     // karakterlerin ekran boyunca yürüyüşü
+  late final AnimationController _pickupCtrl;   // büyüteci yerden alma sekansı
 
   late final Animation<double> _slideAnim;
 
   // ── State ─────────────────────────────────────────────────────────────────
   bool _searchStarted  = false;
   bool _popping        = false;
+  bool _navigated      = false; // çifte pop koruması (Atla + oto-geçiş yarışı)
   bool _searchDone     = false;
   bool _inSearchMode   = false; // false=intro, true=büyüteçli yürüyüş
   bool _showSkipButton = false; // %100 olunca gösterilir
+  bool _showAd         = false; // bu aramada reklam gösterilecek mi?
   int  _phaseIdx       = 0;
   late final DateTime _startTime;
   Timer? _phaseTimer;
@@ -124,14 +135,18 @@ class _VenueSearchLoadingPageState
       duration: const Duration(milliseconds: 850),
     )..repeat(reverse: true);
 
-    // Yürüyüş: 3.5 sn periyot, ileri-geri
+    // Yürüyüş: 12 sn periyot, ileri-geri — waypoint'lerde durup inceleme yapar
     _walkCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 10000),
+      duration: const Duration(milliseconds: 12000),
     );
 
-    // _walkCtrl animasyonu _WalkingStage içindeki kendi AnimatedBuilder'ı ile
-    // yönetilir — burada merge etmeye gerek yok.
+    // Büyüteci alma sekansı: elindeki aksesuarı bırak → çömel → büyüteci
+    // yerden kavra → doğrul. Bitince yürüyüş başlar.
+    _pickupCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
 
     // Faz metni döngüsü
     _phaseTimer = Timer.periodic(const Duration(milliseconds: 1700), (_) {
@@ -139,12 +154,24 @@ class _VenueSearchLoadingPageState
       setState(() => _phaseIdx = (_phaseIdx + 1) % _phases.length);
     });
 
-    // 2.5 sn sonra intro → yürüyüş moduna geç + walk controller'ı başlat
+    // 2.5 sn sonra intro → arama moduna geç: önce büyüteci alma sekansı,
+    // o bitince yürüyüş controller'ı başlar.
     _introTimer = Timer(const Duration(milliseconds: 2500), () {
       if (!mounted) return;
       setState(() => _inSearchMode = true);
-      _walkCtrl.repeat(reverse: true);
+      _pickupCtrl.forward().whenComplete(() {
+        if (mounted) _walkCtrl.repeat(reverse: true);
+      });
     });
+
+    // ── Reklam kararı ───────────────────────────────────────────────────
+    // • Simülasyon modunda reklam gösterilmez.
+    // • Debug modunda _kShowAdInDebug sabiti false ise gösterilmez.
+    // • Gerçek aramada: free kullanıcılar için AdService 2'de 1 true döner.
+    if (!widget.simulationMode && (kReleaseMode || _kShowAdInDebug)) {
+      final isPremium = ref.read(isPremiumProvider);
+      _showAd = AdService.shouldShowAd(isPremium: isPremium);
+    }
 
     if (widget.simulationMode) {
       // Simülasyon: 8 sn sonra tamamlan, sonra atla butonu göster
@@ -206,7 +233,14 @@ class _VenueSearchLoadingPageState
   }
 
   void _doNavigate() {
-    if (!mounted) return;
+    // mounted, route çıkış animasyonu bitene dek true kalır — "Animasyonu
+    // Atla"ya basıldıktan hemen sonra 3 sn'lik oto-geçiş de tetiklenirse
+    // Navigator iki kez pop edilir ve alttaki sayfa da kapanırdı (crash).
+    if (!mounted || _navigated) return;
+    _navigated = true;
+    _phaseTimer?.cancel();
+    _introTimer?.cancel();
+    _simTimer?.cancel();
     Navigator.of(context).pop();
   }
 
@@ -218,6 +252,7 @@ class _VenueSearchLoadingPageState
     _shimmerCtrl.dispose();
     _pulseCtrl.dispose();
     _walkCtrl.dispose();
+    _pickupCtrl.dispose();
     _phaseTimer?.cancel();
     _introTimer?.cancel();
     _simTimer?.cancel();
@@ -340,44 +375,39 @@ class _VenueSearchLoadingPageState
               const Spacer(),
 
               // ── Karakter animasyon alanı ──────────────────────────────────
-              // Intro sahne için slide animasyonunu izliyoruz.
-              // Walk sahne kendi AnimatedBuilder'ını içeriyor.
-              AnimatedBuilder(
-                animation: _slideAnim,
-                builder: (_, __) => SizedBox(
-                  height: 240,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 700),
-                    switchInCurve: Curves.easeIn,
-                    switchOutCurve: Curves.easeOut,
-                    child: _inSearchMode
-                        ? _WalkingStage(
-                            key: const ValueKey('walk'),
-                            me: me,
-                            friend: friend,
-                            isSolo: isSolo,
-                            myType: myType,
-                            friendType: friendType,
-                            walkCtrl: _walkCtrl,
-                            pulseCtrl: _pulseCtrl,
-                            accentColor: primary,
-                          )
-                        : _IntroStage(
-                            key: const ValueKey('intro'),
-                            me: me,
-                            friend: friend,
-                            isSolo: isSolo,
-                            myType: myType,
-                            friendType: friendType,
-                            slideAnim: _slideAnim,
-                            pulseCtrl: _pulseCtrl,
-                            accentColor: primary,
-                          ),
-                  ),
+              // Tek sahne: intro ve arama arasında sahne takası yok.
+              // Arama başlarken kişilik arka planı sönerken şehir silüeti
+              // yavaşça belirir; karakterler yerlerinde arama moduna geçer.
+              SizedBox(
+                height: 240,
+                child: _SearchStage(
+                  me: me,
+                  friend: friend,
+                  isSolo: isSolo,
+                  myType: myType,
+                  friendType: friendType,
+                  inSearchMode: _inSearchMode,
+                  slideAnim: _slideAnim,
+                  walkCtrl: _walkCtrl,
+                  pickupCtrl: _pickupCtrl,
+                  pulseCtrl: _pulseCtrl,
+                  accentColor: primary,
                 ),
               ),
 
-              const Spacer(),
+              // ── Reklam banner (free kullanıcılar, 2'de 1 arama) ──────────
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 500),
+                child: _showAd
+                    ? Padding(
+                        key: const ValueKey('ad_banner'),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: const AdBannerWidget(),
+                      )
+                    : const SizedBox(key: ValueKey('ad_hidden')),
+              ),
+
+              if (!_showAd) const Spacer(),
 
               // ── Progress bölümü ────────────────────────────────────────────
               Padding(
@@ -484,184 +514,105 @@ class _VenueSearchLoadingPageState
   }
 }
 
-// ── Faz 1: Intro Sahne ────────────────────────────────────────────────────────
+// ── Sahne: intro + arama tek parça ───────────────────────────────────────────
 //
-// Karakterler sabit pozisyonlarında kendi kişilik animasyonlarını oynar.
-// Maceraperest iner, gurme tabağıyla durur vb.
-
-class _IntroStage extends StatelessWidget {
-  final dynamic me;
-  final dynamic friend;
-  final bool isSolo;
-  final PersonalityType myType;
-  final PersonalityType friendType;
-  final Animation<double> slideAnim;
-  final AnimationController pulseCtrl;
-  final Color accentColor;
-
-  const _IntroStage({
-    super.key,
-    required this.me,
-    required this.friend,
-    required this.isSolo,
-    required this.myType,
-    required this.friendType,
-    required this.slideAnim,
-    required this.pulseCtrl,
-    required this.accentColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final slide = slideAnim.value.clamp(0.0, 1.0);
-
-    if (isSolo) {
-      return Center(
-        child: Transform.translate(
-          offset: Offset(0, 24 * (1 - slide)),
-          child: Opacity(
-            opacity: slide,
-            child: PersonalityCharacterWidget(
-              type: myType,
-              gender: me?.gender as String?,
-              size: 200,
-              searchMode: false,
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        // Kullanıcı — soldan kayar
-        Transform.translate(
-          offset: Offset(-160 * (1 - slide), 0),
-          child: Opacity(
-            opacity: slide,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                PersonalityCharacterWidget(
-                  type: myType,
-                  gender: me?.gender as String?,
-                  size: 155,
-                  searchMode: false,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  ((me?.name ?? 'Sen') as String).split(' ').first,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: accentColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        // Merkez: nabız atan pin ikonu
-        AnimatedBuilder(
-          animation: pulseCtrl,
-          builder: (_, __) {
-            final scale = 0.80 + pulseCtrl.value * 0.32;
-            return Transform.scale(
-              scale: scale,
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: accentColor
-                          .withOpacity(0.28 + pulseCtrl.value * 0.18),
-                      blurRadius: 14,
-                      spreadRadius: 3,
-                    ),
-                  ],
-                ),
-                child: Icon(Icons.location_on_rounded,
-                    color: accentColor, size: 24),
-              ),
-            );
-          },
-        ),
-
-        // Arkadaş — sağdan kayar, intro modda sola bakacak şekilde flipX
-        Transform.translate(
-          offset: Offset(160 * (1 - slide), 0),
-          child: Opacity(
-            opacity: slide,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                PersonalityCharacterWidget(
-                  type: friendType,
-                  gender: friend?.gender as String?,
-                  size: 155,
-                  searchMode: false,
-                  flipX: true,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  ((friend?.name ?? '') as String).split(' ').first,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: accentColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Faz 2: Yürüyüş Sahne ────────────────────────────────────────────────────
+// Intro ve arama iki ayrı sahne değil — dekor HİÇ değişmez:
+//   • Şehir silüeti en baştan sahnede; kişilik arka planları (dağ, kitaplık
+//     vb.) hiç çizilmez (showBackground: false).
+//   • Intro: karakterler kenarlarda kişilik girişini oynar (paraşütle iniş,
+//     kitap okuma vb.).
+//   • Arama başlayınca sadece mekan pinleri yavaşça belirir; karakterler
+//     crossfade ile arama moduna geçer, elindeki aksesuarı bırakıp yerden
+//     büyüteci alır (pickup sekansı) ve yürüyüşe koyulur.
 //
-// Karakterler Stack içinde Positioned ile ekranın bir ucundan diğerine
-// gerçekten yürür. walkCtrl.value 0→1→0 repeat(reverse: true) ile:
+// Yürüyüş, waypoint tabanlı bir programla ilerler:
+//   yürü → pinin yanında dur → çömelip büyüteçle incele → devam et
+// walkCtrl.value 0→1→0 repeat(reverse: true) ile:
 //   • Kullanıcı: sol kenardan sağa → geri sola → …
 //   • Arkadaş:   sağ kenardan sola → geri sağa → …
 // Yön değiştiklerinde flipX otomatik değişir (sola giden sola bakar).
 
-class _WalkingStage extends StatelessWidget {
+/// Yürüyüş programındaki tek bir zaman dilimi.
+class _WalkSeg {
+  final double t0, t1;   // rawT aralığı
+  final double p0, p1;   // pozisyon aralığı (pause'da p0 == p1)
+  final bool pause;
+  const _WalkSeg(this.t0, this.t1, this.p0, this.p1, {this.pause = false});
+}
+
+/// Programın bir anlık örneği: konum + inceleme yoğunluğu (0..1).
+/// [anchor] duraklamanın kimliğidir (durulan pozisyon) — durak başına
+/// sözde-rastgele varyasyon üretmek için tohum olarak kullanılır.
+class _WalkSample {
+  final double pos;
+  final double inspect;
+  final double anchor;
+  const _WalkSample(this.pos, this.inspect, [this.anchor = 0.0]);
+}
+
+class _SearchStage extends StatelessWidget {
   final dynamic me;
   final dynamic friend;
   final bool isSolo;
   final PersonalityType myType;
   final PersonalityType friendType;
+  final bool inSearchMode;
+  final Animation<double> slideAnim;
   final AnimationController walkCtrl;
+  final AnimationController pickupCtrl;
   final AnimationController pulseCtrl;
   final Color accentColor;
 
   static const _charSize = 148.0;
 
-  const _WalkingStage({
+  const _SearchStage({
     super.key,
     required this.me,
     required this.friend,
     required this.isSolo,
     required this.myType,
     required this.friendType,
+    required this.inSearchMode,
+    required this.slideAnim,
     required this.walkCtrl,
+    required this.pickupCtrl,
     required this.pulseCtrl,
     required this.accentColor,
   });
 
+  /// Intro ↔ arama modu karakteri: mod değişince 450 ms crossfade —
+  /// kişilik pozu (ve painter içi kişilik arka planı) yumuşakça söner,
+  /// arama karakteri aynı konumda belirir.
+  Widget _characterSwitcher({
+    required PersonalityType type,
+    required String? gender,
+    required bool flip,
+    required double inspect,
+    required double pickupT,
+  }) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 450),
+      child: inSearchMode
+          ? PersonalityCharacterWidget(
+              key: const ValueKey('search'),
+              type: type, gender: gender,
+              size: _charSize, searchMode: true, flipX: flip,
+              inspect: inspect, pickup: pickupT)
+          : PersonalityCharacterWidget(
+              key: const ValueKey('intro'),
+              type: type, gender: gender,
+              size: _charSize, searchMode: false, flipX: flip,
+              // Kişilik arka planı (dağ, kitaplık vb.) çizilmez — dekor
+              // en baştan şehir silüeti, geçişte hiçbir dekor kaybolmaz.
+              showBackground: false),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: walkCtrl,
+      animation:
+          Listenable.merge([slideAnim, walkCtrl, pickupCtrl, pulseCtrl]),
       builder: (_, __) => LayoutBuilder(
         builder: (_, constraints) {
           final w = constraints.maxWidth;
@@ -669,90 +620,146 @@ class _WalkingStage extends StatelessWidget {
           final pad = 6.0;
           final lo = pad;
           final hi = w - _charSize - pad;
+
+          final slide = slideAnim.value.clamp(0.0, 1.0);
+          final pickupT = pickupCtrl.value;
+
+          // Şehir silüeti EN BAŞTAN sahnede (sayfa girişiyle belirir) —
+          // dekor hiç değişmez. Sadece mekan pinleri arama başlarken,
+          // büyüteci alma sekansının ilk %60'ında yavaşça belirir.
+          final pinT = !inSearchMode
+              ? 0.0
+              : Curves.easeInOut.transform((pickupT / 0.6).clamp(0.0, 1.0));
+
           final rawT = walkCtrl.value;
-          final pos = _remapWalkT(rawT);
+          final su = _sample(rawT, _scheduleUser);   // kullanıcı programı
+          final sf = _sample(rawT, _scheduleFriend); // arkadaş programı (farklı)
+          final pos = su.pos;
+          final inspect = su.inspect;
 
           final goingForward = walkCtrl.status != AnimationStatus.reverse;
 
-          final userX    = lo + (hi - lo) * pos;
+          final userX    = lo + (hi - lo) * su.pos;
           final userFlip = !goingForward;
-          final friendX  = hi - (hi - lo) * pos;
+          final friendX  = hi - (hi - lo) * sf.pos;
           final friendFlip = goingForward;
 
+          // Zıplama pozisyona bağlı → durunca kendiliğinden durur;
+          // (1 - inspect) ile de yumuşakça yere basar. Her karakter kendi
+          // inceleme durumuna göre yavaşlar/durur.
+          final userBobAmp   = 8.0 * (1.0 - su.inspect);
+          final friendBobAmp = 8.0 * (1.0 - sf.inspect);
+
           if (isSolo) {
-            final soloX = lo + (hi - lo) * (0.5 + 0.4 * math.sin(rawT * math.pi));
-            final soloY = 14.0 + math.sin(rawT * math.pi * 6) * 8.0;
+            const soloPins = [
+              (0.10, 46.0, true), (0.28, 54.0, false), (0.46, 44.0, true),
+              (0.64, 56.0, false), (0.82, 46.0, true),
+            ];
+            final soloX = lo + (hi - lo) * pos;
+            final soloCenter = soloX + _charSize / 2;
+            final soloY = 14.0 + math.sin(pos * math.pi * 8) * userBobAmp;
             return SizedBox(
               width: w, height: h,
               child: Stack(clipBehavior: Clip.none, children: [
-                Positioned.fill(child: _CityScapeWidget(color: accentColor)),
-                Positioned(left: w * 0.10, bottom: 46,
-                  child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: true)),
-                Positioned(left: w * 0.28, bottom: 54,
-                  child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: false)),
-                Positioned(left: w * 0.46, bottom: 44,
-                  child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: true)),
-                Positioned(left: w * 0.64, bottom: 56,
-                  child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: false)),
-                Positioned(left: w * 0.82, bottom: 46,
-                  child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: true)),
+                Positioned.fill(
+                  child: Opacity(
+                    opacity: slide,
+                    child: _CityScapeWidget(color: accentColor))),
+                for (final p in soloPins)
+                  Positioned(left: w * p.$1, bottom: p.$2,
+                    child: Opacity(
+                      opacity: pinT,
+                      child: _PulsingPin(
+                        pulseCtrl: pulseCtrl, color: accentColor,
+                        evenPhase: p.$3,
+                        boost: _pinBoost(w * p.$1 + 10, soloCenter, inspect)))),
                 Positioned(
                   left: soloX, bottom: soloY,
-                  child: PersonalityCharacterWidget(
-                    type: myType, gender: me?.gender as String?,
-                    size: _charSize, searchMode: true, flipX: userFlip)),
+                  child: Transform.translate(
+                    offset: Offset(0, 24 * (1 - slide)),
+                    child: Opacity(
+                      opacity: slide,
+                      child: _characterSwitcher(
+                        type: myType, gender: me?.gender as String?,
+                        flip: userFlip,
+                        inspect: _crouchDepth(su, 0.0),
+                        pickupT: pickupT)))),
               ]),
             );
           }
 
-          final userBob   = math.sin(pos * math.pi * 6) * 9.0;
-          final friendBob = math.sin(pos * math.pi * 6 + math.pi) * 9.0;
+          final userBob   = math.sin(su.pos * math.pi * 8) * userBobAmp;
+          final friendBob =
+              math.sin(sf.pos * math.pi * 8 + math.pi) * friendBobAmp;
 
           final dist = (userX - friendX).abs();
           final push = (_charSize * 1.05 - dist).clamp(0.0, _charSize) * 0.46;
-          final userBottom   = (22.0 + userBob  + push).clamp(8.0, 90.0);
+          final userBottom   = (22.0 + userBob + push).clamp(8.0, 90.0);
           final friendBottom = (22.0 + friendBob - push).clamp(8.0, 90.0);
+
+          const pins = [
+            (0.06, 44.0, true), (0.22, 54.0, false), (0.38, 44.0, true),
+            (0.54, 56.0, false), (0.70, 46.0, true), (0.84, 52.0, false),
+          ];
+          final userCenter   = userX + _charSize / 2;
+          final friendCenter = friendX + _charSize / 2;
 
           return SizedBox(
             width: w, height: h,
             child: Stack(clipBehavior: Clip.none, children: [
-              Positioned.fill(child: _CityScapeWidget(color: accentColor)),
+              Positioned.fill(
+                child: Opacity(
+                  opacity: slide,
+                  child: _CityScapeWidget(color: accentColor))),
 
-              Positioned(left: w * 0.06, bottom: 44,
-                child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: true)),
-              Positioned(left: w * 0.22, bottom: 54,
-                child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: false)),
-              Positioned(left: w * 0.38, bottom: 44,
-                child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: true)),
-              Positioned(left: w * 0.54, bottom: 56,
-                child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: false)),
-              Positioned(left: w * 0.70, bottom: 46,
-                child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: true)),
-              Positioned(left: w * 0.84, bottom: 52,
-                child: _PulsingPin(pulseCtrl: pulseCtrl, color: accentColor, evenPhase: false)),
+              for (final p in pins)
+                Positioned(left: w * p.$1, bottom: p.$2,
+                  child: Opacity(
+                    opacity: pinT,
+                    child: _PulsingPin(
+                      pulseCtrl: pulseCtrl, color: accentColor, evenPhase: p.$3,
+                      boost: math.max(
+                        _pinBoost(w * p.$1 + 10, userCenter, su.inspect),
+                        _pinBoost(w * p.$1 + 10, friendCenter, sf.inspect))))),
 
               Positioned(
                 left: userX, bottom: userBottom,
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  PersonalityCharacterWidget(
-                    type: myType, gender: me?.gender as String?,
-                    size: _charSize, searchMode: true, flipX: userFlip),
-                  const SizedBox(height: 3),
-                  Text(((me?.name ?? 'Sen') as String).split(' ').first,
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accentColor)),
-                ]),
+                child: Transform.translate(
+                  offset: Offset(-160 * (1 - slide), 0),
+                  child: Opacity(
+                    opacity: slide,
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      _characterSwitcher(
+                        type: myType, gender: me?.gender as String?,
+                        flip: userFlip,
+                        inspect: _crouchDepth(su, 0.0),
+                        pickupT: pickupT),
+                      const SizedBox(height: 3),
+                      Text(((me?.name ?? 'Sen') as String).split(' ').first,
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accentColor)),
+                    ]),
+                  ),
+                ),
               ),
 
               Positioned(
                 left: friendX, bottom: friendBottom,
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  PersonalityCharacterWidget(
-                    type: friendType, gender: friend?.gender as String?,
-                    size: _charSize, searchMode: true, flipX: friendFlip),
-                  const SizedBox(height: 3),
-                  Text(((friend?.name ?? '') as String).split(' ').first,
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accentColor)),
-                ]),
+                child: Transform.translate(
+                  offset: Offset(160 * (1 - slide), 0),
+                  child: Opacity(
+                    opacity: slide,
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      _characterSwitcher(
+                        type: friendType, gender: friend?.gender as String?,
+                        flip: friendFlip,
+                        inspect: _crouchDepth(sf, 3.7), // farklı seed
+                        pickupT: pickupT),
+                      const SizedBox(height: 3),
+                      Text(((friend?.name ?? '') as String).split(' ').first,
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accentColor)),
+                    ]),
+                  ),
+                ),
               ),
             ]),
           );
@@ -761,14 +768,79 @@ class _WalkingStage extends StatelessWidget {
     );
   }
 
-  static double _remapWalkT(double rawT) {
-    if (rawT < 0.10) return rawT * 1.40;
-    if (rawT < 0.22) return 0.14 + (rawT - 0.10) * 0.500;
-    if (rawT < 0.42) return 0.20 + (rawT - 0.22) * 1.300;
-    if (rawT < 0.57) return 0.46 + (rawT - 0.42) * 0.533;
-    if (rawT < 0.75) return 0.54 + (rawT - 0.57) * 1.389;
-    if (rawT < 0.88) return 0.79 + (rawT - 0.75) * 0.462;
-    return (0.85 + (rawT - 0.88) * 1.250).clamp(0.0, 1.0);
+  // ── Yürüyüş programları ─────────────────────────────────────────────────────
+  // yürü(easeInOut) → dur & incele → yürü → dur & incele → …
+  // İki karakterin programı bilinçli olarak FARKLI: duraklama zamanları ve
+  // noktaları örtüşmez, böylece aynı anda eğilmezler — her biri kendi
+  // keşfini yapıyormuş gibi görünür.
+  static const _scheduleUser = [
+    _WalkSeg(0.00, 0.15, 0.00, 0.24),
+    _WalkSeg(0.15, 0.30, 0.24, 0.24, pause: true),
+    _WalkSeg(0.30, 0.45, 0.24, 0.52),
+    _WalkSeg(0.45, 0.60, 0.52, 0.52, pause: true),
+    _WalkSeg(0.60, 0.75, 0.52, 0.80),
+    _WalkSeg(0.75, 0.90, 0.80, 0.80, pause: true),
+    _WalkSeg(0.90, 1.00, 0.80, 1.00),
+  ];
+
+  static const _scheduleFriend = [
+    _WalkSeg(0.00, 0.06, 0.00, 0.10),
+    _WalkSeg(0.06, 0.17, 0.10, 0.10, pause: true),
+    _WalkSeg(0.17, 0.32, 0.10, 0.42),
+    _WalkSeg(0.32, 0.44, 0.42, 0.42, pause: true),
+    _WalkSeg(0.44, 0.62, 0.42, 0.72),
+    _WalkSeg(0.62, 0.74, 0.72, 0.72, pause: true),
+    _WalkSeg(0.74, 1.00, 0.72, 1.00),
+  ];
+
+  /// Durak kimliğinden 0..1 arası deterministik "rastgele" değer üretir.
+  /// Aynı durakta aynı değeri verir (titreme olmaz), duraklar arasında değişir.
+  static double _rand01(double seed) {
+    final v = math.sin(seed * 12.9898 + 78.233) * 43758.5453;
+    return v - v.floorToDouble();
+  }
+
+  /// rawT (0..1) → konum + inceleme yoğunluğu.
+  /// Pause dilimlerinde konum sabittir; inspect yumuşakça 0→1→0 gider,
+  /// böylece eğilme/pin parlaması ani değil akıcı olur.
+  static _WalkSample _sample(double rawT, List<_WalkSeg> schedule) {
+    for (final seg in schedule) {
+      if (rawT <= seg.t1 || identical(seg, schedule.last)) {
+        final local = ((rawT - seg.t0) / (seg.t1 - seg.t0)).clamp(0.0, 1.0);
+        if (seg.pause) {
+          final double inspect;
+          if (local < 0.25) {
+            inspect = Curves.easeOut.transform(local / 0.25);
+          } else if (local > 0.75) {
+            inspect = Curves.easeOut.transform((1.0 - local) / 0.25);
+          } else {
+            inspect = 1.0;
+          }
+          return _WalkSample(seg.p0, inspect, seg.t0 + seg.p0);
+        }
+        final eased = Curves.easeInOut.transform(local);
+        return _WalkSample(seg.p0 + (seg.p1 - seg.p0) * eased, 0.0);
+      }
+    }
+    return const _WalkSample(1.0, 0.0);
+  }
+
+  /// Karakter merkezi ile pin arasındaki yakınlığa göre parlama katsayısı.
+  static double _pinBoost(double pinCenterX, double charCenterX, double inspect) {
+    if (inspect <= 0.001) return 0.0;
+    final dx = (pinCenterX - charCenterX).abs();
+    final proximity = (1.0 - dx / 70.0).clamp(0.0, 1.0);
+    return inspect * proximity;
+  }
+
+  /// Çömelme derinliği: temel inspect değeri durak başına sözde-rastgele
+  /// ölçeklenir (0.70–1.0) — her incelemede birebir aynı poz tekrarlanmaz.
+  /// Gerçek çömelme pozunu PersonalityCharacterWidget kendi painter'ında
+  /// çizer (dizler bükülür, gövde öne eğilir, büyüteç yere doğrultulur).
+  static double _crouchDepth(_WalkSample sample, double seed) {
+    if (sample.inspect <= 0.001) return 0.0;
+    final scale = 0.70 + 0.30 * _rand01(sample.anchor * 7.31 + seed);
+    return (sample.inspect * scale).clamp(0.0, 1.0);
   }
 }
 
@@ -1064,10 +1136,14 @@ class _PulsingPin extends StatelessWidget {
   final Color color;
   final bool evenPhase;
 
+  /// 0..1 — yakındaki karakter incelerken pin büyür ve parlar.
+  final double boost;
+
   const _PulsingPin({
     required this.pulseCtrl,
     required this.color,
     required this.evenPhase,
+    this.boost = 0.0,
   });
 
   @override
@@ -1076,14 +1152,17 @@ class _PulsingPin extends StatelessWidget {
       animation: pulseCtrl,
       builder: (_, __) {
         final raw = evenPhase ? pulseCtrl.value : (1.0 - pulseCtrl.value);
-        final scale = 0.72 + raw * 0.35;
-        final opacity = 0.42 + raw * 0.42;
+        final scale = (0.72 + raw * 0.35) * (1.0 + 0.55 * boost);
+        final opacity = (0.42 + raw * 0.42 + 0.30 * boost).clamp(0.0, 1.0);
         return Transform.scale(
           scale: scale,
           child: Icon(
             Icons.location_on_rounded,
             color: color.withOpacity(opacity),
             size: 20,
+            shadows: boost > 0.05
+                ? [Shadow(color: color.withOpacity(0.6 * boost), blurRadius: 12)]
+                : null,
           ),
         );
       },

@@ -27,12 +27,7 @@ import 'package:meetit/features/match/services/places_api_version_service.dart';
 /// RACE CONDITION: FieldValue.increment atomic olduğu için sayaç kaybı
 /// olmaz. Limit ±2-3 aşılabilir (TOCTOU) — 1000'lik limitler için kabul
 /// edilebilir ve önemli bir mali riski yok.
-enum ApiStage {
-  newWithPhotos,
-  legacyWithPhotos,
-  newNoPhotos,
-  legacyNoPhotos,
-}
+enum ApiStage { newWithPhotos, legacyWithPhotos, newNoPhotos, legacyNoPhotos }
 
 extension ApiStageX on ApiStage {
   /// Bu aşamada New Places API mi kullanılıyor?
@@ -49,11 +44,11 @@ extension ApiStageX on ApiStage {
 
   /// Debug / loglama için kısa açıklama.
   String get label => switch (this) {
-        ApiStage.newWithPhotos    => 'New+foto',
-        ApiStage.legacyWithPhotos => 'Legacy+foto',
-        ApiStage.newNoPhotos      => 'New+fotosuz',
-        ApiStage.legacyNoPhotos   => 'Legacy+fotosuz',
-      };
+    ApiStage.newWithPhotos => 'New+foto',
+    ApiStage.legacyWithPhotos => 'Legacy+foto',
+    ApiStage.newNoPhotos => 'New+fotosuz',
+    ApiStage.legacyNoPhotos => 'Legacy+fotosuz',
+  };
 }
 
 class ApiUsageService {
@@ -63,7 +58,7 @@ class ApiUsageService {
   static const _docPath = 'appConfig/apiUsage';
 
   // ── Varsayılan limitler (Firestore'dan override edilebilir) ──────────────
-  static const _defaultPhotoLimit     = 1000; // New veya Legacy başına
+  static const _defaultPhotoLimit = 1000; // New veya Legacy başına
   static const _defaultSearchNewLimit = 4000; // New API aramalarına limit
 
   // ── In-memory cache — Firestore'a her aramada gidilmesin ─────────────────
@@ -93,35 +88,33 @@ class ApiUsageService {
     }
 
     try {
-      final mk   = _mk();
+      final mk = _mk();
       final snap = await _fs.doc(_docPath).get();
-      final d    = snap.data() ?? <String, dynamic>{};
+      final d = snap.data() ?? <String, dynamic>{};
 
-      final photoNew     = (d['photo_new_$mk']     as int?) ?? 0;
-      final photoLegacy  = (d['photo_legacy_$mk']  as int?) ?? 0;
-      final searchNew    = (d['search_new_$mk']    as int?) ?? 0;
-      final photoLimit   = (d['photo_limit']        as int?) ?? _defaultPhotoLimit;
-      final searchLimit  = (d['search_new_limit']   as int?) ?? _defaultSearchNewLimit;
+      final photoNew = (d['photo_new_$mk'] as int?) ?? 0;
+      final photoLegacy = (d['photo_legacy_$mk'] as int?) ?? 0;
+      final searchNew = (d['search_new_$mk'] as int?) ?? 0;
+      final photoLimit = (d['photo_limit'] as int?) ?? _defaultPhotoLimit;
+      final searchLimit =
+          (d['search_new_limit'] as int?) ?? _defaultSearchNewLimit;
 
       final stage = _resolve(
-        photoNew:      photoNew,
-        photoLegacy:   photoLegacy,
-        searchNew:     searchNew,
-        photoLimit:    photoLimit,
+        photoNew: photoNew,
+        photoLegacy: photoLegacy,
+        searchNew: searchNew,
+        photoLimit: photoLimit,
         searchNewLimit: searchLimit,
       );
 
-      _cached   = stage;
+      _cached = stage;
       _cachedAt = now;
       // ignore: avoid_print
-      print('[ApiUsageService] 📊 stage=${stage.label} '
-          'photoNew=$photoNew/$photoLimit '
-          'photoLeg=$photoLegacy/$photoLimit '
-          'searchNew=$searchNew/$searchLimit');
+      'photoNew=$photoNew/$photoLimit '
+          'photoLeg=$photoLegacy/$photoLimit ';
       return stage;
     } catch (e) {
       // ignore: avoid_print
-      print('[ApiUsageService] stage okuma hatası: $e');
       // Firestore erişilemezse son bilinen değeri veya güvenli varsayılanı döndür.
       return _cached ?? ApiStage.newWithPhotos;
     }
@@ -134,9 +127,9 @@ class ApiUsageService {
     required int photoLimit,
     required int searchNewLimit,
   }) {
-    if (photoNew    < photoLimit)    return ApiStage.newWithPhotos;
-    if (photoLegacy < photoLimit)    return ApiStage.legacyWithPhotos;
-    if (searchNew   < searchNewLimit) return ApiStage.newNoPhotos;
+    if (photoNew < photoLimit) return ApiStage.newWithPhotos;
+    if (photoLegacy < photoLimit) return ApiStage.legacyWithPhotos;
+    if (searchNew < searchNewLimit) return ApiStage.newNoPhotos;
     return ApiStage.legacyNoPhotos;
   }
 
@@ -151,13 +144,11 @@ class ApiUsageService {
     final field = isNew ? 'photo_new_${_mk()}' : 'photo_legacy_${_mk()}';
     _cached = null; // stage yeniden hesaplanmalı
     try {
-      await _fs.doc(_docPath).set(
-        {field: FieldValue.increment(1)},
-        SetOptions(merge: true),
-      );
+      await _fs.doc(_docPath).set({
+        field: FieldValue.increment(1),
+      }, SetOptions(merge: true));
     } catch (e) {
       // ignore: avoid_print
-      print('[ApiUsageService] recordPhotoFetch hatası: $e');
     }
   }
 
@@ -171,19 +162,17 @@ class ApiUsageService {
     final field = 'search_new_${_mk()}';
     _cached = null;
     try {
-      await _fs.doc(_docPath).set(
-        {field: FieldValue.increment(1)},
-        SetOptions(merge: true),
-      );
+      await _fs.doc(_docPath).set({
+        field: FieldValue.increment(1),
+      }, SetOptions(merge: true));
     } catch (e) {
       // ignore: avoid_print
-      print('[ApiUsageService] recordSearchCall hatası: $e');
     }
   }
 
   /// Stage cache'ini dışarıdan geçersiz kıl (test / force-refresh için).
   static void invalidateCache() {
-    _cached   = null;
+    _cached = null;
     _cachedAt = null;
   }
 }

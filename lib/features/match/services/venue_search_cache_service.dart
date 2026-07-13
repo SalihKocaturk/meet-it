@@ -98,7 +98,6 @@ class VenueSearchCacheService {
       return all.isEmpty ? null : all;
     } catch (e) {
       // ignore: avoid_print
-      print('[VenueSearchCacheService] okuma hatası: $e');
       return null;
     }
   }
@@ -147,12 +146,9 @@ class VenueSearchCacheService {
         });
         await batch.commit();
         // ignore: avoid_print
-        print('[VenueSearchCacheService] 🗂️ Sharded: '
-            '${places.length} venue → ${chunks.length} shard');
       }
     } catch (e) {
       // ignore: avoid_print
-      print('[VenueSearchCacheService] yazma hatası: $e');
     }
   }
 
@@ -225,11 +221,8 @@ class VenueSearchCacheService {
             SetOptions(merge: true),
           );
       // ignore: avoid_print
-      print('[VenueSearchCacheService] 📈 Pool genişledi: '
-          '+$added yeni mekan, toplam=${merged.length}');
     } catch (e) {
       // ignore: avoid_print
-      print('[VenueSearchCacheService] mergeExpand hatası: $e');
     }
   }
 }

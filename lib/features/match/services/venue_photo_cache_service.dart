@@ -95,7 +95,6 @@ class VenuePhotoCacheService {
       }
     } catch (e) {
       // ignore: avoid_print
-      print('[VenuePhotoCacheService] Firestore okuma hatası: $e');
       // Firestore okunamadıysa bile yükleme denemeye devam edebiliriz,
       // ama tutarlılık için direkt Google fallback'ine düşmek daha güvenli.
       return PlaceResult.buildPhotoUrl(photoName);
@@ -134,11 +133,6 @@ class VenuePhotoCacheService {
           response.body.contains('RESOURCE_EXHAUSTED');
       if (isQuotaExceeded) {
         // ignore: avoid_print
-        print(
-          '[VenuePhotoCacheService] ⚠️ Photo Media kota hatası '
-          '(${response.statusCode}) — foto gösterilmeyecek, mekan listede '
-          'kalacak.',
-        );
         return '';
       }
 
@@ -170,7 +164,6 @@ class VenuePhotoCacheService {
       return downloadUrl;
     } catch (e) {
       // ignore: avoid_print
-      print('[VenuePhotoCacheService] cache yazma hatası: $e');
       return PlaceResult.buildPhotoUrl(photoName); // güvenli fallback
     }
   }
@@ -215,7 +208,6 @@ class VenuePhotoCacheService {
       return urls.values.whereType<String>().take(limit).toList();
     } catch (e) {
       // ignore: avoid_print
-      print('[VenuePhotoCacheService] getCachedPhotoUrls okuma hatası: $e');
       return [];
     }
   }

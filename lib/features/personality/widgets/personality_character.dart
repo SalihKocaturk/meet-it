@@ -39,6 +39,22 @@ class PersonalityCharacterWidget extends StatefulWidget {
   /// için). Loading sayfasında sağdaki karakter sola bakacak şekilde çizilir.
   final bool flipX;
 
+  /// 0..1 — çömelip inceleme pozu (sadece searchMode'da anlamlı).
+  /// 0 = normal yürüyüş; 1 = tam çömelmiş: dizler bükük, gövde öne eğik,
+  /// büyüteç yere doğrultulmuş. Ara değerler pozlar arası akıcı geçiştir.
+  final double inspect;
+
+  /// 0..1 — arama moduna giriş sekansı (sadece searchMode'da anlamlı).
+  /// 0→1 boyunca karakter elindeki tip aksesuarını (kitap, kupa vb.) yere
+  /// bırakır, çömelip yerdeki büyüteci kavrar ve doğrulur. 1 = sekans bitti,
+  /// büyüteç elde (varsayılan — normal arama pozu).
+  final double pickup;
+
+  /// `false` → kişilik tipine özgü arka plan öğeleri (dağlar, kitaplık,
+  /// bitkiler) çizilmez; karakter sade zeminde duruşunu/girişini yapar.
+  /// Loading sahnesinde dekor sabit kalsın diye kullanılır.
+  final bool showBackground;
+
   const PersonalityCharacterWidget({
     super.key,
     required this.type,
@@ -46,6 +62,9 @@ class PersonalityCharacterWidget extends StatefulWidget {
     this.size = 220,
     this.searchMode = false,
     this.flipX = false,
+    this.inspect = 0.0,
+    this.pickup = 1.0,
+    this.showBackground = true,
   });
 
   @override
@@ -139,6 +158,9 @@ class _PersonalityCharacterWidgetState extends State<PersonalityCharacterWidget>
               typeColor: typeColor,
               landed: _landed,
               searchMode: widget.searchMode,
+              inspect: widget.inspect.clamp(0.0, 1.0),
+              pickup: widget.pickup.clamp(0.0, 1.0),
+              showBackground: widget.showBackground,
             ),
           ),
         );
@@ -165,6 +187,9 @@ class _CharacterPainter extends CustomPainter {
   final Color typeColor;
   final bool landed;     // maceraperest: iniş tamamlandı mı?
   final bool searchMode; // tüm tipler: yürüyerek büyüteçle arama
+  final double inspect;  // 0..1: çömelip inceleme pozu (searchMode)
+  final double pickup;   // 0..1: büyüteci yerden alma sekansı (searchMode)
+  final bool showBackground; // kişilik arka planı (dağ, kitaplık vb.) çizilsin mi
 
   _CharacterPainter({
     required this.type,
@@ -173,7 +198,42 @@ class _CharacterPainter extends CustomPainter {
     required this.typeColor,
     this.landed = false,
     this.searchMode = false,
+    this.inspect = 0.0,
+    this.pickup = 1.0,
+    this.showBackground = true,
   });
+
+  // ── Çömelme pozu sabitleri ─────────────────────────────────────────────────
+  static const _crouchFwd  = 0.030; // öne kayma (s oranı)
+  static const _crouchDrop = 0.095; // aşağı çökme (s oranı)
+  static const _crouchRot  = 0.32;  // kalça pivotundan öne eğilme (radyan)
+
+  /// Büyüteci yerden alma sekansı sürüyor mu?
+  bool get _pickingUp => searchMode && pickup < 1.0;
+
+  /// Hareketsizlik (0..1): salınım/sekme/iz efektlerini söndürür.
+  /// İnceleme ve alma sekansı boyunca karakter yerinde durur.
+  double get _stillAmt =>
+      searchMode ? (_pickingUp ? 1.0 : inspect) : 0.0;
+
+  /// Çömelme miktarı (0..1): inceleme VEYA alma sekansının çömelme fazı.
+  double get _crouchAmt => searchMode
+      ? math.max(inspect, _pickingUp ? math.sin(pickup * math.pi) : 0.0)
+      : 0.0;
+
+  /// Çömelme dönüşümünü bir noktaya uygular — üst gövde grubunun canvas
+  /// transform'uyla birebir aynı matematik (grup dışından senkron çizim için).
+  Offset _crouchXform(Offset p, double s) {
+    final c = _crouchAmt;
+    if (c <= 0.001) return p;
+    final th = _crouchRot * c;
+    final px = s * 0.5, py = s * 0.78;
+    final rx = p.dx - px, ry = p.dy - py;
+    return Offset(
+      px + rx * math.cos(th) - ry * math.sin(th) + s * _crouchFwd * c,
+      py + rx * math.sin(th) + ry * math.cos(th) + s * _crouchDrop * c,
+    );
+  }
 
   // ── Sabit renkler ──────────────────────────────────────────────────────────
 
@@ -200,8 +260,8 @@ class _CharacterPainter extends CustomPainter {
     final s = size.width;
 
     // ── Arka plan: translate dışında, sabit kalır ────────────────────────────
-    // Arama modunda arka plan çizilmez; karakter sade şekilde yürür.
-    if (!searchMode) _drawBackground(canvas, s);
+    // Arama modunda veya showBackground=false iken arka plan çizilmez.
+    if (!searchMode && showBackground) _drawBackground(canvas, s);
 
     // ── Karakter animasyon ötelemesi ─────────────────────────────────────────
     // Maceraperest (iniş sırasında): tek seferlik büyük iniş.
@@ -210,8 +270,10 @@ class _CharacterPainter extends CustomPainter {
     // Diğerleri: ±5px yukarı-aşağı sallanma.
     canvas.save();
     if (searchMode) {
-      // Yürüme sırasında hafif yukarı-aşağı sekme (±3px, çift frekans)
-      canvas.translate(0, -math.sin(anim * math.pi * 2) * 3.0);
+      // Yürüme sırasında hafif yukarı-aşağı sekme (±3px, çift frekans).
+      // Çömelirken / büyüteci alırken sekme söner — karakter yere sabitlenir.
+      canvas.translate(
+          0, -math.sin(anim * math.pi * 2) * 3.0 * (1 - _stillAmt));
     } else if (type == PersonalityType.maceraperest && !landed) {
       // Tek seferlik iniş: yukarıdan aşağıya süzülür
       canvas.translate(0, -s * 0.75 * (1 - anim));
@@ -223,7 +285,27 @@ class _CharacterPainter extends CustomPainter {
       canvas.translate(0, -math.sin(anim * math.pi) * 5.0);
     }
 
+    // Bacaklar ve zemin efektleri çömelme dönüşümünün DIŞINDA çizilir:
+    // ayaklar yerde sabit kalır, dizler _drawLegs içinde bükülür.
     _drawLegs(canvas, s);
+    _drawAccents(canvas, s);
+
+    // Alma sekansı öğeleri de grup DIŞINDA: yere bırakılan aksesuar ve
+    // yerdeki büyüteç zemine sabit kalmalı, gövdeyle dönmemeli.
+    if (_pickingUp) _drawPickupItems(canvas, s);
+
+    // ── Üst gövde: çömelmede aşağı iner + kalçadan öne eğilir ────────────────
+    final crouch = _crouchAmt;
+    canvas.save();
+    if (crouch > 0.001) {
+      // Aşağı çök + hafif öne kay
+      canvas.translate(s * _crouchFwd * crouch, s * _crouchDrop * crouch);
+      // Kalça pivotundan öne eğil (karakter sağa bakar; flipX aynalar)
+      final px = s * 0.5, py = s * 0.78;
+      canvas.translate(px, py);
+      canvas.rotate(_crouchRot * crouch);
+      canvas.translate(-px, -py);
+    }
     _drawTorso(canvas, s);
     _drawArms(canvas, s);
     _drawNeck(canvas, s);
@@ -231,7 +313,7 @@ class _CharacterPainter extends CustomPainter {
     _drawHair(canvas, s);
     _drawFace(canvas, s);
     _drawProp(canvas, s);
-    _drawAccents(canvas, s);
+    canvas.restore();
 
     canvas.restore();
   }
@@ -425,12 +507,30 @@ class _CharacterPainter extends CustomPainter {
     final shoeP = _fill(_shoe);
 
     if (searchMode || type == PersonalityType.maceraperest) {
-      // Yürüme animasyonu: tüm tipler searchMode'da, maceraperest her zaman
-      final walk = math.sin(anim * math.pi) * s * 0.045;
+      // Yürüme animasyonu: tüm tipler searchMode'da, maceraperest her zaman.
+      // Çömelmede adım salınımı söner, kalça çöker, dizler öne bükülür —
+      // ayaklar yerde sabit kalır.
+      final crouch = _crouchAmt;
+      final walk = math.sin(anim * math.pi) * s * 0.045 * (1 - _stillAmt);
+      final drop = s * _crouchDrop * crouch;
+      final hipL = Offset(s * 0.445, s * 0.747 + drop);
+      final hipR = Offset(s * 0.555, s * 0.747 + drop);
       final leftFoot  = Offset(s * 0.400 - walk, s * 0.912);
       final rightFoot = Offset(s * 0.580 + walk, s * 0.912);
-      canvas.drawLine(Offset(s * 0.445, s * 0.747), leftFoot,  legP);
-      canvas.drawLine(Offset(s * 0.555, s * 0.747), rightFoot, legP);
+
+      // Diz: crouch=0'da tam orta nokta (düz bacak görünümü),
+      // crouch arttıkça öne (bakış yönüne) çıkar.
+      Offset knee(Offset hip, Offset foot, double fwd) => Offset(
+            (hip.dx + foot.dx) / 2 + fwd,
+            (hip.dy + foot.dy) / 2 + s * 0.012 * crouch,
+          );
+      final kneeL = knee(hipL, leftFoot,  s * 0.070 * crouch);
+      final kneeR = knee(hipR, rightFoot, s * 0.088 * crouch);
+
+      canvas.drawLine(hipL, kneeL, legP);
+      canvas.drawLine(kneeL, leftFoot, legP);
+      canvas.drawLine(hipR, kneeR, legP);
+      canvas.drawLine(kneeR, rightFoot, legP);
       canvas.drawOval(Rect.fromCenter(center: Offset(leftFoot.dx,  leftFoot.dy  + s * 0.022), width: s * 0.11, height: s * 0.044), shoeP);
       canvas.drawOval(Rect.fromCenter(center: Offset(rightFoot.dx, rightFoot.dy + s * 0.022), width: s * 0.11, height: s * 0.044), shoeP);
     } else {
@@ -453,11 +553,25 @@ class _CharacterPainter extends CustomPainter {
     if (searchMode) {
       // Arama pozu: sağ el büyüteç tutarak göz hizasına kaldırılmış,
       // sol el yürüme dengesi için karşılıklı sallantı yapıyor.
-      final swing = math.sin(anim * math.pi) * s * 0.022;
-      // Sağ: kol yukarı-içe kalkık (büyüteç yüzün üzerinde)
-      canvas.drawLine(rs, Offset(s * 0.620, s * 0.432 - swing * 0.35), armP);
-      // Sol: yürüme dengesi — sağın tersi yönde sallanır
-      canvas.drawLine(ls, Offset(s * 0.285 - swing, s * 0.660), armP);
+      // Sol el çömelmede dize dayanır, salınım söner. Sağ el büyüteci HER
+      // ZAMAN yüz hizasında tutar (incelemede yere yaklaşma gövde eğiminden
+      // gelir) — yalnızca alma sekansında yerdeki büyütece uzanır.
+      final crouch = _crouchAmt;
+      final swing = math.sin(anim * math.pi) * s * 0.022 * (1 - _stillAmt);
+      final reach = _pickingUp ? math.sin(pickup * math.pi) : 0.0;
+      final rHand = Offset.lerp(
+        Offset(s * 0.620, s * 0.432 - swing * 0.35),
+        Offset(s * 0.640, s * 0.590),
+        reach,
+      )!;
+      canvas.drawLine(rs, rHand, armP);
+      // Sol: sallanma → dize dayalı
+      final lHand = Offset.lerp(
+        Offset(s * 0.285 - swing, s * 0.660),
+        Offset(s * 0.408, s * 0.700),
+        crouch,
+      )!;
+      canvas.drawLine(ls, lHand, armP);
       return;
     }
 
@@ -581,7 +695,8 @@ class _CharacterPainter extends CustomPainter {
 
   void _drawFace(Canvas canvas, double s) {
     final cx = s * _cx;
-    final cy = s * 0.395;
+    // Çömelirken yüz hatları hafif aşağı kayar → yere bakma hissi
+    final cy = s * 0.395 + s * 0.022 * _crouchAmt;
     final isFemale = gender == CharacterGender.female;
 
     // ── Kaşlar (her cinsiyet, şekil farklı) ──────────────────────────────────
@@ -675,7 +790,8 @@ class _CharacterPainter extends CustomPainter {
 
   void _drawProp(Canvas canvas, double s) {
     if (searchMode) {
-      _drawSearchMagnifier(canvas, s);
+      // Alma sekansı sürerken büyüteç grup DIŞINDA (_drawPickupItems) çizilir
+      if (!_pickingUp) _drawSearchMagnifier(canvas, s);
       return;
     }
     switch (type) {
@@ -693,12 +809,21 @@ class _CharacterPainter extends CustomPainter {
   /// yukarı-sağa doğru uzanır. Cam içinde nabız gibi titreşen bir
   /// parıltı + dışarı yayılan iki "radar" halkası var.
   void _drawSearchMagnifier(Canvas canvas, double s) {
-    final swing = math.sin(anim * math.pi) * s * 0.022;
+    final swing = math.sin(anim * math.pi) * s * 0.022 * (1 - _stillAmt);
 
-    // Sapın başladığı nokta (sağ el) — _drawArms ile senkron
+    // Büyüteç DAİMA yüz hizasında: sap sağ elde, mercek göz önünde.
+    // İncelemede mercek yüzle birlikte alçalır (gövde eğimi grubu döndürür) —
+    // ayrıca aşağı indirilmez.
     final handleBase = Offset(s * 0.620, s * 0.432 - swing * 0.35);
-    // Mercek merkezi — yüzün üzerinde, sağ göz bölgesinde
     final lensC = Offset(s * 0.548, s * 0.370 - swing * 0.35);
+    _paintMagnifier(canvas, s, handleBase, lensC);
+  }
+
+  /// Büyüteç çizimi — hem elde tutulan (grup içi) hem alma sekansındaki
+  /// (grup dışı) büyüteç için ortak. [ringScale] radar halkalarını söndürür
+  /// (yerde dururken ping atmasın diye).
+  void _paintMagnifier(Canvas canvas, double s, Offset handleBase, Offset lensC,
+      {double ringScale = 1.0}) {
     final lensR = s * 0.062;
 
     // Sap
@@ -721,15 +846,104 @@ class _CharacterPainter extends CustomPainter {
     );
 
     // Radar halkaları: mercekten dışarı yayılan iki ping dalgası
+    if (ringScale <= 0.02) return;
     for (var i = 0; i < 2; i++) {
       final t = (anim + i * 0.5) % 1.0; // 0→1, ofsetli
       final r = lensR * (1.0 + t * 0.90);
-      final opacity = (1.0 - t) * 0.30;
+      final opacity = (1.0 - t) * 0.30 * ringScale;
       canvas.drawCircle(
         lensC, r,
         _stroke(typeColor.withOpacity(opacity), s * 0.007),
       );
     }
+  }
+
+  // ── Büyüteci yerden alma sekansı ─────────────────────────────────────────
+  //
+  //  pickup 0.00–0.30 : elindeki tip aksesuarı yere bırakılır (hızla düşer)
+  //  pickup 0.00–0.50 : çömelme derinleşir (sin eğrisi, _crouchAmt)
+  //  pickup 0.50–0.90 : el büyüteci kavrar, yerden ele taşınır
+  //  pickup 0.50–1.00 : karakter doğrulur, yürüyüş pozuna döner
+  //  Bırakılan aksesuar 0.80'den sonra solarak kaybolur.
+
+  /// Bırakılan aksesuarın normal duruştaki yaklaşık merkezi.
+  Offset _propAnchor(double s) {
+    switch (type) {
+      case PersonalityType.entelektuel:   return Offset(s * 0.500, s * 0.675);
+      case PersonalityType.gurme:         return Offset(s * 0.450, s * 0.550);
+      case PersonalityType.sakinRuh:      return Offset(s * 0.252, s * 0.640);
+      case PersonalityType.maceraperest:  return Offset(s * 0.270, s * 0.780);
+      case PersonalityType.sosyalKelebek: return Offset(s * 0.500, s * 0.600);
+    }
+  }
+
+  void _drawPickupItems(Canvas canvas, double s) {
+    // ── 1) Eski aksesuar yere bırakılır ──────────────────────────────────────
+    // (Sosyal kelebeğin elinde taşınan aksesuar yok — kelebekler uçup gider.)
+    if (type != PersonalityType.sosyalKelebek) {
+      final dropT = Curves.easeIn.transform((pickup / 0.30).clamp(0.0, 1.0));
+      final fade = pickup > 0.80
+          ? (1.0 - (pickup - 0.80) / 0.20).clamp(0.0, 1.0)
+          : 1.0;
+      if (fade > 0.02) {
+        final anchor = _propAnchor(s);
+        final target = Offset(s * 0.260, s * 0.870); // karakterin gerisinde, yerde
+        canvas.saveLayer(null, Paint()..color = Colors.white.withOpacity(fade));
+        canvas.translate(
+          (target.dx - anchor.dx) * dropT,
+          (target.dy - anchor.dy) * dropT,
+        );
+        // Yere inerken hafif küçülsün
+        final k = 1.0 - 0.18 * dropT;
+        canvas.translate(anchor.dx, anchor.dy);
+        canvas.scale(k, k);
+        canvas.translate(-anchor.dx, -anchor.dy);
+        switch (type) {
+          case PersonalityType.entelektuel:  _drawBook(canvas, s); break;
+          case PersonalityType.gurme:        _drawForkAndPlate(canvas, s); break;
+          case PersonalityType.sakinRuh:     _drawMug(canvas, s); break;
+          case PersonalityType.maceraperest: _drawHikingStick(canvas, s); break;
+          case PersonalityType.sosyalKelebek: break;
+        }
+        canvas.restore();
+      }
+    }
+
+    // ── 2) Büyüteç: yerde durur → el kavrar → elle birlikte yüze taşınır ─────
+    final grabT = Curves.easeInOut
+        .transform(((pickup - 0.50) / 0.40).clamp(0.0, 1.0));
+
+    // Sağ elin anlık konumu — _drawArms ile aynı formül (reach: uzanma),
+    // çömelme dönüşümü uygulanır ki grup içindeki kolla örtüşsün.
+    final reach = math.sin(pickup * math.pi);
+    final hand = _crouchXform(
+      Offset.lerp(Offset(s * 0.620, s * 0.432),
+          Offset(s * 0.640, s * 0.590), reach)!,
+      s,
+    );
+
+    // Yerde yatan büyüteç konumu
+    final handleGround = Offset(s * 0.745, s * 0.915);
+    final lensGround   = Offset(s * 0.640, s * 0.885);
+
+    // Mercek-sap ofseti: yerde yatık → elde yüz hizası duruşuna döner.
+    // grabT=1 && pickup→1'de sap = el = (0.620, 0.432), mercek = (0.548,
+    // 0.370) → grup içi _drawSearchMagnifier ile kesintisiz devralma.
+    final lensOffset = Offset.lerp(
+      lensGround - handleGround,
+      Offset(s * (0.548 - 0.620), s * (0.370 - 0.432)),
+      grabT,
+    )!;
+
+    // Kavranana dek yerde sabit; sonra ele yapışık yükselir.
+    final handleBase = Offset.lerp(handleGround, hand, grabT)!;
+
+    _paintMagnifier(
+      canvas, s,
+      handleBase,
+      handleBase + lensOffset,
+      ringScale: grabT, // yerdeyken ping atmaz, ele gelince başlar
+    );
   }
 
   void _drawBook(Canvas canvas, double s) {
@@ -894,7 +1108,8 @@ class _CharacterPainter extends CustomPainter {
     final offsets = [-s * 0.12, -s * 0.22, -s * 0.32];
     for (var i = 0; i < offsets.length; i++) {
       final phase = (anim + i * 0.28) % 1.0;
-      final opacity = (1.0 - phase) * 0.35;
+      // Dururken (inceleme / büyüteci alma) hareket izi solar
+      final opacity = (1.0 - phase) * 0.35 * (1 - _stillAmt);
       final r = s * 0.012 * (1.0 - phase * 0.5);
       canvas.drawCircle(
         Offset(s * 0.50 + offsets[i], baseY),
@@ -1047,5 +1262,7 @@ class _CharacterPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _CharacterPainter old) =>
       old.anim != anim || old.type != type || old.gender != gender ||
-      old.landed != landed || old.searchMode != searchMode;
+      old.landed != landed || old.searchMode != searchMode ||
+      old.inspect != inspect || old.pickup != pickup ||
+      old.showBackground != showBackground;
 }

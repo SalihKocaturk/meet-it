@@ -17,11 +17,16 @@ import 'package:meetit/features/match/providers/match_provider.dart';
 class SignUpPage extends ConsumerWidget {
   const SignUpPage({super.key});
 
-  List<String> _genders(BuildContext context) => [
-        'auth.gender_male'.tr(),
-        'auth.gender_female'.tr(),
-        'auth.gender_other'.tr(),
-      ];
+  static const _genderCodes = ['male', 'female', 'other'];
+
+  String _genderLabel(String code) {
+    switch (code) {
+      case 'male':   return 'auth.gender_male'.tr();
+      case 'female': return 'auth.gender_female'.tr();
+      case 'other':  return 'auth.gender_other'.tr();
+      default:       return code;
+    }
+  }
 
   Future<void> _onSignUp(BuildContext context, WidgetRef ref) async {
     final name = ref.read(signUpNameControllerProvider).text.trim();
@@ -267,8 +272,11 @@ class SignUpPage extends ConsumerWidget {
                         fontSize: 14,
                       ),
                     ),
-                    items: _genders(context)
-                        .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                    items: _genderCodes
+                        .map((code) => DropdownMenuItem(
+                              value: code,
+                              child: Text(_genderLabel(code)),
+                            ))
                         .toList(),
                     onChanged: (v) =>
                         ref.read(signUpGenderProvider.notifier).state = v,

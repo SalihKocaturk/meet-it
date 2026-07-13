@@ -182,7 +182,6 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
       }
     } catch (e) {
       // ignore: avoid_print
-      print('[VenueSearch] SharedPreferences yükleme hatası: \$e');
     }
   }
 
@@ -198,7 +197,6 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
       }
     } catch (e) {
       // ignore: avoid_print
-      print('[VenueSearch] SharedPreferences yazma hatası: \$e');
     }
   }
 
@@ -465,8 +463,6 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
           maxVenueDistanceKm != null &&
           maxVenueDistanceKm < 3.0) {
         // ignore: avoid_print
-        print('🌊 Boğaz istisnası: orta nokta çevresinde '
-            '${maxVenueDistanceKm}km içinde hiç mekan yok — 3 km deneniyor');
         searchRadius = 3000;
         results = await PlacesService.searchVenues(
           lat: searchLat,
@@ -500,7 +496,6 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
         // Fiyat ve puan şartları da kaldırılır, geçmiş hariç tutma listesi
         // de sıfırlanır — bu sayede en kısıtlayıcı filtreler gevşetilmiş olur.
         // ignore: avoid_print
-        print('⚠️ Birincil arama boş — fallback aramaya geçiliyor…');
 
         var fallbackResults = await PlacesService.searchVenues(
           lat: searchLat,
@@ -524,7 +519,6 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
         if (fallbackResults.isNotEmpty) {
           results = fallbackResults;
           // ignore: avoid_print
-          print('✅ Fallback: ${results.length} mekan bulundu');
         } else {
           state = state.copyWith(
             isLoading: false,

@@ -117,6 +117,12 @@ class AuthNotifier extends Notifier<AuthState> {
         final map = jsonDecode(raw) as Map<String, dynamic>;
         final user = UserModel.fromMap(map);
         state = state.copyWith(user: user, isSessionLoading: false);
+
+        // Arka planda Firestore'dan güncel veriyi çek — özellikle `isPremium`
+        // gibi admin/sunucu tarafından değiştirilebilen alanların yansıması için.
+        // Bloklamaz: kullanıcı session'dan anında uyanır, Firestore gelince
+        // state güncellenir.
+        _syncUserFromFirestore(user.uid).ignore();
       } else {
         state = state.copyWith(isSessionLoading: false);
       }
@@ -124,6 +130,20 @@ class AuthNotifier extends Notifier<AuthState> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_kSessionKey);
       state = state.copyWith(isSessionLoading: false);
+    }
+  }
+
+  /// Firestore'daki güncel kullanıcı verisini çekip hem state'i hem
+  /// session'ı sessizce günceller. Hata olursa mevcut state bozulmaz.
+  Future<void> _syncUserFromFirestore(String uid) async {
+    try {
+      final snap = await _firestore.collection('users').doc(uid).get();
+      if (!snap.exists) return;
+      final fresh = UserModel.fromMap(snap.data()!);
+      await _saveSession(fresh);
+      state = state.copyWith(user: fresh);
+    } catch (_) {
+      // Ağ hatası vb. — mevcut state korunur, sessizce devam.
     }
   }
 
@@ -516,6 +536,35 @@ class AuthNotifier extends Notifier<AuthState> {
     }
 
     state = state.copyWith(user: updatedUser);
+  }
+
+  // ── Premium ───────────────────────────────────────────────────────────────
+
+  /// Kullanıcının premium durumunu günceller — hem Firestore'a yazar hem de
+  /// local state + session'ı anında yansıtır.
+  ///
+  /// Kullanım senaryoları:
+  ///   • İleride: in-app purchase doğrulandıktan sonra `setPremium(true)`
+  ///   • Test/admin: Firebase Console'dan el ile `isPremium: true` yazmak
+  ///     yerine (veya ek olarak) direkt çağrılabilir.
+  ///   • Abonelik iptal: `setPremium(false)`
+  Future<void> setPremium(bool value) async {
+    final user = state.user;
+    if (user == null) return;
+    if (user.isPremium == value) return; // değişiklik yok
+
+    final updatedUser = user.copyWith(isPremium: value);
+    await _saveSession(updatedUser);
+    state = state.copyWith(user: updatedUser);
+
+    try {
+      await _firestore.collection('users').doc(user.uid).update({
+        'isPremium': value,
+      });
+    } catch (e) {
+      debugPrint('[setPremium] Firestore write failed: $e');
+      // Firestore hatası local state'i geri almaz — bir sonraki sync düzeltir.
+    }
   }
 
   // ── Çıkış ────────────────────────────────────────────────────────────────

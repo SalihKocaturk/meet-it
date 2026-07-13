@@ -194,7 +194,7 @@ class VenueCard extends ConsumerWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                'MeetIt'te \${place.communityLikes} beğeni',
+                                "MeetIt'te ${place.communityLikes} beğeni",
                                 style: TextStyle(
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.w600,

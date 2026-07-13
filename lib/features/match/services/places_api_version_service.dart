@@ -68,10 +68,6 @@ class PlacesApiVersionService {
       return resolved;
     } catch (e) {
       // ignore: avoid_print
-      print(
-        '[PlacesApiVersionService] Firestore okuma hatası, "new" '
-        'varsayılanına dönülüyor: $e',
-      );
       // Hata durumunda cache'e YAZMIYORUZ — bir sonraki arama tekrar
       // okumayı denesin (geçici bir ağ sorunuysa hemen kendini düzeltsin).
       return PlacesApiVersion.newApi;

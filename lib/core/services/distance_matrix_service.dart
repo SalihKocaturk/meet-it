@@ -122,7 +122,6 @@ class DistanceMatrixService {
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     final status = body['status'] as String?;
     // ignore: avoid_print
-    print('[DistanceMatrixService] mode=$mode status=$status');
 
     if (status != 'OK') {
       // REQUEST_DENIED (API etkin değil) / OVER_QUERY_LIMIT (kota) /

@@ -3,12 +3,12 @@ import 'dart:math' as math;
 
 import 'package:http/http.dart' as http;
 import 'package:meetit/core/constants/app_config.dart';
+import 'package:meetit/core/utils/geo_utils.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/services/api_usage_service.dart';
 import 'package:meetit/features/match/services/places_api_version_service.dart';
 import 'package:meetit/features/match/services/venue_photo_cache_service.dart';
 import 'package:meetit/features/match/services/venue_search_cache_service.dart';
-import 'package:meetit/core/utils/geo_utils.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 
 /// Google Places Nearby Search API wrapper.
@@ -64,7 +64,16 @@ class PlacesService {
   /// döndüreceğinden (uzaktaki iyi mekanlar dar çapta gelmez) dedup sonrası
   /// havuz büyür. 4 × 20 = en fazla 80 benzersiz / tip grubu →
   /// 3-4 tip grubuyla toplam ~200 hedefe ulaşılır.
-  static const List<int> _poolBuildRadii = [500, 1000, 2000, 3000, 5000, 7500, 10000, 15000];
+  static const List<int> _poolBuildRadii = [
+    500,
+    1000,
+    2000,
+    3000,
+    5000,
+    7500,
+    10000,
+    15000,
+  ];
 
   /// Cache'e yazılacak maksimum havuz büyüklüğü.
   static const int _maxPoolSize = 500;
@@ -151,8 +160,7 @@ class PlacesService {
     'supermarket',
     'grocery_or_supermarket',
     'liquor_store',
-    'store',         // Google'ın genel mağaza etiketi
-
+    'store', // Google'ın genel mağaza etiketi
     // Depo / endüstri / tamirat
     'storage',
     'moving_company',
@@ -184,15 +192,15 @@ class PlacesService {
   // (store+health) gibi false-positive'lar filtrelenir.
   static const Map<String, Set<String>> _activityRequiredTypes = {
     'restoran': {'restaurant', 'meal_takeaway', 'meal_delivery'},
-    'yemek':    {'restaurant', 'meal_takeaway', 'meal_delivery'},
-    'kafe':     {'cafe', 'bakery'},
-    'kahve':    {'cafe', 'bakery'},
-    'bar':      {'bar', 'night_club'},
-    'müze':     {'museum', 'art_gallery', 'tourist_attraction'},
-    'kültür':   {'museum', 'art_gallery', 'tourist_attraction'},
-    'galeri':   {'art_gallery', 'museum'},
-    'park':     {'park', 'campground', 'natural_feature'},
-    'doğa':     {'park', 'campground', 'natural_feature'},
+    'yemek': {'restaurant', 'meal_takeaway', 'meal_delivery'},
+    'kafe': {'cafe', 'bakery'},
+    'kahve': {'cafe', 'bakery'},
+    'bar': {'bar', 'night_club'},
+    'müze': {'museum', 'art_gallery', 'tourist_attraction'},
+    'kültür': {'museum', 'art_gallery', 'tourist_attraction'},
+    'galeri': {'art_gallery', 'museum'},
+    'park': {'park', 'campground', 'natural_feature'},
+    'doğa': {'park', 'campground', 'natural_feature'},
     // NOT: 'stadium' kasıtlı çıkarıldı — stadyum izleyici/etkinlik mekanıdır,
     // birlikte spor YAPILACAK bir yer değil. "Spor" aktivitesi seçildiğinde
     // futbol stadyumu önermek anlamsız (sadece statik veri görüntüleniyor).
@@ -200,13 +208,13 @@ class PlacesService {
     // egzersiz değil, dinlence/eğlence amaçlıdır. Google Places'te aquapark
     // için ayrı bir type olmadığından (legacy API'de en yakın karşılığı
     // 'amusement_park'), bu type sadece 'eğlence' kategorisinde tutuluyor.
-    'spor':     {'gym', 'bowling_alley'},
-    'sinema':   {'movie_theater'},
-    'eğlence':  {'amusement_park', 'bowling_alley', 'movie_theater'},
-    'alışveriş':{'shopping_mall', 'department_store'},
-    'bowling':  {'bowling_alley'},
-    'kitap':    {'library', 'book_store'},
-    'spa':      {'spa', 'beauty_salon'},
+    'spor': {'gym', 'bowling_alley'},
+    'sinema': {'movie_theater'},
+    'eğlence': {'amusement_park', 'bowling_alley', 'movie_theater'},
+    'alışveriş': {'shopping_mall', 'department_store'},
+    'bowling': {'bowling_alley'},
+    'kitap': {'library', 'book_store'},
+    'spa': {'spa', 'beauty_salon'},
   };
 
   /// Fiyat filtresi — kümülatif "en fazla bu kadar pahalı" mantığı.
@@ -337,7 +345,10 @@ class PlacesService {
   // Belediyesi Kütüphanesi", "Atatürk Kitaplığı") bu kelimeleri içermediği
   // için etkilenmez.
   static const List<String> _universityKeywords = [
-    'üniversite', 'üniv ', 'üniv.', 'university',
+    'üniversite',
+    'üniv ',
+    'üniv.',
+    'university',
   ];
 
   static bool _isUniversityLibrary(PlaceResult place) {
@@ -444,10 +455,6 @@ class PlacesService {
     // Havuz çok küçüldüyse kısıtı kaldır — boş ekran gösterme
     if (filtered.length < _maxResultCount && filtered.length < places.length) {
       // ignore: avoid_print
-      print(
-        '⚠️ Mesafe filtresi (${maxRadiusM}m) havuzu ${filtered.length} mekana '
-        'düşürdü — ${_maxResultCount} eşiğinin altında, kısıt kaldırılıyor.',
-      );
       return places;
     }
     return filtered;
@@ -479,14 +486,29 @@ class PlacesService {
   // hâlâ kişilik tablosundan geliyor, burada yalnızca SAF gece hayatı
   // mekanları (başka hiçbir sakin/nötr type'ı olmayanlar) hedefleniyor.
   static const Set<String> _calmCoTypes = {
-    'cafe', 'restaurant', 'bakery', 'library', 'museum', 'art_gallery',
-    'park', 'movie_theater', 'tourist_attraction', 'bowling_alley',
-    'amusement_park', 'gym',
+    'cafe',
+    'restaurant',
+    'bakery',
+    'library',
+    'museum',
+    'art_gallery',
+    'park',
+    'movie_theater',
+    'tourist_attraction',
+    'bowling_alley',
+    'amusement_park',
+    'gym',
   };
 
   static const List<String> _nightlifeNameKeywords = [
-    'lounge', 'pub', 'meyhane', 'gece kulübü', 'night club', 'disko',
-    ' club', 'kulüp',
+    'lounge',
+    'pub',
+    'meyhane',
+    'gece kulübü',
+    'night club',
+    'disko',
+    ' club',
+    'kulüp',
   ];
 
   static List<PlaceResult> _filterNightlifeMismatch(
@@ -497,7 +519,8 @@ class PlacesService {
     double nightlifeRatio(PersonalityProfile profile) {
       final total = profile.scores.values.fold<double>(0, (a, b) => a + b);
       if (total <= 0) return 0;
-      final intent = (profile.scores[PersonalityType.sosyalKelebek] ?? 0) +
+      final intent =
+          (profile.scores[PersonalityType.sosyalKelebek] ?? 0) +
           (profile.scores[PersonalityType.gurme] ?? 0);
       return intent / total;
     }
@@ -511,11 +534,13 @@ class PlacesService {
     }
 
     return places.where((p) {
-      final isNightlifeOnlyType = p.types.any(_nightlifeOnlyTypes.contains) &&
+      final isNightlifeOnlyType =
+          p.types.any(_nightlifeOnlyTypes.contains) &&
           !p.types.any(_calmCoTypes.contains);
       final lowerName = p.name.toLowerCase();
-      final hasNightlifeName =
-          _nightlifeNameKeywords.any((kw) => lowerName.contains(kw));
+      final hasNightlifeName = _nightlifeNameKeywords.any(
+        (kw) => lowerName.contains(kw),
+      );
       return !(isNightlifeOnlyType || hasNightlifeName);
     }).toList();
   }
@@ -535,7 +560,8 @@ class PlacesService {
   static List<PlaceResult> _filterMinimumReviews(List<PlaceResult> places) {
     return places
         .where(
-          (p) => p.userRatingsTotal == null ||
+          (p) =>
+              p.userRatingsTotal == null ||
               p.userRatingsTotal! >= _minReviewCount,
         )
         .toList();
@@ -564,8 +590,9 @@ class PlacesService {
     List<PlaceResult> places,
     List<String> selectedActivities,
   ) {
-    final sportSelected =
-        selectedActivities.any((a) => a.toLowerCase().contains('spor'));
+    final sportSelected = selectedActivities.any(
+      (a) => a.toLowerCase().contains('spor'),
+    );
     if (sportSelected) return places;
     return places.where((p) => !p.types.contains('gym')).toList();
   }
@@ -595,20 +622,33 @@ class PlacesService {
   // kalite skoruna dayandığı için bu sadece KÜÇÜK bir ek ağırlık — tamamen
   // alakasız bir profile sahip kullanıcılara bu mekanlar yine de zorla
   // gösterilmez, sadece eşit/yakın skorlu adaylar arasında öne geçer.
-  static const Map<String, Set<PersonalityType>> _landmarkPersonalityAffinity = {
+  static const Map<String, Set<PersonalityType>>
+  _landmarkPersonalityAffinity = {
     // Parklar / doğa — sakin ruh + maceraperest (yürüyüş/doğa = hafif aktif)
     'yıldız parkı': {PersonalityType.sakinRuh, PersonalityType.maceraperest},
-    'maçka demokrasi parkı': {PersonalityType.sakinRuh, PersonalityType.maceraperest},
+    'maçka demokrasi parkı': {
+      PersonalityType.sakinRuh,
+      PersonalityType.maceraperest,
+    },
     'emirgan korusu': {PersonalityType.sakinRuh, PersonalityType.maceraperest},
     'gülhane parkı': {PersonalityType.sakinRuh, PersonalityType.maceraperest},
-    'göztepe 60. yıl parkı': {PersonalityType.sakinRuh, PersonalityType.maceraperest},
-    'fethi paşa korusu': {PersonalityType.sakinRuh, PersonalityType.maceraperest},
+    'göztepe 60. yıl parkı': {
+      PersonalityType.sakinRuh,
+      PersonalityType.maceraperest,
+    },
+    'fethi paşa korusu': {
+      PersonalityType.sakinRuh,
+      PersonalityType.maceraperest,
+    },
     'belgrad ormanı': {PersonalityType.sakinRuh, PersonalityType.maceraperest},
     'çamlıca': {PersonalityType.sakinRuh, PersonalityType.maceraperest},
 
     // Sahiller — sakin ruh + sosyal kelebek
     'bebek sahili': {PersonalityType.sakinRuh, PersonalityType.sosyalKelebek},
-    'beşiktaş sahili': {PersonalityType.sakinRuh, PersonalityType.sosyalKelebek},
+    'beşiktaş sahili': {
+      PersonalityType.sakinRuh,
+      PersonalityType.sosyalKelebek,
+    },
     'moda sahili': {PersonalityType.sakinRuh, PersonalityType.sosyalKelebek},
     'kuruçeşme': {PersonalityType.sakinRuh, PersonalityType.sosyalKelebek},
     'ortaköy': {PersonalityType.sakinRuh, PersonalityType.sosyalKelebek},
@@ -630,7 +670,10 @@ class PlacesService {
 
     // Genel olarak çok bilinen/turistik — herkese hafif bonus (entelektuel +
     // sosyal kelebek ağırlıklı, çünkü hem gezilecek hem sosyalleşilecek yer)
-    'galata kulesi': {PersonalityType.entelektuel, PersonalityType.sosyalKelebek},
+    'galata kulesi': {
+      PersonalityType.entelektuel,
+      PersonalityType.sosyalKelebek,
+    },
     'kız kulesi': {PersonalityType.sosyalKelebek, PersonalityType.sakinRuh},
     'istiklal caddesi': {PersonalityType.sosyalKelebek},
     'bağdat caddesi': {PersonalityType.sosyalKelebek, PersonalityType.gurme},
@@ -700,18 +743,26 @@ class PlacesService {
   //   Akşam   18–21: restoran, bar, sinema, bowling (akşam yemeği + eğlence)
   //   Gece    22–04: bar, gece kulübü              (gece hayatı)
   static const Map<String, double> _morningTypeBoost = {
-    'cafe': 0.08, 'bakery': 0.08, 'park': 0.05,
+    'cafe': 0.08,
+    'bakery': 0.08,
+    'park': 0.05,
   };
   static const Map<String, double> _afternoonTypeBoost = {
-    'restaurant': 0.06, 'museum': 0.06, 'art_gallery': 0.06,
-    'shopping_mall': 0.04, 'movie_theater': 0.04,
+    'restaurant': 0.06,
+    'museum': 0.06,
+    'art_gallery': 0.06,
+    'shopping_mall': 0.04,
+    'movie_theater': 0.04,
   };
   static const Map<String, double> _eveningTypeBoost = {
-    'restaurant': 0.08, 'bar': 0.06,
-    'movie_theater': 0.07, 'bowling_alley': 0.06,
+    'restaurant': 0.08,
+    'bar': 0.06,
+    'movie_theater': 0.07,
+    'bowling_alley': 0.06,
   };
   static const Map<String, double> _nightTypeBoost = {
-    'bar': 0.08, 'night_club': 0.08,
+    'bar': 0.08,
+    'night_club': 0.08,
   };
 
   /// Fiyat bonusu/cezası: uygulamanın hedef kitlesi büyük çoğunluğu
@@ -725,13 +776,17 @@ class PlacesService {
   ///   4    → ₺₺₺₺ (çok pahalı)          → -0.28
   static double _priceBonus(PlaceResult place) {
     switch (place.priceLevel) {
-      case 1:    return 0.06;   // ₺ — ucuz, hedef kitle için ideal
-      case 3:    return -0.15;  // ₺₺₺ — pahalı
-      case 4:    return -0.28;  // ₺₺₺₺ — çok pahalı
-      case 0:    // ücretsiz (genellikle park) → nötr, park cezası ayrıca uygulanır
+      case 1:
+        return 0.06; // ₺ — ucuz, hedef kitle için ideal
+      case 3:
+        return -0.15; // ₺₺₺ — pahalı
+      case 4:
+        return -0.28; // ₺₺₺₺ — çok pahalı
+      case 0: // ücretsiz (genellikle park) → nötr, park cezası ayrıca uygulanır
       case null: // bilinmiyor → nötr
-      case 2:    // ₺₺ — orta → nötr
-      default:   return 0.0;
+      case 2: // ₺₺ — orta → nötr
+      default:
+        return 0.0;
     }
   }
 
@@ -741,11 +796,10 @@ class PlacesService {
   static double _parkDeprioritization(PlaceResult place) {
     if (!place.types.contains('park')) return 0.0;
     final reviews = place.userRatingsTotal ?? 0;
-    if (reviews >= 500) return 0.0;   // landmark park → nötr
+    if (reviews >= 500) return 0.0; // landmark park → nötr
     if (reviews >= 150) return -0.18; // orta büyüklükte park
-    return -0.32;                      // küçük/az bilinen park
+    return -0.32; // küçük/az bilinen park
   }
-
 
   static double _timeOfDayBoost(PlaceResult place) {
     final hour = DateTime.now().hour;
@@ -818,8 +872,7 @@ class PlacesService {
       final u = _rng.nextDouble().clamp(0.0001, 0.9999);
       final key = math.pow(u, 1 / weight).toDouble();
       return (entry.$1, key);
-    }).toList()
-      ..sort((a, b) => b.$2.compareTo(a.$2)); // büyük key = öncelikli
+    }).toList()..sort((a, b) => b.$2.compareTo(a.$2)); // büyük key = öncelikli
 
     final result = <PlaceResult>[];
     final usedGroups = <String>{};
@@ -865,11 +918,22 @@ class PlacesService {
   // spor salonu çıkabiliyordu. Artık gym SADECE kullanıcı açıkça "spor"
   // aktivitesini seçtiğinde aranıyor (bkz. `_activityToTypes['spor']`).
   static const Map<PersonalityType, List<String>> _personalityTypes = {
-    PersonalityType.sosyalKelebek: ['bar', 'night_club', 'restaurant', 'meal_takeaway'],
-    PersonalityType.sakinRuh:      ['cafe', 'park', 'library', 'bakery'],
-    PersonalityType.maceraperest:  ['park', 'bowling_alley', 'amusement_park'],
-    PersonalityType.entelektuel:   ['museum', 'art_gallery', 'library', 'movie_theater', 'tourist_attraction'],
-    PersonalityType.gurme:         ['restaurant', 'meal_takeaway', 'bakery', 'cafe'],
+    PersonalityType.sosyalKelebek: [
+      'bar',
+      'night_club',
+      'restaurant',
+      'meal_takeaway',
+    ],
+    PersonalityType.sakinRuh: ['cafe', 'park', 'library', 'bakery'],
+    PersonalityType.maceraperest: ['park', 'bowling_alley', 'amusement_park'],
+    PersonalityType.entelektuel: [
+      'museum',
+      'art_gallery',
+      'library',
+      'movie_theater',
+      'tourist_attraction',
+    ],
+    PersonalityType.gurme: ['restaurant', 'meal_takeaway', 'bakery', 'cafe'],
   };
 
   // ── Kişilik tipi → mekan tipi AĞIRLIK skoru ──────────────────────────────
@@ -935,32 +999,32 @@ class PlacesService {
     // alakasız yerleri de kapsıyor. restaurant + meal_takeaway + meal_delivery
     // kombinasyonu kebapçı, dönerci, fast-food'u zaten karşılıyor.
     'restoran': ['restaurant', 'meal_takeaway', 'meal_delivery'],
-    'yemek':    ['restaurant', 'meal_takeaway', 'meal_delivery'],
+    'yemek': ['restaurant', 'meal_takeaway', 'meal_delivery'],
     // Kafe — pastane (bakery) buraya ait, restoran aramasına girmesin
-    'kafe':     ['cafe', 'bakery'],
-    'kahve':    ['cafe', 'bakery'],
+    'kafe': ['cafe', 'bakery'],
+    'kahve': ['cafe', 'bakery'],
     // Bar / gece
-    'bar':      ['bar', 'night_club'],
+    'bar': ['bar', 'night_club'],
     // Kültür / müze
-    'müze':     ['museum', 'art_gallery', 'tourist_attraction'],
-    'kültür':   ['museum', 'art_gallery', 'tourist_attraction'],
+    'müze': ['museum', 'art_gallery', 'tourist_attraction'],
+    'kültür': ['museum', 'art_gallery', 'tourist_attraction'],
     // Galeri
-    'galeri':   ['art_gallery', 'museum'],
+    'galeri': ['art_gallery', 'museum'],
     // Park / doğa
-    'park':     ['park', 'campground', 'natural_feature'],
-    'doğa':     ['park', 'campground', 'natural_feature'],
+    'park': ['park', 'campground', 'natural_feature'],
+    'doğa': ['park', 'campground', 'natural_feature'],
     // Spor — 'stadium' ve 'amusement_park' kasıtlı çıkarıldı, bkz.
     // _activityRequiredTypes notu (ikisi de egzersiz değil).
-    'spor':     ['gym', 'bowling_alley'],
+    'spor': ['gym', 'bowling_alley'],
     // Sinema / eğlence
-    'sinema':   ['movie_theater'],
-    'eğlence':  ['amusement_park', 'bowling_alley', 'movie_theater'],
+    'sinema': ['movie_theater'],
+    'eğlence': ['amusement_park', 'bowling_alley', 'movie_theater'],
     // Alışveriş
     'alışveriş': ['shopping_mall', 'department_store'],
     // Diğer
-    'bowling':  ['bowling_alley'],
-    'kitap':    ['library', 'book_store'],
-    'spa':      ['spa', 'beauty_salon'],
+    'bowling': ['bowling_alley'],
+    'kitap': ['library', 'book_store'],
+    'spa': ['spa', 'beauty_salon'],
   };
 
   // ── Ana Arama Metodu ───────────────────────────────────────────────────────
@@ -979,15 +1043,18 @@ class PlacesService {
     double? minRating,
     Set<String> excludePlaceIds = const {},
     bool fallback = false,
+
     /// Kullanıcının geçmiş tercihleri (kaydet + tarif al) type→boost haritası.
     /// VenueSearchNotifier tarafından inşa edilir; boş geçilirse davranışsal
     /// boost hesaplanmaz.
     Map<String, double> behavioralTypeBoosts = const {},
+
     /// false → foto çözümleme ATLANIR; çağıran taraf, gösterilecek mekanlar
     /// kesinleştikten sonra [resolvePhotosFor] ile kendisi çözümler.
     /// (Mesafe filtresi gibi SONRADAN eleme yapan akışlarda, elenecek
     /// mekanlar için Photo API kotası boşa harcanmasın diye eklendi.)
     bool resolvePhotos = true,
+
     /// true → kuş uçuşu mesafe kırpması havuz küçük kalsa bile GEVŞETİLMEZ.
     /// Kullanıcı açıkça mesafe filtresi seçtiğinde kullanılır (bkz.
     /// _filterByDistance içindeki açıklama).
@@ -1007,9 +1074,7 @@ class PlacesService {
     final searchRadius = radius ?? AppConfig.defaultSearchRadius;
 
     // ignore: avoid_print
-    print('🔍 PlacesService typeGroups: $typeGroups '
-        'lodgingSearch=$searchingForLodging '
-        'radius=$searchRadius minRating=$minRating');
+    'lodgingSearch=$searchingForLodging ';
 
     // 📍 API ÇAĞRI TASARRUFU (2026-06-28, güncelleme 2026-06-29): Her type
     // grubu için AYRI bir `searchNearby` isteği atılıyor (tek aktivite
@@ -1045,11 +1110,18 @@ class PlacesService {
         radius: _poolCacheRadius,
       );
       if (groupCached == null) {
-        groupCached = await _fetchAndCacheNearby(lat: lat, lng: lng, types: group);
+        groupCached = await _fetchAndCacheNearby(
+          lat: lat,
+          lng: lng,
+          types: group,
+        );
       } else if (groupCached.length < _maxPoolSize) {
         // Fire-and-forget: aylık genişleme — kullanıcıyı bekletme.
         _maybeExpandAsync(
-          lat: lat, lng: lng, types: group, existing: groupCached,
+          lat: lat,
+          lng: lng,
+          types: group,
+          existing: groupCached,
         ).ignore();
       }
       rawResults.addAll(groupCached);
@@ -1099,9 +1171,7 @@ class PlacesService {
     // göster — hiç sonuç göstermemek yerine seçenek sunmak tercih edilir.
     if (priceLevel != null && priceFiltered.length < _minPoolAfterPriceFilter) {
       // ignore: avoid_print
-      print('⚠️ Fiyat filtresi ($priceLevel) sonrası havuz yetersiz '
-          '(${priceFiltered.length} < $_minPoolAfterPriceFilter) — '
-          'fiyat kısıtı kaldırılıyor, tüm havuzdan devam ediliyor.');
+      '(${priceFiltered.length} < $_minPoolAfterPriceFilter) — ';
       priceFiltered = distanceFiltered;
     }
 
@@ -1140,8 +1210,11 @@ class PlacesService {
     // Hiçbir taraf sosyalKelebek/gurme eğilimi taşımıyorsa (örn. maceraperest
     // + entelektüel + sakin ruh kombinasyonu), saf bar/night_club karakterli
     // veya ismi "lounge"/"pub" gibi gece hayatı kelimeleri içeren mekanları ele.
-    final nightlifeFiltered =
-        _filterNightlifeMismatch(restrictedFiltered, userProfile, friendProfile);
+    final nightlifeFiltered = _filterNightlifeMismatch(
+      restrictedFiltered,
+      userProfile,
+      friendProfile,
+    );
 
     // ── Adım 4: Yorum sayısı çok az olan (güvenilmez) mekanları ele ───────
     final reviewFiltered = _filterMinimumReviews(nightlifeFiltered);
@@ -1151,18 +1224,19 @@ class PlacesService {
     final ratingFiltered = _filterMinimumRating(reviewFiltered, minRating);
 
     // ── Adım 5.5: "spor" aktivitesi seçilmediyse gym sonuçlarını ele ───────
-    final gymFiltered = _filterGymRequiresActivity(ratingFiltered, selectedActivities);
+    final gymFiltered = _filterGymRequiresActivity(
+      ratingFiltered,
+      selectedActivities,
+    );
 
     // ignore: avoid_print
-    print('🔍 PlacesService: raw=${results.length} '
-        'dist=${distanceFiltered.length}(≤${searchRadius}m) '
+    'dist=${distanceFiltered.length}(≤${searchRadius}m) '
         'price=${priceFiltered.length} '
         'excl=${excludeFiltered.length} req=${filtered.length} '
         'name=${nameFiltered.length} uniLib=${libraryFiltered.length} '
         'restricted=${restrictedFiltered.length} '
         'nightlife=${nightlifeFiltered.length} '
-        'review=${reviewFiltered.length} rating=${ratingFiltered.length} '
-        'gym=${gymFiltered.length}');
+        'review=${reviewFiltered.length} rating=${ratingFiltered.length} ';
 
     if (gymFiltered.isEmpty) return [];
 
@@ -1180,8 +1254,9 @@ class PlacesService {
     // düşmesin diye hariç tutma uygulanmıyor.
     var pool = gymFiltered;
     if (excludePlaceIds.isNotEmpty) {
-      final withoutRecent =
-          gymFiltered.where((p) => !excludePlaceIds.contains(p.placeId)).toList();
+      final withoutRecent = gymFiltered
+          .where((p) => !excludePlaceIds.contains(p.placeId))
+          .toList();
       if (withoutRecent.length >= _maxResultCount) {
         pool = withoutRecent;
       }
@@ -1193,11 +1268,15 @@ class PlacesService {
     // + davranışsal boost (kullanıcının geçmiş kaydet/tarif al sinyali).
     final scored = pool.map((place) {
       final personalityScore = _personalityMatch(
-        place, userProfile, friendProfile, selectedActivities,
+        place,
+        userProfile,
+        friendProfile,
+        selectedActivities,
       );
       final ratingScore = _qualityScore(place);
       // %60 kişilik uyumu + %40 kalite (rating + yorum sayısı)
-      final total = personalityScore * 0.6 +
+      final total =
+          personalityScore * 0.6 +
           ratingScore * 0.4 +
           _landmarkBonus(place, userProfile, friendProfile) +
           _gymBrandBonus(place) +
@@ -1239,14 +1318,12 @@ class PlacesService {
       // sonradan eleme yapan akışlar, SADECE gerçekten gösterilecek mekanlar
       // için resolvePhotosFor() çağırıp Photo API kotasını korur.
       // ignore: avoid_print
-      print('🔍 PlacesService final (foto ertelendi): ${finalList.length} mekan');
       return finalList;
     }
 
     final cachedList = await resolvePhotosFor(finalList);
 
     // ignore: avoid_print
-    print('🔍 PlacesService final: ${cachedList.length} mekan');
     return cachedList;
   }
 
@@ -1254,47 +1331,44 @@ class PlacesService {
   /// fotoğraflarını paylaşımlı global önbellek (VenuePhotoCacheService)
   /// üzerinden çözümler. `searchVenues(resolvePhotos: false)` ile ertelenen
   /// çözümlemeyi, gösterilecek mekanlar kesinleşince çağıran taraf yapar.
-  static Future<List<PlaceResult>> resolvePhotosFor(
-    List<PlaceResult> places,
-  ) {
-    return Future.wait(places.map((place) async {
-      final namesToCache =
-          place.photoReferences.isNotEmpty
-              ? place.photoReferences.take(_maxGalleryPhotos).toList()
-              : (place.photoReference != null ? [place.photoReference!] : <String>[]);
-      if (namesToCache.isEmpty) return place;
-      try {
-        final cachedUrls = await VenuePhotoCacheService.resolvePhotoUrls(
-          placeId: place.placeId,
-          photoNames: namesToCache,
-        );
-        // Kota hatası yüzünden TÜM fotoğraflar elenmiş olabilir (bkz.
-        // VenuePhotoCacheService.resolvePhotoUrl — kota hatasında '' döner,
-        // resolvePhotoUrls bunları filtreler). Bu durumda mekanı fotosuz
-        // bırak (UI zaten "fotoğraf yok" placeholder'ını gösteriyor),
-        // ASLA `.first` ile boş listeye erişip exception fırlatma.
-        if (cachedUrls.isEmpty) {
-          // NOT: `copyWith` standart `?? this.field` deseni kullanıyor —
-          // yani `null` geçmek eski (kotaya tabi, henüz çözümlenmemiş ham
-          // Google foto adı içeren) değeri TEMİZLEMEZ. Bu yüzden burada
-          // BOŞ STRING ('') geçiyoruz — `'' ?? eski` ifadesinde '' geçerli
-          // bir değer olduğundan eski değerin üzerine yazılır ve gerçekten
-          // temizlenir (UI artık "fotoğraf yok" durumuna düşer).
+  static Future<List<PlaceResult>> resolvePhotosFor(List<PlaceResult> places) {
+    return Future.wait(
+      places.map((place) async {
+        final namesToCache = place.photoReferences.isNotEmpty
+            ? place.photoReferences.take(_maxGalleryPhotos).toList()
+            : (place.photoReference != null
+                  ? [place.photoReference!]
+                  : <String>[]);
+        if (namesToCache.isEmpty) return place;
+        try {
+          final cachedUrls = await VenuePhotoCacheService.resolvePhotoUrls(
+            placeId: place.placeId,
+            photoNames: namesToCache,
+          );
+          // Kota hatası yüzünden TÜM fotoğraflar elenmiş olabilir (bkz.
+          // VenuePhotoCacheService.resolvePhotoUrl — kota hatasında '' döner,
+          // resolvePhotoUrls bunları filtreler). Bu durumda mekanı fotosuz
+          // bırak (UI zaten "fotoğraf yok" placeholder'ını gösteriyor),
+          // ASLA `.first` ile boş listeye erişip exception fırlatma.
+          if (cachedUrls.isEmpty) {
+            // NOT: `copyWith` standart `?? this.field` deseni kullanıyor —
+            // yani `null` geçmek eski (kotaya tabi, henüz çözümlenmemiş ham
+            // Google foto adı içeren) değeri TEMİZLEMEZ. Bu yüzden burada
+            // BOŞ STRING ('') geçiyoruz — `'' ?? eski` ifadesinde '' geçerli
+            // bir değer olduğundan eski değerin üzerine yazılır ve gerçekten
+            // temizlenir (UI artık "fotoğraf yok" durumuna düşer).
+            return place.copyWith(photoReference: '', photoReferences: []);
+          }
+          return place.copyWith(
+            photoReference: cachedUrls.first,
+            photoReferences: cachedUrls,
+          );
+        } catch (e) {
+          // ignore: avoid_print
           return place.copyWith(photoReference: '', photoReferences: []);
         }
-        return place.copyWith(
-          photoReference: cachedUrls.first,
-          photoReferences: cachedUrls,
-        );
-      } catch (e) {
-        // ignore: avoid_print
-        print(
-          '[PlacesService] ⚠️ ${place.name} için foto çözümleme hatası '
-          '(kota/ağ) — mekan fotosuz gösterilecek: $e',
-        );
-        return place.copyWith(photoReference: '', photoReferences: []);
-      }
-    }));
+      }),
+    );
   }
 
   static final math.Random _rng = math.Random();
@@ -1417,7 +1491,10 @@ class PlacesService {
       return (activityBonus > 0 ? activityBonus : 0.3).clamp(0.0, 1.0);
     }
 
-    final cosine = (dot / (math.sqrt(normC) * math.sqrt(normV))).clamp(0.0, 1.0);
+    final cosine = (dot / (math.sqrt(normC) * math.sqrt(normV))).clamp(
+      0.0,
+      1.0,
+    );
     return (cosine + activityBonus).clamp(0.0, 1.0);
   }
 
@@ -1465,23 +1542,37 @@ class PlacesService {
   }) async {
     try {
       final lastExpanded = await VenueSearchCacheService.getExpandedAt(
-        lat: lat, lng: lng, types: types, radius: _poolCacheRadius,
+        lat: lat,
+        lng: lng,
+        types: types,
+        radius: _poolCacheRadius,
       );
-      final isDue = lastExpanded == null ||
+      final isDue =
+          lastExpanded == null ||
           DateTime.now().difference(lastExpanded).inDays >= 30;
       if (!isDue) return;
       if (existing.length >= _maxPoolSize) return; // zaten dolu
 
       // Sadece dış 3 halka: 7500, 10000, 15000 → 3 API çağrısı
       // 4 aşamalı yönetici hem API versiyonunu hem arama sayacını halleder.
-      final stage      = await ApiUsageService.currentStage();
+      final stage = await ApiUsageService.currentStage();
       final apiVersion = stage.apiVersion;
       final expansionRadii = _poolBuildRadii.reversed.take(3).toList();
       final fresh = <PlaceResult>[];
       for (final r in expansionRadii) {
         final batch = apiVersion == PlacesApiVersion.legacy
-            ? await _fetchNearbyLegacy(lat: lat, lng: lng, types: types, radius: r)
-            : await _fetchNearbyNew(lat: lat, lng: lng, types: types, radius: r);
+            ? await _fetchNearbyLegacy(
+                lat: lat,
+                lng: lng,
+                types: types,
+                radius: r,
+              )
+            : await _fetchNearbyNew(
+                lat: lat,
+                lng: lng,
+                types: types,
+                radius: r,
+              );
         ApiUsageService.recordSearchCall(isNew: stage.usesNewApi).ignore();
         fresh.addAll(batch);
       }
@@ -1496,7 +1587,6 @@ class PlacesService {
       );
     } catch (e) {
       // ignore: avoid_print
-      print('[PlacesService] _maybeExpandAsync hata: \$e');
     }
   }
 
@@ -1508,14 +1598,19 @@ class PlacesService {
     // 📍 4 AŞAMALI API SWITCH: stage hem versiyonu hem foto iznini belirler.
     // In-memory cache (5 dk) sayesinde döngü boyunca Firestore'a tekrar
     // gidilmez — PlacesApiVersionService'in yerini ApiUsageService aldı.
-    final stage      = await ApiUsageService.currentStage();
+    final stage = await ApiUsageService.currentStage();
     final apiVersion = stage.apiVersion;
 
     final allFetched = <PlaceResult>[];
 
     for (final r in _poolBuildRadii) {
       final batch = apiVersion == PlacesApiVersion.legacy
-          ? await _fetchNearbyLegacy(lat: lat, lng: lng, types: types, radius: r)
+          ? await _fetchNearbyLegacy(
+              lat: lat,
+              lng: lng,
+              types: types,
+              radius: r,
+            )
           : await _fetchNearbyNew(lat: lat, lng: lng, types: types, radius: r);
       // Her Nearby Search çağrısını say (Legacy şimdilik sayılmıyor)
       ApiUsageService.recordSearchCall(isNew: stage.usesNewApi).ignore();
@@ -1534,8 +1629,6 @@ class PlacesService {
     }
 
     // ignore: avoid_print
-    print('🗄️ PlacesService pool built: types=$types '
-        'fetched=${allFetched.length} unique=${pool.length}');
 
     await VenueSearchCacheService.setCached(
       lat: lat,
@@ -1580,16 +1673,10 @@ class PlacesService {
 
       if (response.statusCode == 401 || response.statusCode == 403) {
         // ignore: avoid_print
-        print(
-          '[PlacesService] ❌ Google Places yetkilendirme hatası '
-          '(${response.statusCode}) — GOOGLE_MAPS_API_KEY doğru mu ve '
-          '"Places API (New)" Cloud Console\'da aktif mi kontrol et.',
-        );
         return [];
       }
       if (response.statusCode != 200) {
         // ignore: avoid_print
-        print('[PlacesService] ⚠️ Google Places status=${response.statusCode} body=${response.body}');
         return [];
       }
 
@@ -1597,7 +1684,6 @@ class PlacesService {
       final rawResults = decoded['places'] as List<dynamic>? ?? [];
 
       // ignore: avoid_print
-      print('[PlacesService] types=$types count=${rawResults.length}');
 
       var places = rawResults
           .map((p) => PlaceResult.fromJson(p as Map<String, dynamic>))
@@ -1610,7 +1696,6 @@ class PlacesService {
       return places;
     } catch (e) {
       // ignore: avoid_print
-      print('[PlacesService] fetch error: $e');
       return [];
     }
   }
@@ -1648,19 +1733,15 @@ class PlacesService {
       'language': 'tr',
       'key': AppConfig.googleMapsApiKey,
     };
-    final uri = Uri.parse(AppConfig.placesNearbySearchUrlLegacy)
-        .replace(queryParameters: params);
+    final uri = Uri.parse(
+      AppConfig.placesNearbySearchUrlLegacy,
+    ).replace(queryParameters: params);
 
     try {
-      final response =
-          await http.get(uri).timeout(const Duration(seconds: 10));
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) {
         // ignore: avoid_print
-        print(
-          '[PlacesService] ⚠️ Legacy status=${response.statusCode} '
-          'body=${response.body}',
-        );
         return [];
       }
 
@@ -1669,26 +1750,16 @@ class PlacesService {
 
       if (status == 'REQUEST_DENIED' || status == 'OVER_QUERY_LIMIT') {
         // ignore: avoid_print
-        print(
-          '[PlacesService] ❌ Legacy Places yetkilendirme/kota hatası '
-          '(status=$status) — GOOGLE_MAPS_API_KEY için "Places API" '
-          '(Legacy) Cloud Console\'da aktif mi ve kotası dolmuş mu kontrol et.',
-        );
         return [];
       }
       if (status != 'OK' && status != 'ZERO_RESULTS') {
         // ignore: avoid_print
-        print('[PlacesService] ⚠️ Legacy status=$status body=${response.body}');
         return [];
       }
 
       final rawResults = body['results'] as List<dynamic>? ?? [];
 
       // ignore: avoid_print
-      print(
-        '[PlacesService] (Legacy) type=$primaryType '
-        'count=${rawResults.length}',
-      );
 
       var places = rawResults
           .map((r) => PlaceResult.fromLegacyJson(r as Map<String, dynamic>))
@@ -1698,7 +1769,6 @@ class PlacesService {
       return places;
     } catch (e) {
       // ignore: avoid_print
-      print('[PlacesService] Legacy fetch error: $e');
       return [];
     }
   }
@@ -1727,8 +1797,9 @@ class PlacesService {
     // "Place Details" endpoint'ine HİÇ gidilmez. Bu endpoint kendi başına
     // faturalanıyor — yani sadece foto indirmeyi değil, "bu mekanın foto
     // listesi ne?" sorusunun KENDİSİNİ de ücretsiz hale getiriyoruz.
-    final cached =
-        await VenuePhotoCacheService.getCachedPhotoUrls(placeId: placeId);
+    final cached = await VenuePhotoCacheService.getCachedPhotoUrls(
+      placeId: placeId,
+    );
     if (cached.isNotEmpty) return cached;
 
     try {
@@ -1763,7 +1834,6 @@ class PlacesService {
       );
     } catch (e) {
       // ignore: avoid_print
-      print('[PlacesService] fetchPhotoUrls error: $e');
       return [];
     }
   }
@@ -1928,10 +1998,7 @@ class PlacesService {
 
     final userSecondary = <String>[];
     final friendSecondary = <String>[];
-    void collectSecondaryPool(
-      PersonalityProfile profile,
-      List<String> sink,
-    ) {
+    void collectSecondaryPool(PersonalityProfile profile, List<String> sink) {
       final ranked = profile.rankedTypes;
       if (ranked.length < 2) return;
       final second = ranked[1];

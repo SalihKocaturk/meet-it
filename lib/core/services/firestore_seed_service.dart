@@ -20,10 +20,8 @@ class FirestoreSeedService {
       }
       await batch.commit();
       // ignore: avoid_print
-      print('✅ Firestore seed: ${users.length} kullanıcı eklendi.');
     } catch (e) {
       // ignore: avoid_print
-      print('⚠️ Firestore seed hatası: $e');
     }
   }
 

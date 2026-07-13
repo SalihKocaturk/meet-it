@@ -61,11 +61,17 @@ final editPhotoFileProvider = StateProvider.autoDispose<File?>((ref) => null);
 class EditProfilePage extends ConsumerWidget {
   const EditProfilePage({super.key});
 
-  List<String> _genders(BuildContext context) => [
-        'auth.gender_male'.tr(),
-        'auth.gender_female'.tr(),
-        'auth.gender_other'.tr(),
-      ];
+  // Sabit kodlar — Firestore'a bunlar yazılır, asla çevrilmiş string değil.
+  static const _genderCodes = ['male', 'female', 'other'];
+
+  String _genderLabel(String code) {
+    switch (code) {
+      case 'male':   return 'auth.gender_male'.tr();
+      case 'female': return 'auth.gender_female'.tr();
+      case 'other':  return 'auth.gender_other'.tr();
+      default:       return code;
+    }
+  }
 
   Future<void> _pickPhoto(WidgetRef ref) async {
     final picker = ImagePicker();
@@ -474,7 +480,10 @@ class EditProfilePage extends ConsumerWidget {
                   ),
                   SizedBox(height: 6),
                   DropdownButtonFormField<String>(
-                    initialValue: selectedGender,
+                    // value: null ise hint gösterilir, items'ta olmayan değer crash yapmaz
+                    value: _genderCodes.contains(selectedGender)
+                        ? selectedGender
+                        : null,
                     decoration: _dropdownDecoration(context),
                     hint: Text(
                       'auth.gender_hint'.tr(),
@@ -483,8 +492,11 @@ class EditProfilePage extends ConsumerWidget {
                         fontSize: 14,
                       ),
                     ),
-                    items: _genders(context)
-                        .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                    items: _genderCodes
+                        .map((code) => DropdownMenuItem(
+                              value: code,
+                              child: Text(_genderLabel(code)),
+                            ))
                         .toList(),
                     onChanged: (v) =>
                         ref.read(editGenderProvider.notifier).state = v,

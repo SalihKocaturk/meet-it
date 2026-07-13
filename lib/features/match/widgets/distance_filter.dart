@@ -21,6 +21,7 @@ class DistanceFilter extends ConsumerWidget {
   // (km değeri null=tümü/sınırsız, çeviri anahtarı)
   static const _options = [
     (null, 'match.distance_all'),
+    (1.0, 'match.distance_1km'),
     (3.0, 'match.distance_3km'),
     (5.0, 'match.distance_5km'),
     (10.0, 'match.distance_10km'),

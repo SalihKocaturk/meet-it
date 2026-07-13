@@ -30,6 +30,14 @@ class UserModel {
   final double? lat;
   final double? lng;
 
+  /// Premium üyelik durumu. true ise:
+  ///   • Reklam gösterilmez
+  ///   • Gelecekte: Places API sınırsız, Hidden Gem modu açık, vb.
+  ///
+  /// Firestore'da `isPremium: true` alanıyla saklanır; alan yoksa
+  /// (eski kullanıcılar) varsayılan olarak false döner.
+  final bool isPremium;
+
   const UserModel({
     required this.uid,
     required this.name,
@@ -43,6 +51,7 @@ class UserModel {
     this.personalityHistory = const [],
     this.lat,
     this.lng,
+    this.isPremium = false,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -70,6 +79,7 @@ class UserModel {
           const [],
       lat: (map['lat'] as num?)?.toDouble(),
       lng: (map['lng'] as num?)?.toDouble(),
+      isPremium: map['isPremium'] as bool? ?? false,
     );
   }
 
@@ -90,6 +100,7 @@ class UserModel {
             personalityHistory.map((p) => p.toMap()).toList(),
       if (lat != null) 'lat': lat,
       if (lng != null) 'lng': lng,
+      if (isPremium) 'isPremium': isPremium,
     };
   }
 
@@ -109,6 +120,7 @@ class UserModel {
     List<PersonalityProfile>? personalityHistory,
     double? lat,
     double? lng,
+    bool? isPremium,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -124,6 +136,7 @@ class UserModel {
       personalityHistory: personalityHistory ?? this.personalityHistory,
       lat: lat ?? this.lat,
       lng: lng ?? this.lng,
+      isPremium: isPremium ?? this.isPremium,
     );
   }
 }

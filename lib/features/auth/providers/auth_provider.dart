@@ -36,3 +36,8 @@ final isAuthenticatedProvider = Provider<bool>((ref) {
 final hasPersonalityProvider = Provider<bool>((ref) {
   return ref.watch(authProvider).hasPersonality;
 });
+
+// Premium üye mi?
+final isPremiumProvider = Provider<bool>((ref) {
+  return ref.watch(authProvider).user?.isPremium ?? false;
+});
