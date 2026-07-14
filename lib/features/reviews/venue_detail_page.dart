@@ -707,7 +707,13 @@ class _ReviewTileState extends ConsumerState<_ReviewTile>
 
   Future<void> _toggleLike(WidgetRef ref, String uid) async {
     // Stream provider otomatik güncellediği için invalidate'e gerek yok.
-    await ref.read(reviewProvider.notifier).toggleLike(review.id, uid);
+    await ref.read(reviewProvider.notifier).toggleLike(
+      reviewId: review.id,
+      uid: uid,
+      isCurrentlyLiked: review.isLikedBy(uid),
+      authorUid: review.authorUid,
+      venueName: review.venueName,
+    );
   }
 
   // Çift dokunma: Instagram'da olduğu gibi SADECE beğenir, asla beğeniyi

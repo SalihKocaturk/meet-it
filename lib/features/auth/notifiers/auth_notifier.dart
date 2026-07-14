@@ -111,6 +111,10 @@ class AuthNotifier extends Notifier<AuthState> {
 
   Future<void> _restoreSession() async {
     try {
+      // Firebase Auth token'ının hazır olmasını bekle — aksi halde cold-start'ta
+      // Firestore okumalar başarısız olur (sign-out/sign-in sonrası düzeliyordu).
+      await FirebaseAuth.instance.authStateChanges().first;
+
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_kSessionKey);
       if (raw != null) {

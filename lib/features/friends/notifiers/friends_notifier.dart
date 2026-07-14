@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -76,6 +77,7 @@ class FriendsNotifier extends Notifier<FriendsState> {
   }
 
   Future<void> _listenFriendships(String currentUid) async {
+    try {
     // Önce tüm kullanıcıları bir kere çek
     final usersSnap = await _db.collection('users').get();
     final allUsers = usersSnap.docs
@@ -160,6 +162,13 @@ class FriendsNotifier extends Notifier<FriendsState> {
         isLoading: false,
       );
     });
+    } catch (e) {
+      debugPrint('[FriendsNotifier] _listenFriendships hatası: $e — 3sn sonra tekrar deneniyor');
+      await Future.delayed(const Duration(seconds: 3));
+      if (ref.read(authProvider).user?.uid == currentUid) {
+        await _listenFriendships(currentUid);
+      }
+    }
   }
 
   // ── Yükleme ───────────────────────────────────────────────────────────────
