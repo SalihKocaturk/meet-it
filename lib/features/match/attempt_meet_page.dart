@@ -217,7 +217,7 @@ class AttemptMeetPage extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
+                                  color: Colors.black.withValues(alpha: 0.1),
                                   blurRadius: 8,
                                 ),
                               ],
@@ -247,11 +247,13 @@ class AttemptMeetPage extends ConsumerWidget {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFFA000).withOpacity(0.1),
+                              color: const Color(
+                                0xFFFFA000,
+                              ).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
+                                  color: Colors.black.withValues(alpha: 0.1),
                                   blurRadius: 8,
                                 ),
                               ],
@@ -301,7 +303,7 @@ class AttemptMeetPage extends ConsumerWidget {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.12),
+                            color: Colors.black.withValues(alpha: 0.12),
                             blurRadius: 8,
                           ),
                         ],
@@ -346,7 +348,7 @@ class AttemptMeetPage extends ConsumerWidget {
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.12),
+                                  color: Colors.black.withValues(alpha: 0.12),
                                   blurRadius: 6,
                                 ),
                               ],

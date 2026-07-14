@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -76,90 +77,99 @@ class FriendsNotifier extends Notifier<FriendsState> {
   }
 
   Future<void> _listenFriendships(String currentUid) async {
-    // Önce tüm kullanıcıları bir kere çek
-    final usersSnap = await _db.collection('users').get();
-    final allUsers = usersSnap.docs
-        .map((d) => UserModel.fromMap(d.data()))
-        .where((u) => u.uid != currentUid)
-        .toList();
-
-    // Friendships'i realtime dinle
-    _friendshipSub?.cancel();
-    _friendshipSub = _db
-        .collection('friendships')
-        .where(Filter.or(
-          Filter('fromUid', isEqualTo: currentUid),
-          Filter('toUid', isEqualTo: currentUid),
-        ))
-        .snapshots()
-        .listen((snap) {
-      final friendships = snap.docs
-          .map((d) => FriendshipModel.fromMap(d.id, d.data()))
+    try {
+      // Önce tüm kullanıcıları bir kere çek
+      final usersSnap = await _db.collection('users').get();
+      final allUsers = usersSnap.docs
+          .map((d) => UserModel.fromMap(d.data()))
+          .where((u) => u.uid != currentUid)
           .toList();
 
-      final acceptedUids = <String>{};
-      final pendingFromMe = <String>{};
-      final pendingToMe = <String>{};
-      // Her arkadaşın meetCount'u — doğrudan friendship dokümanından
-      // okunuyor (yön bağımsız, tek bir paylaşılan sayaç, bkz.
-      // FriendshipModel.meetCount).
-      final meetCounts = <String, int>{};
+      // Friendships'i realtime dinle
+      _friendshipSub?.cancel();
+      _friendshipSub = _db
+          .collection('friendships')
+          .where(Filter.or(
+            Filter('fromUid', isEqualTo: currentUid),
+            Filter('toUid', isEqualTo: currentUid),
+          ))
+          .snapshots()
+          .listen((snap) {
+        final friendships = snap.docs
+            .map((d) => FriendshipModel.fromMap(d.id, d.data()))
+            .toList();
 
-      for (final f in friendships) {
-        final otherUid =
-            f.fromUid == currentUid ? f.toUid : f.fromUid;
-        meetCounts[otherUid] = f.meetCount;
-        switch (f.status) {
-          case FriendshipStatus.accepted:
-            acceptedUids.add(otherUid);
-          case FriendshipStatus.pending:
-            if (f.fromUid == currentUid) {
-              pendingFromMe.add(otherUid);
-            } else {
-              pendingToMe.add(otherUid);
-            }
-          case FriendshipStatus.rejected:
-            break;
+        final acceptedUids = <String>{};
+        final pendingFromMe = <String>{};
+        final pendingToMe = <String>{};
+        // Her arkadaşın meetCount'u — doğrudan friendship dokümanından
+        // okunuyor (yön bağımsız, tek bir paylaşılan sayaç, bkz.
+        // FriendshipModel.meetCount).
+        final meetCounts = <String, int>{};
+
+        for (final f in friendships) {
+          final otherUid =
+              f.fromUid == currentUid ? f.toUid : f.fromUid;
+          meetCounts[otherUid] = f.meetCount;
+          switch (f.status) {
+            case FriendshipStatus.accepted:
+              acceptedUids.add(otherUid);
+            case FriendshipStatus.pending:
+              if (f.fromUid == currentUid) {
+                pendingFromMe.add(otherUid);
+              } else {
+                pendingToMe.add(otherUid);
+              }
+            case FriendshipStatus.rejected:
+              break;
+          }
         }
-      }
 
-      final suggestions = <UserFriendModel>[];
-      final connections = <UserFriendModel>[];
-      final pendingInvitations = <UserFriendModel>[];
-      final sentRequests = <UserFriendModel>[];
+        final suggestions = <UserFriendModel>[];
+        final connections = <UserFriendModel>[];
+        final pendingInvitations = <UserFriendModel>[];
+        final sentRequests = <UserFriendModel>[];
 
-      for (final u in allUsers) {
-        final friend = UserFriendModel(
-          uid: u.uid,
-          name: u.name,
-          photoUrl: u.photoUrl,
-          status: acceptedUids.contains(u.uid)
-              ? FriendStatus.accepted
-              : FriendStatus.pending,
-          addedAt: DateTime.now(),
-          personalityProfile: u.personalityProfile,
-          meetCount: meetCounts[u.uid] ?? 0,
-          gender: u.gender,
+        for (final u in allUsers) {
+          final friend = UserFriendModel(
+            uid: u.uid,
+            name: u.name,
+            photoUrl: u.photoUrl,
+            status: acceptedUids.contains(u.uid)
+                ? FriendStatus.accepted
+                : FriendStatus.pending,
+            addedAt: DateTime.now(),
+            personalityProfile: u.personalityProfile,
+            meetCount: meetCounts[u.uid] ?? 0,
+            gender: u.gender,
+          );
+          if (acceptedUids.contains(u.uid)) {
+            connections.add(friend);
+          } else if (pendingToMe.contains(u.uid)) {
+            pendingInvitations.add(friend);
+          } else if (pendingFromMe.contains(u.uid)) {
+            sentRequests.add(friend);
+          } else {
+            suggestions.add(friend);
+          }
+        }
+
+        state = state.copyWith(
+          suggestions: suggestions,
+          connections: connections,
+          pendingInvitations: pendingInvitations,
+          sentRequests: sentRequests,
+          isLoading: false,
         );
-        if (acceptedUids.contains(u.uid)) {
-          connections.add(friend);
-        } else if (pendingToMe.contains(u.uid)) {
-          pendingInvitations.add(friend);
-        } else if (pendingFromMe.contains(u.uid)) {
-          sentRequests.add(friend);
-        } else {
-          suggestions.add(friend);
-        }
+      });
+    } catch (e) {
+      debugPrint('[FriendsNotifier] _listenFriendships hatası: $e — 3sn sonra tekrar deneniyor');
+      await Future.delayed(const Duration(seconds: 3));
+      // Kullanıcı hâlâ aynıysa tekrar dene (logout olduysa uid değişmiş olur)
+      if (ref.read(authProvider).user?.uid == currentUid) {
+        await _listenFriendships(currentUid);
       }
-
-      state = state.copyWith(
-        suggestions: suggestions,
-        connections: connections,
-        pendingInvitations: pendingInvitations,
-        sentRequests: sentRequests,
-        isLoading: false,
-      );
-    });
+    }
   }
 
   // ── Yükleme ───────────────────────────────────────────────────────────────

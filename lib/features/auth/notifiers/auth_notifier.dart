@@ -111,6 +111,13 @@ class AuthNotifier extends Notifier<AuthState> {
 
   Future<void> _restoreSession() async {
     try {
+      // Firebase Auth'un native persistence'tan (Keychain/SharedPreferences)
+      // auth state'i yükleyip token'ı yenilemesini bekle.
+      // Bu olmadan cold-start'ta ilk Firestore istekleri (FriendsNotifier,
+      // topReviewsProvider vb.) "token henüz hazır değil" nedeniyle sessizce
+      // başarısız olur — sign-out/sign-in sonrası token taze olduğundan çalışır.
+      await FirebaseAuth.instance.authStateChanges().first;
+
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_kSessionKey);
       if (raw != null) {
