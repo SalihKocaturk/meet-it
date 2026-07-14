@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -272,8 +271,7 @@ class ReviewNotifier extends Notifier<ReviewState> {
           },
         ));
       }
-    } catch (e) {
-      debugPrint('[toggleLike] Firestore yazma hatası: $e');
+    } catch (_) {
       // Rollback
       final rollback = List<VenueReviewModel>.from(state.reviews);
       rollback[idx] = review;
