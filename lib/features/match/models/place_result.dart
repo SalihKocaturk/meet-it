@@ -349,4 +349,37 @@ class PlaceResult {
       'restaurant', 'cafe', 'bar', 'museum', 'art_gallery', 'park',
       'gym', 'movie_theater', 'bowling_alley', 'night_club', 'library',
       'bakery', 'amusement_park', 'shopping_mall', 'spa',
-      'tourist_att
+      'tourist_attraction',
+    };
+    for (final type in types) {
+      if (knownTypes.contains(type)) return type;
+    }
+    return types.isNotEmpty ? types.first : null;
+  }
+
+  /// Tip etiketini Türkçeye çevir
+  String get primaryTypeLabel {
+    const typeMap = {
+      'restaurant': 'Restoran',
+      'cafe': 'Kafe',
+      'bar': 'Bar',
+      'museum': 'Müze',
+      'art_gallery': 'Galeri',
+      'park': 'Park',
+      'gym': 'Spor Salonu',
+      'movie_theater': 'Sinema',
+      'bowling_alley': 'Bowling',
+      'night_club': 'Gece Kulübü',
+      'library': 'Kütüphane',
+      'bakery': 'Pastane',
+      'amusement_park': 'Eğlence Parkı',
+      'shopping_mall': 'AVM',
+      'spa': 'Spa',
+      'tourist_attraction': 'Turistik',
+    };
+    for (final type in types) {
+      if (typeMap.containsKey(type)) return typeMap[type]!;
+    }
+    return 'Mekan';
+  }
+}

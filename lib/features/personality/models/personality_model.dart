@@ -1326,4 +1326,35 @@ const _venueMap = <String, List<VenueRecommendation>>{
   'default': [
     VenueRecommendation(
       name: 'Şehrin Popüler Kafesi',
-      description: 'Her zevke hi
+      description: 'Her zevke hitap eden, şık ve konforlu buluşma noktası.',
+      type: 'Kafe',
+      emoji: '☕',
+      compatibilityScore: 0.80,
+      tags: ['kafe', 'sosyal'],
+    ),
+    VenueRecommendation(
+      name: 'Park ve Açık Hava Alanı',
+      description: 'Doğal ortamda rahat ve keyifli buluşma.',
+      type: 'Park',
+      emoji: '🌳',
+      compatibilityScore: 0.75,
+      tags: ['park', 'doğa'],
+    ),
+    VenueRecommendation(
+      name: 'Alışveriş Merkezi Food Court',
+      description: 'Çeşitli seçenekler sunan merkezi buluşma noktası.',
+      type: 'Yemek',
+      emoji: '🛍️',
+      compatibilityScore: 0.70,
+      tags: ['yemek', 'alışveriş'],
+    ),
+    VenueRecommendation(
+      name: 'Sinema',
+      description: 'Her zaman bir klasik: birlikte film izlemek.',
+      type: 'Sinema',
+      emoji: '🎬',
+      compatibilityScore: 0.72,
+      tags: ['sinema', 'eğlence'],
+    ),
+  ],
+};
