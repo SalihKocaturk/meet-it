@@ -235,47 +235,35 @@ class ReviewNotifier extends Notifier<ReviewState> {
     } catch (_) {}
   }
 
-  Future<void> toggleLike(String id, String uid) async {
-    final idx = state.reviews.indexWhere((r) => r.id == id);
-    if (idx == -1) return;
-
-    final review = state.reviews[idx];
-    final liked = review.isLikedBy(uid);
-    final newLikedBy = liked
-        ? review.likedBy.where((u) => u != uid).toList()
-        : [...review.likedBy, uid];
-
-    // Optimistic update
-    final updated = List<VenueReviewModel>.from(state.reviews);
-    updated[idx] = review.copyWith(likedBy: newLikedBy);
-    state = state.copyWith(reviews: updated);
-
+  /// UI [venueReviewsStreamProvider] kullandığı için state.reviews boş kalır
+  /// — review stream'den geliyor. Bu yüzden review nesnesini doğrudan alıyoruz.
+  Future<void> toggleLike({
+    required String reviewId,
+    required String uid,
+    required bool isCurrentlyLiked,
+    required String authorUid,
+    required String venueName,
+  }) async {
     try {
-      await _db.collection('venue_reviews').doc(id).update({
-        'likedBy': liked
+      await _db.collection('venue_reviews').doc(reviewId).update({
+        'likedBy': isCurrentlyLiked
             ? FieldValue.arrayRemove([uid])
             : FieldValue.arrayUnion([uid]),
       });
 
       // Beğeni EKLENDİĞİNDE bildirim gönder (kendi yorumuna değil)
-      if (!liked && review.authorUid != uid) {
+      if (!isCurrentlyLiked && authorUid != uid) {
         final myName = ref.read(authProvider).user?.name ?? '';
         unawaited(NotificationService.sendNotification(
-          toUid: review.authorUid,
+          toUid: authorUid,
           type: 'review_liked',
           fromName: myName,
           fromUid: uid,
-          extra: {
-            'venueName': review.venueName,
-            'reviewId': id,
-          },
+          extra: {'venueName': venueName, 'reviewId': reviewId},
         ));
       }
-    } catch (_) {
-      // Rollback
-      final rollback = List<VenueReviewModel>.from(state.reviews);
-      rollback[idx] = review;
-      state = state.copyWith(reviews: rollback);
+    } catch (e) {
+      debugPrint('[toggleLike] Firestore yazma hatası: $e');
     }
   }
 }

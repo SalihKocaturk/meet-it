@@ -83,11 +83,10 @@ meetit/
 pubspec.lock
 .metadata
 
-# Node modules (Cloud Functions + nested web projects)
-functions/node_modules/
-functions/package-lock.json
-meetit/
-
-# Flutter generated / lock files
-pubspec.lock
-.metadata
+# iOS / macOS — CocoaPods & SPM cache (Mac'e özel, Windows'ta gerek yok)
+ios/Podfile
+ios/Podfile.lock
+ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+ios/Runner.xcworkspace/xcshareddata/swiftpm/
+macos/Podfile
+macos/Podfile.lock
