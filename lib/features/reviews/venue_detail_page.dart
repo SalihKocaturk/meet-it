@@ -1218,4 +1218,14 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
                             color: Colors.white,
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
-                  
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

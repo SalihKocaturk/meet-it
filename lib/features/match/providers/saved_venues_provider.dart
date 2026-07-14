@@ -236,4 +236,36 @@ class NavigatedVenuesNotifier extends Notifier<List<PlaceResult>> {
     //
     // Tarif al = 1x etki (learningRate: 0.03).
     // Yorum yaz = 2x etki (learningRate: 0.06, bkz. review_notifier.dart).
-    // Her ikisi de mekan�
+    // Her ikisi de mekanın Google Places kategorilerini sinyal olarak kullanır
+    // ve profili kullanıcının gerçek alışkanlıklarına doğru yavaşça kaydırır.
+    final currentUser = ref.read(authProvider).user;
+    final currentProfile = currentUser?.personalityProfile;
+    if (currentUser != null && currentProfile != null) {
+      final evolved = currentProfile.evolvedWith(
+        place.types,
+        learningRate: 0.03, // Tarif al: yorum etkisinin yarısı (1x)
+      );
+      if (evolved != currentProfile) {
+        unawaited(
+          ref
+              .read(authProvider.notifier)
+              .setPersonalityProfile(evolved)
+              .catchError((_) {}),
+        );
+      }
+    }
+  }
+
+  Future<void> _persistLocal(List<PlaceResult> list) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      _kKey,
+      list.map((p) => jsonEncode(p.toStorageMap())).toList(),
+    );
+  }
+}
+
+final navigatedVenuesProvider =
+    NotifierProvider<NavigatedVenuesNotifier, List<PlaceResult>>(
+  NavigatedVenuesNotifier.new,
+);

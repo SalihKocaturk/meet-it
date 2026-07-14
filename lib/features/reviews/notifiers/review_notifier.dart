@@ -342,4 +342,33 @@ final myReviewsProvider =
 // sebebiydi. Çözüm: index gerektirmeyen basit bir sorgu + client-side sort.
 final topReviewsProvider = FutureProvider<List<VenueReviewModel>>((ref) async {
   try {
-    final snap = await FirebaseFiresto
+    final snap = await FirebaseFirestore.instance
+        .collection('venue_reviews')
+        .limit(50)
+        .get();
+    var reviews = snap.docs
+        .map((d) => VenueReviewModel.fromMap(d.id, d.data()))
+        .toList();
+
+    final me = ref.watch(currentUserProvider);
+    final myLat = me?.lat;
+    final myLng = me?.lng;
+    if (myLat != null && myLng != null) {
+      reviews = reviews.where((r) {
+        if (r.lat == null || r.lng == null) return false;
+        final distanceKm =
+            GeoUtils.haversineKm(myLat, myLng, r.lat!, r.lng!);
+        return distanceKm <= AppConfig.nearbyLikedVenuesRadiusKm;
+      }).toList();
+    }
+
+    reviews.sort((a, b) {
+      final ratingCmp = b.rating.compareTo(a.rating);
+      if (ratingCmp != 0) return ratingCmp;
+      return b.createdAt.compareTo(a.createdAt);
+    });
+    return reviews.take(15).toList();
+  } catch (e) {
+    return [];
+  }
+});
