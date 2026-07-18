@@ -1,18 +1,31 @@
-/// Reklam gösterim mantığını yöneten basit sayaç servisi.
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+
+/// Reklam gösterim mantığını ve AdMob SDK yaşam döngüsünü yöneten servis.
 ///
-/// Free kullanıcılar her 2 aramadan 1'inde (çift aramalarda) reklam görür.
-/// Premium kullanıcılar [isPremium] = true ile hiç reklam görmez.
+/// ── Kullanım:
+///    1. `main.dart`'ta `WidgetsFlutterBinding.ensureInitialized()` sonrası
+///       `await AdService.initialize()` çağır.
+///    2. Banner göstermek istediğin yerde `AdBannerWidget` kullan.
+///    3. Arama sayaç mantığı için `shouldShowAd(isPremium: ...)` kullan.
 ///
-/// Sayaç uygulama oturumuna bağlı (in-memory) — uygulama yeniden açıldığında
-/// sıfırlanır. MVP için bu yeterli; kalıcı hale getirmek istersen
-/// SharedPreferences ile persist edilebilir.
+/// Free kullanıcılar her 2 aramadan 1'inde reklam görür.
+/// Premium kullanıcılar hiç reklam görmez.
 ///
-/// İleride Google Mobile Ads entegrasyonu yapılacaksa bu sınıf
-/// AdMob interstitial/banner hazırlık ve gösterim mantığını da üstlenecek.
+/// Sayaç in-memory (oturum bazlı) — MVP için yeterli.
 class AdService {
   AdService._();
 
   static int _searchCount = 0;
+  static bool _initialized = false;
+
+  /// AdMob SDK'yı başlat. `main.dart`'ta Firebase init'ten sonra çağrılmalı.
+  ///
+  /// Birden fazla kez çağrılabilir — ikinci çağrılar erken döner.
+  static Future<void> initialize() async {
+    if (_initialized) return;
+    await MobileAds.instance.initialize();
+    _initialized = true;
+  }
 
   /// Bu aramada reklam gösterilmeli mi?
   ///
@@ -27,6 +40,5 @@ class AdService {
   }
 
   /// Test/geliştirme amaçlı sayacı sıfırla.
-  /// Üretim kodunda çağrılmamalı.
   static void resetCounterForTesting() => _searchCount = 0;
 }

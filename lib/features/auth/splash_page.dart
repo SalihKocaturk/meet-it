@@ -28,7 +28,11 @@ class SplashPage extends ConsumerWidget {
     });
 
     return Scaffold(
-      backgroundColor: context.colors.primary,
+      // Splash her zaman light primary rengiyle gösterilir — logo PNG bu
+      // renk üzerine tasarlandığı için dark modda primary koyu yeşile
+      // kaydığında logo "ayrılıyordu". Splash screen tasarımı tema-bağımsız
+      // olmalı (marka rengi sabit), AppColors.light.primary tam bunu sağlar.
+      backgroundColor: AppColors.light.primary,
       body: const Center(child: PulsingLogo()),
     );
   }

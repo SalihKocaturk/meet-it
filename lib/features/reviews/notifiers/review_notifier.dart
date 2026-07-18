@@ -279,26 +279,61 @@ final venueReviewsProvider =
   return ref.read(reviewProvider.notifier).loadReviewsForVenue(placeId);
 });
 
-// ── Mekana göre yorumlar — GERÇEK ZAMANLI STREAM ─────────────────────────────
+// ── Mekana göre yorumlar — GERÇEK ZAMANLI STREAM (otomatik yeniden deneme) ────
 //
 // `.snapshots()` ile Firestore'daki her değişikliği (beğeni ekleme/kaldırma,
 // yorum silme, yeni yorum) tüm cihazlara anında yansıtır.
-// `venueReviewsProvider` (FutureProvider) yerine bu kullanılmalı — özellikle
-// beğeni sayısının canlı güncellenmesi için gerekli.
-// Composite index sorunu burada da aynı: sadece `where` + client-side sort.
+//
+// Sayfa ilk açıldığında (özellikle Firestore bağlantısı kurulmadan önce) stream
+// geçici bir hata alabiliyordu — bu durumda VenueDetailPage hata durumuna
+// düşüyor ve kullanıcı "Tekrar dene" tuşuna basmak zorunda kalıyordu. Çözüm:
+// StreamController + otomatik yeniden deneme: ilk 3 hatada 2sn bekleyip yeniden
+// abone olur; spinner göstererek beklediği için kullanıcı müdahalesi gerekmez.
+// 3 deneme sonunda da hata alınırsa controller'a hata iletilir (gerçek hata UI).
 final venueReviewsStreamProvider =
     StreamProvider.family<List<VenueReviewModel>, String>((ref, placeId) {
-  return FirebaseFirestore.instance
-      .collection('venue_reviews')
-      .where('placeId', isEqualTo: placeId)
-      .snapshots()
-      .map((snap) {
-    final reviews = snap.docs
-        .map((d) => VenueReviewModel.fromMap(d.id, d.data()))
-        .toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return reviews;
+  final controller = StreamController<List<VenueReviewModel>>();
+  int retries = 0;
+  const maxRetries = 3;
+  StreamSubscription<List<VenueReviewModel>>? sub;
+
+  void startStream() {
+    sub?.cancel();
+    sub = FirebaseFirestore.instance
+        .collection('venue_reviews')
+        .where('placeId', isEqualTo: placeId)
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((d) => VenueReviewModel.fromMap(d.id, d.data()))
+            .toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt)))
+        .listen(
+          (data) {
+            retries = 0; // başarılı alım → sayacı sıfırla
+            if (!controller.isClosed) controller.add(data);
+          },
+          onError: (Object e) async {
+            if (controller.isClosed) return;
+            if (retries < maxRetries) {
+              retries++;
+              await Future.delayed(const Duration(seconds: 2));
+              if (!controller.isClosed) startStream();
+            } else {
+              controller.addError(e); // 3 denemede başarısız → hatayı ilet
+            }
+          },
+          cancelOnError: true,
+        );
+  }
+
+  startStream();
+
+  ref.onDispose(() {
+    sub?.cancel();
+    controller.close();
   });
+
+  return controller.stream;
 });
 
 // ── Kullanıcının kendi yorumları ──────────────────────────────────────────────

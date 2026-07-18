@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:meetit/core/constants/app_colors.dart';
@@ -19,20 +20,20 @@ class _CharacterPreviewPageState extends State<CharacterPreviewPage> {
 
   static const _types = PersonalityType.values;
 
-  static const _labels = {
-    PersonalityType.sosyalKelebek: 'Sosyal Kelebek',
-    PersonalityType.sakinRuh:      'Sakin Ruh',
-    PersonalityType.maceraperest:  'Maceraperest',
-    PersonalityType.entelektuel:   'Entelektüel',
-    PersonalityType.gurme:         'Gurme',
+  static Map<PersonalityType, String> get _labels => {
+    PersonalityType.sosyalKelebek: 'character_preview.social_butterfly_label'.tr(),
+    PersonalityType.sakinRuh:      'character_preview.calm_soul_label'.tr(),
+    PersonalityType.maceraperest:  'character_preview.adventurer_label'.tr(),
+    PersonalityType.entelektuel:   'character_preview.intellectual_label'.tr(),
+    PersonalityType.gurme:         'character_preview.foodie_label'.tr(),
   };
 
-  static const _descriptions = {
-    PersonalityType.sosyalKelebek: 'Enerjik, sosyal ve eğlence odaklı.',
-    PersonalityType.sakinRuh:      'Huzurlu, içe dönük ve doğa sevgini.',
-    PersonalityType.maceraperest:  'Macera arayan, cesaretli ve aktif.',
-    PersonalityType.entelektuel:   'Meraklı, analitik ve kültür odaklı.',
-    PersonalityType.gurme:         'Lezzet arayışında, rafine ve sofistike.',
+  static Map<PersonalityType, String> get _descriptions => {
+    PersonalityType.sosyalKelebek: 'character_preview.social_butterfly_desc'.tr(),
+    PersonalityType.sakinRuh:      'character_preview.calm_soul_desc'.tr(),
+    PersonalityType.maceraperest:  'character_preview.adventurer_desc'.tr(),
+    PersonalityType.entelektuel:   'character_preview.intellectual_desc'.tr(),
+    PersonalityType.gurme:         'character_preview.foodie_desc'.tr(),
   };
 
   @override
@@ -47,7 +48,7 @@ class _CharacterPreviewPageState extends State<CharacterPreviewPage> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'Kişilik Tipleri',
+          'character_preview.title'.tr(),
           style: TextStyle(
             color: context.colors.textPrimary,
             fontWeight: FontWeight.w700,
@@ -66,14 +67,14 @@ class _CharacterPreviewPageState extends State<CharacterPreviewPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _GenderChip(
-                  label: 'Erkek',
+                  label: 'character_preview.male'.tr(),
                   selected: _gender == 'erkek',
                   onTap: () => setState(() => _gender = 'erkek'),
                   color: context.colors.primary,
                 ),
                 const SizedBox(width: 10),
                 _GenderChip(
-                  label: 'Kadın',
+                  label: 'character_preview.female'.tr(),
                   selected: _gender == 'kadın',
                   onTap: () => setState(() => _gender = 'kadın'),
                   color: context.colors.primary,

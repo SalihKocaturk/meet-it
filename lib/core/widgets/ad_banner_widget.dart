@@ -1,30 +1,89 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/constants/app_config.dart';
 
-/// Reklam banner alanı (320×50 formatı).
+/// Google Mobile Ads banner widget'ı (320×50 / adaptive format).
 ///
-/// ──────────────────────────────────────────────────────────────────────────
-/// DEBUG MODU  →  Reklam GÖSTERİLMEZ (bkz. [VenueSearchLoadingPage]).
-///   Reklam yerleşimini önizlemek istersen yükleyici sayfadaki
-///   [_kShowAdInDebug] sabitini geçici olarak `true` yap.
-///
-/// PROD MODU   →  Şu an: görsel placeholder gösterir (yer tutucu).
-///   İleride buraya `google_mobile_ads` paketi entegre edilecek:
-///     BannerAd → AdWidget (adUnitId: Platform.isIOS ? '...' : '...')
-/// ──────────────────────────────────────────────────────────────────────────
-class AdBannerWidget extends StatelessWidget {
+/// ── Debug modda test ID kullanılır; prod'da dart_defines.json'dan gelen
+///    gerçek Unit ID (ADMOB_BANNER_ID) devreye girer.
+/// ── Premium kullanıcılara (isPremium) bu widget gösterilmez —
+///    VenueSearchLoadingPage'de AdService.shouldShowAd() ile karar verilir.
+/// ── Reklam yüklenemezse placeholder gösterilir (hiçbir şey çökmez).
+class AdBannerWidget extends StatefulWidget {
   const AdBannerWidget({super.key});
 
   @override
+  State<AdBannerWidget> createState() => _AdBannerWidgetState();
+}
+
+class _AdBannerWidgetState extends State<AdBannerWidget> {
+  BannerAd? _bannerAd;
+  bool _adLoaded = false;
+
+  // Debug modda Google'ın resmi test ID'si kullanılır.
+  // Bu ID her zaman reklam döndürür, gerçek tıklamaları saymaz.
+  static const String _testUnitId =
+      'ca-app-pub-3940256099942544/6300978111'; // Android test banner
+
+  String get _unitId =>
+      kDebugMode ? _testUnitId : AppConfig.admobBannerUnitId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAd();
+  }
+
+  void _loadAd() {
+    if (_unitId.isEmpty) return; // dart_defines.json'da key yoksa yükleme
+    // `final` closure içinde kendine referans veremez (referenced_before_declaration).
+    // Önce nullable declare et, sonra assign et.
+    BannerAd? ad;
+    ad = BannerAd(
+      adUnitId: _unitId,
+      size: AdSize.banner, // 320×50
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (_) {
+          if (!mounted) return;
+          setState(() {
+            _bannerAd = ad;
+            _adLoaded = true;
+          });
+        },
+        onAdFailedToLoad: (loadedAd, error) {
+          loadedAd.dispose();
+          // Sessizce başarısız ol — placeholder görünür, uygulama çökmez.
+        },
+      ),
+    );
+    ad.load();
+  }
+
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // TODO(premium): google_mobile_ads entegre edilince bu widget'ı
-    // BannerAd → AdWidget ile değiştir. Debug'da test ad unit ID kullan.
+    if (_adLoaded && _bannerAd != null) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 28),
+        height: _bannerAd!.size.height.toDouble(),
+        width: _bannerAd!.size.width.toDouble(),
+        child: AdWidget(ad: _bannerAd!),
+      );
+    }
+    // Reklam yüklenene kadar (veya başarısız olursa) minimal placeholder.
     return _AdPlaceholder(isDebug: kDebugMode);
   }
 }
 
-// ── Placeholder ──────────────────────────────────────────────────────────────
+// ── Placeholder (yükleniyor / başarısız) ────────────────────────────────────
 
 class _AdPlaceholder extends StatelessWidget {
   final bool isDebug;
@@ -33,7 +92,6 @@ class _AdPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 28),
       height: 60,
@@ -47,65 +105,15 @@ class _AdPlaceholder extends StatelessWidget {
           width: 1.5,
         ),
       ),
-      child: Stack(
-        children: [
-          // İçerik
-          Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  isDebug ? 'Reklam alanı (yer tutucu)' : 'Reklam',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: colors.textSecondary.withOpacity(0.65),
-                  ),
-                ),
-                if (isDebug) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    'google_mobile_ads · 320×50',
-                    style: TextStyle(
-                      fontSize: 9,
-                      color: colors.textSecondary.withOpacity(0.40),
-                    ),
-                  ),
-                ],
-              ],
-            ),
+      child: Center(
+        child: Text(
+          isDebug ? 'Reklam yükleniyor…' : 'Reklam',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: colors.textSecondary.withOpacity(0.55),
           ),
-
-          // Etiket (sağ üst köşe)
-          Positioned(
-            top: 4,
-            right: 6,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-              decoration: BoxDecoration(
-                color: isDebug
-                    ? Colors.orange.withOpacity(0.14)
-                    : colors.textSecondary.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(
-                  color: isDebug
-                      ? Colors.orange.withOpacity(0.45)
-                      : colors.textSecondary.withOpacity(0.20),
-                ),
-              ),
-              child: Text(
-                isDebug ? 'TEST' : 'Reklam',
-                style: TextStyle(
-                  fontSize: 8,
-                  fontWeight: FontWeight.w800,
-                  color: isDebug
-                      ? Colors.orange
-                      : colors.textSecondary.withOpacity(0.55),
-                ),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

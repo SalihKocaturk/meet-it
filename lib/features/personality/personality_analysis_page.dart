@@ -61,7 +61,7 @@ class PersonalityAnalysisPage extends ConsumerWidget {
             ),
             icon: Icon(Iconsax.eye, size: 16, color: context.colors.primary),
             label: Text(
-              'Tipleri İncele',
+              'personality_analysis.view_types'.tr(),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,

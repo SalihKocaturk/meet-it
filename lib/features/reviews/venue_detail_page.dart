@@ -325,13 +325,28 @@ class VenueDetailPage extends ConsumerWidget {
                 ),
               ),
             ),
-            error: (_, _) => SliverToBoxAdapter(
+            error: (err, _) => SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Center(
-                  child: Text(
-                    'venue_detail.no_reviews'.tr(),
-                    style: TextStyle(color: context.colors.textSecondary),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.cloud_off_rounded,
+                          color: context.colors.textSecondary, size: 28),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Yorumlar yüklenemedi',
+                        style: TextStyle(color: context.colors.textSecondary),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: () => ref
+                            .invalidate(venueReviewsStreamProvider(placeId)),
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: const Text('Tekrar dene'),
+                      ),
+                    ],
                   ),
                 ),
               ),

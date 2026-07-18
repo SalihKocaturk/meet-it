@@ -58,6 +58,13 @@ class AppConfig {
     'GOOGLE_MAPS_API_KEY',
   );
 
+  /// AdMob Banner reklam birimi ID'si — derleme zamanında inject edilir.
+  /// dart_defines.json'a ADMOB_BANNER_ID olarak eklenmeli (gitignore'da).
+  /// Debug modda test ID kullanılır (bkz. AdBannerWidget).
+  static const String admobBannerUnitId = String.fromEnvironment(
+    'ADMOB_BANNER_ID',
+  );
+
   /// Places API (New) — Nearby Search endpoint'i (POST, JSON body).
   ///
   /// ⚠️ Bu, eski (Legacy) `maps.googleapis.com/maps/api/place/nearbysearch/

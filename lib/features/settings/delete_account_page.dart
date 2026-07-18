@@ -154,7 +154,7 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
               ),
               const SizedBox(height: 10),
               _InfoRow(
-                icon: Iconsax.clock_slash,
+                icon: Iconsax.clock,
                 text: 'Buluşma geçmişin',
                 colors: colors,
               ),
