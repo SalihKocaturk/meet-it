@@ -7,7 +7,7 @@ import 'package:meetit/core/providers/network_provider.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friends_page.dart';
 import 'package:meetit/features/home/home_page.dart';
-import 'package:meetit/features/match/match_page.dart' hide SizedBox;
+import 'package:meetit/features/match/match_page.dart';
 import 'package:meetit/features/profile/profile_page.dart';
 
 final mainTabIndexProvider = StateProvider<int>((ref) => 0);

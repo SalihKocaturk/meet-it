@@ -1959,6 +1959,7 @@ class PlacesService {
     return [_fallbackVenueTypes];
   }
 
+  // ignore: unused_element
   static List<String> _resolvePersonalityTypes({
     required PersonalityProfile userProfile,
     required PersonalityProfile friendProfile,

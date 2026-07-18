@@ -15,8 +15,7 @@ import 'package:meetit/features/friends/friend_code_page.dart';
 import 'package:meetit/features/history/meeting_history_page.dart';
 import 'package:meetit/features/settings/privacy_policy_page.dart';
 import 'package:meetit/features/settings/terms_page.dart';
-import 'package:meetit/features/match/match_page.dart'
-    hide Expanded, SizedBox, Row;
+import 'package:meetit/features/match/match_page.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/personality/providers/personality_provider.dart';
 

@@ -354,14 +354,14 @@ class _VenueSearchLoadingPageState
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             _PersonalityChip(
-                              name: (me?.name as String? ?? 'Sen').split(' ').first,
+                              name: (me?.name ?? 'Sen').split(' ').first,
                               type: myType,
                               color: primary,
                             ),
                             if (!isSolo) ...[
                               const SizedBox(width: 20),
                               _PersonalityChip(
-                                name: (friend?.name as String? ?? '').split(' ').first,
+                                name: (friend?.name ?? '').split(' ').first,
                                 type: friendType,
                                 color: primary,
                               ),
@@ -566,7 +566,6 @@ class _SearchStage extends StatelessWidget {
   static const _charSize = 148.0;
 
   const _SearchStage({
-    super.key,
     required this.me,
     required this.friend,
     required this.isSolo,

@@ -12,7 +12,6 @@ import 'package:meetit/core/widgets/langauge_switcher.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/auth/providers/sign_up_form_provider.dart';
 import 'package:meetit/features/auth/widgets/gender_dropdown.dart';
-import 'package:meetit/features/match/providers/match_provider.dart' show UserLocation;
 import 'package:meetit/features/auth/widgets/sign_up_email_field.dart';
 import 'package:meetit/features/auth/widgets/sign_up_location_field.dart';
 

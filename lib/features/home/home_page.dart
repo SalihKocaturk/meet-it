@@ -16,7 +16,6 @@ import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/main/main_page.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/personality/friend_compatibility_page.dart';
-import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/personality/personality_analysis_page.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
@@ -41,7 +40,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   final _carouselController = ScrollController();
   Timer? _autoScrollTimer;
   Timer? _resumeTimer;
-  static const _cardWidth = 240.0;
   static const _scrollStep = 1.2; // her tick'te kayma miktarı (px)
   static const _tickDuration = Duration(milliseconds: 16);
 
