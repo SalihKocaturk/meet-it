@@ -1,1 +1,2 @@
-// No widget tests yet.\nvoid main() {}
+// No widget tests yet.
+void main() {}
