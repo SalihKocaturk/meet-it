@@ -98,6 +98,7 @@ service cloud.firestore {
     match /notifications/{uid}/{document=**} {
       allow read: if isSignedIn() && request.auth.uid == uid;
       allow create: if isSignedIn();
+      allow update: if isSignedIn() && request.auth.uid == uid;
     }
 
     // Buluşma geçmişi — katılımcı UID'lerinden biri oturum açmış kullanıcıysa erişim var.
