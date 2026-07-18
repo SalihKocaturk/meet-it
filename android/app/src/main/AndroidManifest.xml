@@ -21,6 +21,15 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <!-- Deep link: meetit://delete-account
+                 Google Play hesap silme URL'si için kullanılır. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="meetit" android:host="delete-account"/>
+            </intent-filter>
         </activity>
 
         <!-- Google Maps API Key — değer build.gradle.kts tarafından
@@ -33,6 +42,13 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- Google Mobile Ads (AdMob) — App ID zorunlu, APK içine gömülür.
+             Bu değer secret değildir; her AdMob entegrasyonunda manifest'e
+             doğrudan yazılır. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-5159705151285978~4813426679"/>
 
         <!-- Firebase Cloud Messaging — arka planda mesaj işleme.
              FirebaseMessagingService plugin tarafından otomatik merge

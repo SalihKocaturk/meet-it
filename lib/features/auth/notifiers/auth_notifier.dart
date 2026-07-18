@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -111,23 +112,53 @@ class AuthNotifier extends Notifier<AuthState> {
 
   Future<void> _restoreSession() async {
     try {
-      // Firebase Auth token'ının hazır olmasını bekle — aksi halde cold-start'ta
-      // Firestore okumalar başarısız olur (sign-out/sign-in sonrası düzeliyordu).
-      await FirebaseAuth.instance.authStateChanges().first;
+      // ── Firebase Auth token'ını bekle ────────────────────────────────────
+      // SORUN: authStateChanges().first cold-start'ta ANİNDE null döndürür —
+      // Firebase, secure storage'dan token'ı henüz yüklememiştir. Bu yüzden
+      // null gelen ilk event'i yok sayarak, non-null user'ı bekliyoruz.
+      //
+      // Bu kritik: session SharedPreferences'tan geri yüklense bile Firebase
+      // Auth token'ı hazır olmadan Firestore provider'ları sorgu yaparsa
+      // permission-denied alır → arkadaşlar ve ev sayfası yüklenmez.
+      //
+      // Uygulama güncellemesinde de aynı sorun yaşanıyordu: SharedPreferences
+      // session korunur, ama Firebase Auth ilk açılışta token'ı validate
+      // etmek için sunucuyla konuşur. Bu süre dolmadan Firestore sorgular → hata.
+      //
+      // Timeout (3 sn): kullanıcı gerçekten çıkış yapmışsa non-null event
+      // asla gelmez. Bu durumda SharedPreferences session'ı da geçersizdir.
+      User? fbUser;
+      try {
+        fbUser = await FirebaseAuth.instance
+            .authStateChanges()
+            .firstWhere((u) => u != null)
+            .timeout(const Duration(seconds: 3));
+      } on TimeoutException {
+        // 3 saniyede Firebase Auth tokenı doğrulanamadı.
+      } catch (_) {
+        // StateError (stream kapandı) veya başka hata — fbUser null kalır.
+      }
 
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_kSessionKey);
-      if (raw != null) {
+
+      if (raw != null && fbUser != null) {
+        // Firebase Auth onayladı + local session var → güvenli restore.
+        // Firestore token'ı artık hazır olduğundan provider'ların sorguları çalışır.
         final map = jsonDecode(raw) as Map<String, dynamic>;
         final user = UserModel.fromMap(map);
         state = state.copyWith(user: user, isSessionLoading: false);
 
         // Arka planda Firestore'dan güncel veriyi çek — özellikle `isPremium`
         // gibi admin/sunucu tarafından değiştirilebilen alanların yansıması için.
-        // Bloklamaz: kullanıcı session'dan anında uyanır, Firestore gelince
-        // state güncellenir.
         _syncUserFromFirestore(user.uid).ignore();
+      } else if (raw != null && fbUser == null) {
+        // Local session var ama Firebase Auth kullanıcıyı tanımıyor
+        // (token süresi dolmuş, başka cihazda çıkış yapılmış vb.) → temizle.
+        await prefs.remove(_kSessionKey);
+        state = state.copyWith(isSessionLoading: false);
       } else {
+        // Hiç session yok.
         state = state.copyWith(isSessionLoading: false);
       }
     } catch (_) {
@@ -585,6 +616,47 @@ class AuthNotifier extends Notifier<AuthState> {
     // Quiz state'ini sıfırla — bir sonraki kullanıcıda temiz başlasın
     ref.invalidate(quizProvider);
     state = const AuthState();
+  }
+
+  /// Hesabı kalıcı olarak siler.
+  ///
+  /// Sırayla: FCM token temizle → Firestore dokümanını sil → Firebase Auth
+  /// hesabını sil → session temizle → state sıfırla.
+  ///
+  /// Başarılıysa `null` döner. Hata varsa çeviri anahtarı döner.
+  /// Firebase Auth bazen son girişin üzerinden uzun süre geçmişse
+  /// `requires-recent-login` hatası fırlatır — bu durumda kullanıcıya
+  /// tekrar giriş yapması gerektiği söylenir.
+  Future<String?> deleteAccount() async {
+    try {
+      final uid = state.user?.uid;
+      if (uid == null) return 'auth.error_generic';
+
+      // FCM token'ı önce temizle
+      NotificationService.clearFcmToken(uid).ignore();
+
+      // Firestore'daki kullanıcı dokümanını sil
+      await FirebaseFirestore.instance.collection('users').doc(uid).delete();
+
+      // Firebase Auth hesabını sil
+      final fbUser = _auth.currentUser;
+      if (fbUser == null) return 'auth.error_generic';
+      await fbUser.delete();
+
+      // Yerel session + state temizle
+      await _googleSignIn.signOut();
+      await _clearSession();
+      ref.invalidate(quizProvider);
+      state = const AuthState();
+      return null; // başarı
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        return 'settings.delete_account_relogin';
+      }
+      return 'auth.error_generic';
+    } catch (_) {
+      return 'auth.error_generic';
+    }
   }
 
   void clearError() => state = state.copyWith(clearError: true);

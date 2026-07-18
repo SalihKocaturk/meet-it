@@ -12,6 +12,7 @@ import 'package:meetit/features/main/main_page.dart';
 import 'package:meetit/features/personality/quiz_page.dart';
 import 'package:meetit/features/settings/change_password_page.dart';
 import 'package:meetit/features/settings/edit_profile_page.dart';
+import 'package:meetit/features/settings/delete_account_page.dart';
 import 'package:meetit/features/settings/privacy_policy_page.dart';
 import 'package:meetit/features/settings/settings_page.dart';
 import 'package:meetit/features/settings/terms_page.dart';
@@ -182,6 +183,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.privacyPolicy,
         builder: (context, state) => const PrivacyPolicyPage(),
+      ),
+
+      // Hesap silme — deep link meetit://delete-account → /delete-account
+      GoRoute(
+        path: AppRoutes.deleteAccount,
+        builder: (context, state) => const DeleteAccountPage(),
       ),
     ],
   );

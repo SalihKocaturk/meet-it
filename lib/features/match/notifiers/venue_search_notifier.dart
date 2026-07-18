@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -166,6 +167,10 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
   final Map<String, List<String>> _recentlyShownIds = {};
   bool _historyLoaded = false;
 
+  /// Arama zaman aşımı timer'ı. `searchVenues()` başlangıcında başlatılır,
+  /// finally bloğunda her koşulda iptal edilir.
+  Timer? _searchTimer;
+
   String _historyKey(String? friendUid) => friendUid ?? '__solo__';
 
   /// SharedPreferences'tan tüm arkadaş geçmişlerini bir kez yükler.
@@ -289,6 +294,20 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
     // talebi üzerine bilinçli olarak basit tutuldu.
     double? maxVenueDistanceKm,
   }) async {
+    // Önceki bekleyen timer varsa iptal et (peş peşe arama senaryosu)
+    _searchTimer?.cancel();
+    // 1 dakika içinde sonuç gelmezse "uygun mekan bulunamadı" göster.
+    // Finally bloğu her koşulda (başarı / hata / erken return) timer'ı temizler.
+    _searchTimer = Timer(const Duration(minutes: 1), () {
+      if (state.isLoading) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Uygun mekan bulunamadı.',
+        );
+      }
+    });
+
+    try {
     state = state.copyWith(
       isLoading: true,
       clearError: true,
@@ -619,6 +638,11 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
         isLoading: false,
         errorMessage: 'Mekan arama sırasında bir hata oluştu.',
       );
+    }
+    } finally {
+      // Başarı, hata veya erken return — her koşulda timer'ı durdur
+      _searchTimer?.cancel();
+      _searchTimer = null;
     }
   }
 

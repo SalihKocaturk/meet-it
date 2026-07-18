@@ -30,6 +30,36 @@ class SettingsPage extends ConsumerWidget {
     return user.providerData.any((p) => p.providerId == 'password');
   }
 
+  void _showDeleteAccountAlert(BuildContext context, WidgetRef ref) {
+    showAppAlert(
+      context: context,
+      type: AppAlertType.confirm,
+      title: 'settings.delete_account_title'.tr(),
+      text: 'settings.delete_account_confirm'.tr(),
+      confirmBtnText: 'settings.delete_account_yes'.tr(),
+      cancelBtnText: 'common.cancel'.tr(),
+      confirmBtnColor: context.colors.error,
+      headerBackgroundColor: context.colors.error.withOpacity(0.1),
+      onConfirmBtnTap: () async {
+        Navigator.pop(context);
+        final error = await ref.read(authProvider.notifier).deleteAccount();
+        if (!context.mounted) return;
+        if (error != null) {
+          showAppAlert(
+            context: context,
+            type: AppAlertType.error,
+            title: 'common.error'.tr(),
+            text: error.tr(),
+            confirmBtnText: 'common.ok'.tr(),
+            confirmBtnColor: context.colors.primary,
+          );
+          return;
+        }
+        context.go(AppRoutes.signIn);
+      },
+    );
+  }
+
   void _showLogoutAlert(BuildContext context, WidgetRef ref) {
     showAppAlert(
       context: context,
@@ -340,6 +370,29 @@ class SettingsPage extends ConsumerWidget {
                         ),
                       ),
                       onTap: () => _showLogoutAlert(context, ref),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Container(
+                    decoration: BoxDecoration(
+                      color: context.colors.card,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: context.colors.error.withOpacity(0.3),
+                      ),
+                    ),
+                    child: ListTile(
+                      leading: Icon(Iconsax.trash, color: context.colors.error),
+                      title: Text(
+                        'settings.delete_account'.tr(),
+                        style: TextStyle(
+                          color: context.colors.error,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      onTap: () => _showDeleteAccountAlert(context, ref),
                     ),
                   ),
 

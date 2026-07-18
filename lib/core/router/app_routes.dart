@@ -23,4 +23,7 @@ abstract class AppRoutes {
 
   // Geçmiş buluşmalar
   static const meetingHistory = '/meeting-history';
+
+  // Hesap silme (deep link: meetit://delete-account)
+  static const deleteAccount = '/delete-account';
 }

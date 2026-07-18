@@ -42,15 +42,34 @@ class UserLocation {
 // konum girmek veya konum servisini açık tutmak zorunda kalmasın.
 // `currentUserProvider` değiştiğinde (örn. konum DB'ye yazıldıktan
 // sonra) bu da otomatik senkronize olur.
+//
+// ⚠️ İstanbul kapsam kontrolü: Uygulama şimdilik sadece İstanbul'da
+// çalışıyor. DB'deki koordinatlar İstanbul dışındaysa (eski kayıt,
+// GPS hatası vb.) null dönülür; kullanıcı "Yeni Konum Seç" ile
+// geçerli bir İstanbul konumu seçmek zorunda kalır.
+// Bu sınırlar MapLocationPickerPage._IstanbulBounds ile eşleşmeli.
+const _istMinLat = 40.80, _istMaxLat = 41.60;
+const _istMinLng = 27.85, _istMaxLng = 29.95;
+
+bool _isInIstanbul(double lat, double lng) =>
+    lat >= _istMinLat &&
+    lat <= _istMaxLat &&
+    lng >= _istMinLng &&
+    lng <= _istMaxLng;
+
 final userLocationProvider = StateProvider<UserLocation?>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user?.hasCoords ?? false) {
+    final lat = user!.lat!;
+    final lng = user.lng!;
+    // İstanbul dışı koordinatları sessizce reddet
+    if (!_isInIstanbul(lat, lng)) return null;
     return UserLocation(
-      text: (user!.location != null && user.location!.trim().isNotEmpty)
+      text: (user.location != null && user.location!.trim().isNotEmpty)
           ? user.location!
-          : '${user.lat!.toStringAsFixed(4)}, ${user.lng!.toStringAsFixed(4)}',
-      lat: user.lat,
-      lng: user.lng,
+          : '${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)}',
+      lat: lat,
+      lng: lng,
     );
   }
   return null;
