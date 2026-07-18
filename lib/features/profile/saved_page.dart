@@ -14,6 +14,7 @@ import 'package:meetit/core/widgets/langauge_switcher.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friend_code_page.dart';
 import 'package:meetit/features/match/match_page.dart';
+import 'package:meetit/features/settings/delete_account_page.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
@@ -141,6 +142,14 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
           icon: Iconsax.shield_tick,
           title: 'legal.privacy_title'.tr(),
           onTap: () => _showLegalSheet(context, isTerms: false),
+        ),
+        _MenuItem(
+          icon: Iconsax.trash,
+          title: 'settings.delete_account'.tr(),
+          color: Colors.red,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const DeleteAccountPage()),
+          ),
         ),
       ];
 
@@ -401,6 +410,16 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                                 ),
                               ),
                             ),
+                            _MenuItem(
+                              icon: Iconsax.trash,
+                              title: 'settings.delete_account'.tr(),
+                              color: Colors.red,
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const DeleteAccountPage(),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
 
@@ -555,6 +574,7 @@ class _MenuItem extends StatelessWidget {
   final String? subtitle;
   final Widget? trailing;
   final int? badge;
+  final Color? color;
   final VoidCallback? onTap;
 
   const _MenuItem({
@@ -563,16 +583,18 @@ class _MenuItem extends StatelessWidget {
     this.subtitle,
     this.trailing,
     this.badge,
+    this.color,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final iconColor = color ?? context.colors.primary;
     return ListTile(
-      leading: Icon(icon, color: context.colors.primary, size: 22),
+      leading: Icon(icon, color: iconColor, size: 22),
       title: Text(
         title,
-        style: TextStyle(fontSize: 14, color: context.colors.textPrimary),
+        style: TextStyle(fontSize: 14, color: color ?? context.colors.textPrimary),
       ),
       subtitle: subtitle != null
           ? Text(
