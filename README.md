@@ -5,7 +5,7 @@
 <p align="center">
   <img src="appimages/home_page.jpg" width="260" alt="Home Page" />
   <img src="appimages/meeting_map_view.jpg" width="260" alt="Meeting Map View" />
-  <img src="appimages/personality_analysis.jpg" width="260" alt="My Personality Analysis" />
+  <img src="appimages/friend_compatibility.jpg" width="260" alt="Friend Personality Compatibility" />
 </p>
 
 ---
@@ -124,13 +124,28 @@ service cloud.firestore {
 
 ## 📸 Screenshots
 
-### Home & Personality Quiz
+### Home & Personality
 
 <table>
   <tr>
     <td align="center"><img src="appimages/home_page.jpg" width="240" /><br/>Home Page</td>
-    <td align="center"><img src="appimages/quiz_result.jpg" width="240" /><br/>Personality Quiz Result</td>
     <td align="center"><img src="appimages/personality_analysis.jpg" width="240" /><br/>My Personality Analysis</td>
+    <td align="center"><img src="appimages/friend_compatibility.jpg" width="240" /><br/>Friend Personality Compatibility</td>
+  </tr>
+</table>
+
+### Personality Types
+
+<table>
+  <tr>
+    <td align="center"><img src="appimages/personality_type_social_butterfly.jpg" width="240" /><br/>Social Butterfly</td>
+    <td align="center"><img src="appimages/personality_type_calm_soul.jpg" width="240" /><br/>Calm Soul</td>
+    <td align="center"><img src="appimages/personality_type_adventurer.jpg" width="240" /><br/>Adventurer</td>
+  </tr>
+  <tr>
+    <td align="center"><img src="appimages/personality_type_intellectual.jpg" width="240" /><br/>Intellectual</td>
+    <td align="center"><img src="appimages/personality_type_gourmet.jpg" width="240" /><br/>Gourmet</td>
+    <td></td>
   </tr>
 </table>
 
@@ -138,9 +153,14 @@ service cloud.firestore {
 
 <table>
   <tr>
-    <td align="center"><img src="appimages/meeting_setup_full.jpg" width="240" /><br/>Find a Meeting Spot (multi-activity)</td>
+    <td align="center"><img src="appimages/meeting_setup.jpg" width="240" /><br/>Find a Meeting Spot (multi-activity)</td>
+    <td align="center"><img src="appimages/venue_search_loading.jpg" width="240" /><br/>Venue Search</td>
     <td align="center"><img src="appimages/meeting_map_view.jpg" width="240" /><br/>Map View</td>
+  </tr>
+  <tr>
     <td align="center"><img src="appimages/venue_detail.jpg" width="240" /><br/>Venue Detail</td>
+    <td></td>
+    <td></td>
   </tr>
 </table>
 
@@ -148,29 +168,19 @@ service cloud.firestore {
 
 <table>
   <tr>
-    <td align="center"><img src="appimages/friends_suggestions.jpg" width="240" /><br/>Friend Suggestions</td>
-    <td align="center"><img src="appimages/friend_requests.jpg" width="240" /><br/>Requests</td>
     <td align="center"><img src="appimages/friends_list.jpg" width="240" /><br/>My Friends</td>
-  </tr>
-  <tr>
     <td align="center"><img src="appimages/friend_code.jpg" width="240" /><br/>Add Friend by Code</td>
-    <td align="center"><img src="appimages/friend_compatibility.jpg" width="240" /><br/>Friend Personality Compatibility</td>
     <td></td>
   </tr>
 </table>
 
-### Profile & Settings
+### Profile
 
 <table>
   <tr>
     <td align="center"><img src="appimages/profile_overview.jpg" width="240" /><br/>Profile — Posts</td>
-    <td align="center"><img src="appimages/profile_saved_venues.jpg" width="240" /><br/>Saved Venues</td>
     <td align="center"><img src="appimages/profile_directions_taken.jpg" width="240" /><br/>Venues with Directions Taken</td>
-  </tr>
-  <tr>
     <td align="center"><img src="appimages/edit_profile.jpg" width="240" /><br/>Edit Profile</td>
-    <td align="center"><img src="appimages/settings_menu_dark.jpg" width="240" /><br/>Settings (Dark Theme)</td>
-    <td align="center"><img src="appimages/settings_menu_light.jpg" width="240" /><br/>Settings (Light Theme)</td>
   </tr>
 </table>
 
