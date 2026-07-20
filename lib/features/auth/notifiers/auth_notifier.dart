@@ -117,8 +117,63 @@ class AuthNotifier extends Notifier<AuthState> {
 
   @override
   AuthState build() {
+    // Firebase Auth state'ini sürekli dinle.
+    // Samsung gibi agresif süreç yönetiminde force-kill sonrası Firebase Auth,
+    // token'ını 15+ saniyede yüklüyor (ağ kısıtlaması vb.). Bu durumda
+    // _restoreSession() erken çalışırsa currentUser null bulur.
+    // authStateChanges() Firebase yüklenince bizi haberdar eder → auto-restore.
+    final sub = FirebaseAuth.instance.authStateChanges().listen(_onFirebaseAuthChange);
+    ref.onDispose(sub.cancel);
+
     Future(() => _restoreSession());
     return const AuthState(isSessionLoading: true);
+  }
+
+  /// Firebase Auth state değişikliklerini işle.
+  /// İki durum önemli:
+  ///   1. Splash/login sırasında Firebase geç yüklenirse → local session varsa restore et.
+  ///   2. Kullanıcı giriş yapmışken Firebase null döndürürse → oturumu kapat.
+  void _onFirebaseAuthChange(User? fbUser) {
+    // _restoreSession() henüz çalışıyorsa (isSessionLoading: true) → bekle.
+    // Oradan zaten kontrol edilecek.
+    if (state.isSessionLoading) return;
+
+    if (fbUser != null && !state.isAuthenticated) {
+      // Firebase geç yüklendi (Samsung force-kill senaryosu).
+      // Login ekranındayken arka planda token geldi → local session varsa restore et.
+      debugPrint('[Session] Firebase geç yüklendi → auto-restore deneniyor');
+      _tryAutoRestoreFromLocal(fbUser).ignore();
+    } else if (fbUser == null && state.isAuthenticated) {
+      // Firebase kullanıcıyı iptal etti (şifre değişti, hesap silindi vb.)
+      // → oturumu kapat.
+      debugPrint('[Session] Firebase auth iptal → oturum kapatılıyor');
+      signOut();
+    }
+  }
+
+  /// Firebase Auth geç yüklendikten sonra SharedPreferences'taki local
+  /// session'ı restore etmeyi dener. Sadece oturum kapalıyken çağrılır.
+  Future<void> _tryAutoRestoreFromLocal(User fbUser) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedVersion = prefs.getInt(_kSessionVersionKey);
+      if (savedVersion != _kSessionVersion) {
+        debugPrint('[Session] auto-restore: versiyon uyuşmuyor, atlanıyor');
+        return;
+      }
+      final raw = prefs.getString(_kSessionKey);
+      if (raw == null) {
+        debugPrint('[Session] auto-restore: local session yok, atlanıyor');
+        return;
+      }
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      final user = UserModel.fromMap(map);
+      debugPrint('[Session] auto-restore başarılı → uid=${user.uid}');
+      state = state.copyWith(user: user);
+      _syncUserFromFirestore(user.uid).ignore();
+    } catch (e) {
+      debugPrint('[Session] auto-restore hata: $e');
+    }
   }
 
   // ── Session ───────────────────────────────────────────────────────────────
@@ -162,7 +217,6 @@ class AuthNotifier extends Notifier<AuthState> {
 
       if (fbUser != null) {
         // Firebase Auth onayladı + local session var → güvenli restore.
-        // Firestore token'ı hazır; provider'ların sorguları çalışır.
         final map = jsonDecode(raw) as Map<String, dynamic>;
         final user = UserModel.fromMap(map);
         debugPrint('[Session] restore başarılı → uid=${user.uid}');
@@ -171,11 +225,12 @@ class AuthNotifier extends Notifier<AuthState> {
         // Arka planda Firestore'dan güncel veriyi çek (isPremium vb.).
         _syncUserFromFirestore(user.uid).ignore();
       } else {
-        // Firebase Auth kullanıcıyı tanımıyor (gerçekten çıkış yapılmış,
-        // şifre değişmiş, hesap silinmiş vb.) → session'ı temizle.
-        debugPrint('[Session] Firebase user null → session temizleniyor, login ekranı');
-        await prefs.remove(_kSessionKey);
-        await prefs.remove(_kSessionVersionKey);
+        // Firebase Auth henüz null — Samsung gibi cihazlarda force-kill sonrası
+        // Firebase token'ını yüklemek için ağa ihtiyaç duyar ve bu 15sn+ sürebilir.
+        // Session'ı SILMIYORUZ: build()'daki authStateChanges() dinleyicisi
+        // Firebase yüklenince _tryAutoRestoreFromLocal() ile otomatik restore eder.
+        // Kullanıcı login olursa _saveSession() zaten üstüne yazar.
+        debugPrint('[Session] Firebase null → session korunuyor, login ekranı (auto-restore bekliyor)');
         state = state.copyWith(isSessionLoading: false);
       }
     } catch (e) {
