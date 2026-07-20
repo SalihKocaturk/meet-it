@@ -124,6 +124,7 @@ class AuthNotifier extends Notifier<AuthState> {
   // ── Session ───────────────────────────────────────────────────────────────
 
   Future<void> _restoreSession() async {
+    debugPrint('[Session] _restoreSession başladı');
     try {
       final prefs = await SharedPreferences.getInstance();
 
@@ -131,7 +132,9 @@ class AuthNotifier extends Notifier<AuthState> {
       // UserModel şeması değiştiğinde _kSessionVersion'ı artır → eski session
       // otomatik temizlenir, kullanıcıdan bir kez temiz giriş istenir.
       final savedVersion = prefs.getInt(_kSessionVersionKey);
+      debugPrint('[Session] versiyon: saved=$savedVersion beklenen=$_kSessionVersion');
       if (savedVersion != _kSessionVersion) {
+        debugPrint('[Session] versiyon uyuşmuyor → session temizleniyor');
         await prefs.remove(_kSessionKey);
         await prefs.remove(_kSessionVersionKey);
         state = state.copyWith(isSessionLoading: false);
@@ -139,9 +142,11 @@ class AuthNotifier extends Notifier<AuthState> {
       }
 
       final raw = prefs.getString(_kSessionKey);
+      debugPrint('[Session] raw session var mı: ${raw != null} (uzunluk: ${raw?.length ?? 0})');
 
       if (raw == null) {
         // Hiç session yok.
+        debugPrint('[Session] session yok → login ekranı');
         state = state.copyWith(isSessionLoading: false);
         return;
       }
@@ -153,12 +158,14 @@ class AuthNotifier extends Notifier<AuthState> {
       //   • Çıkış yapılmışsa / timeout'sa → null.
       // Bu sayede session'ı yanlışlıkla silme riski ortadan kalktı.
       final fbUser = FirebaseAuth.instance.currentUser;
+      debugPrint('[Session] Firebase currentUser: ${fbUser?.uid ?? "NULL"}');
 
       if (fbUser != null) {
         // Firebase Auth onayladı + local session var → güvenli restore.
         // Firestore token'ı hazır; provider'ların sorguları çalışır.
         final map = jsonDecode(raw) as Map<String, dynamic>;
         final user = UserModel.fromMap(map);
+        debugPrint('[Session] restore başarılı → uid=${user.uid}');
         state = state.copyWith(user: user, isSessionLoading: false);
 
         // Arka planda Firestore'dan güncel veriyi çek (isPremium vb.).
@@ -166,12 +173,14 @@ class AuthNotifier extends Notifier<AuthState> {
       } else {
         // Firebase Auth kullanıcıyı tanımıyor (gerçekten çıkış yapılmış,
         // şifre değişmiş, hesap silinmiş vb.) → session'ı temizle.
+        debugPrint('[Session] Firebase user null → session temizleniyor, login ekranı');
         await prefs.remove(_kSessionKey);
         await prefs.remove(_kSessionVersionKey);
         state = state.copyWith(isSessionLoading: false);
       }
-    } catch (_) {
+    } catch (e) {
       // JSON parse hatası gibi beklenmedik durum → temizle.
+      debugPrint('[Session] hata: $e → session temizleniyor');
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_kSessionKey);
       await prefs.remove(_kSessionVersionKey);
@@ -194,11 +203,13 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> _saveSession(UserModel user) async {
+    debugPrint('[Session] _saveSession çağrıldı: uid=${user.uid}');
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_kSessionKey, jsonEncode(user.toMap()));
+    final r1 = await prefs.setString(_kSessionKey, jsonEncode(user.toMap()));
     // Session versiyonunu da kaydet — güncelleme sonrası eski session
     // tespiti için kullanılır (bkz. _restoreSession).
-    await prefs.setInt(_kSessionVersionKey, _kSessionVersion);
+    final r2 = await prefs.setInt(_kSessionVersionKey, _kSessionVersion);
+    debugPrint('[Session] _saveSession tamamlandı: sessionOk=$r1 versionOk=$r2');
   }
 
   Future<void> _clearSession() async {

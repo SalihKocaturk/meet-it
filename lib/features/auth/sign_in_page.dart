@@ -46,7 +46,7 @@ class SignInPage extends ConsumerWidget {
       // kişilik testi artık burada ZORUNLU tetiklenmiyor — sadece
       // kullanıcı "önemli" bir işlem denediğinde devreye giriyor (bkz.
       // `important_action_guard.dart`).
-      if (!previous!.isAuthenticated && next.isAuthenticated) {
+      if (!(previous?.isAuthenticated ?? false) && next.isAuthenticated) {
         context.go(AppRoutes.main);
       }
     });

@@ -54,10 +54,13 @@ Future<void> main() async {
         .authStateChanges()
         .firstWhere((u) => u != null)
         .timeout(const Duration(seconds: 15));
+    debugPrint('[PreWarm] tamamlandı — uid=${FirebaseAuth.instance.currentUser?.uid}');
   } on TimeoutException catch (_) {
     // Giriş yapılmamış ya da ağ sorunu — devam et, login ekranı açılır.
-  } catch (_) {
+    debugPrint('[PreWarm] timeout (15s) — currentUser=${FirebaseAuth.instance.currentUser?.uid ?? "NULL"}');
+  } catch (e) {
     // Beklenmedik hata — devam et.
+    debugPrint('[PreWarm] hata: $e — currentUser=${FirebaseAuth.instance.currentUser?.uid ?? "NULL"}');
   }
 
   // App Check: debug modda debug provider, release'de Play Integrity
