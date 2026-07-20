@@ -221,6 +221,46 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  /// Samsung force-kill sonrası Firebase Auth token'ı gider ama Google'ın
+  /// kendi hesap cache'i cihazda kalır. Bu metod `signInSilently()` ile
+  /// sessizce yeniden auth yapar, Firebase token'ını yeniler, ardından
+  /// SharedPreferences'taki local session'ı restore eder.
+  ///
+  /// Başarılıysa state'i günceller ve `true` döner.
+  /// Kullanıcı Google ile giriş yapmamışsa veya hata varsa `false` döner
+  /// → caller login ekranına yönlendirir.
+  Future<bool> _trySilentGoogleRestore(String sessionRaw) async {
+    try {
+      debugPrint('[Session] Google silent sign-in deneniyor...');
+      final googleUser = await _googleSignIn.signInSilently().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => null,
+      );
+      if (googleUser == null) {
+        debugPrint('[Session] Google silent sign-in: hesap yok veya timeout');
+        return false;
+      }
+
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      await _auth.signInWithCredential(credential);
+      debugPrint('[Session] Google silent sign-in başarılı → Firebase Auth yenilendi');
+
+      final map = jsonDecode(sessionRaw) as Map<String, dynamic>;
+      final user = UserModel.fromMap(map);
+      debugPrint('[Session] Silent restore tamamlandı → uid=${user.uid}');
+      state = state.copyWith(user: user, isSessionLoading: false);
+      _syncUserFromFirestore(user.uid).ignore();
+      return true;
+    } catch (e) {
+      debugPrint('[Session] Google silent sign-in hata: $e');
+      return false;
+    }
+  }
+
   // ── Session ───────────────────────────────────────────────────────────────
 
   Future<void> _restoreSession() async {
@@ -277,9 +317,15 @@ class AuthNotifier extends Notifier<AuthState> {
         //      → SessionRestoringPage göster, 15s bekle.
         if (_firebaseEmittedNullEarly) {
           // Samsung force-kill: Firebase kendi token'ını da kaybetmiş.
-          // Beklemenin faydası yok, doğrudan login ekranına git.
-          debugPrint('[Session] Firebase zaten null (early) → restore atlanıyor → login ekranı');
-          state = state.copyWith(isSessionLoading: false);
+          // Google ile giriş yapmış kullanıcılar için sessiz yeniden auth dene —
+          // GoogleSignIn'in kendi cache'i Samsung tarafından silinmiyor.
+          final restored = await _trySilentGoogleRestore(raw);
+          if (!restored) {
+            // Email/şifre kullanıcısı veya Google hesabı yok → login ekranı.
+            debugPrint('[Session] Silent restore başarısız → login ekranı');
+            state = state.copyWith(isSessionLoading: false);
+          }
+          // restored == true: state _trySilentGoogleRestore içinde set edildi.
         } else {
           // Firebase henüz bir şey söylemedi — belki token geliyor.
           debugPrint('[Session] Firebase null → restore bekleniyor (SessionRestoringPage)');
