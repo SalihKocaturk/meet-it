@@ -122,6 +122,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return AppRoutes.completeProfile;
       }
 
+      // Oturum açık ama geçici bir sayfadaysa (restoring, signin, splash)
+      // → ana sayfaya yönlendir.
+      // Bu özellikle Samsung force-kill sonrası auto-restore için kritik:
+      // _tryAutoRestoreFromLocal() isAuthenticated'ı true yapar ama
+      // GoRouter'ın yalnızca "unauthenticated → login" yönlendirmesi varken
+      // "authenticated → main" yönlendirmesi yoktu. ref.listen veya Google
+      // re-auth olmadan navigasyon tetiklenmiyordu.
+      const _transitionalRoutes = [
+        AppRoutes.restoring,
+        AppRoutes.signIn,
+        AppRoutes.splash,
+      ];
+      if (isAuthenticated &&
+          !needsEmailVerification &&
+          !needsProfileCompletion &&
+          _transitionalRoutes.contains(location)) {
+        return AppRoutes.main;
+      }
+
       return null;
     },
     routes: [
