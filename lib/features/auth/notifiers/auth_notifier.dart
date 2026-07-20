@@ -42,6 +42,13 @@ class AuthState {
   final UserModel? user;
   final bool isLoading;
   final bool isSessionLoading;
+
+  /// Local session var ama Firebase Auth henüz token'ı yükleyemedi
+  /// (Samsung force-kill sonrası ağ kısıtlaması vb.). Bu flag true iken
+  /// router kullanıcıyı SessionRestoringPage'de tutar; Firebase gelince
+  /// auto-restore edilir, 15s timeout'ta login ekranına gönderilir.
+  final bool isAwaitingFirebaseRestore;
+
   final String? errorMessage;
 
   /// Firebase'deki `currentUser.emailVerified` durumunu yansıtır.
@@ -59,6 +66,7 @@ class AuthState {
     this.user,
     this.isLoading = false,
     this.isSessionLoading = false,
+    this.isAwaitingFirebaseRestore = false,
     this.errorMessage,
     this.needsEmailVerification = false,
   });
@@ -92,6 +100,7 @@ class AuthState {
     UserModel? user,
     bool? isLoading,
     bool? isSessionLoading,
+    bool? isAwaitingFirebaseRestore,
     String? errorMessage,
     bool? needsEmailVerification,
     bool clearUser = false,
@@ -101,6 +110,8 @@ class AuthState {
       user: clearUser ? null : (user ?? this.user),
       isLoading: isLoading ?? this.isLoading,
       isSessionLoading: isSessionLoading ?? this.isSessionLoading,
+      isAwaitingFirebaseRestore:
+          isAwaitingFirebaseRestore ?? this.isAwaitingFirebaseRestore,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       needsEmailVerification:
           needsEmailVerification ?? this.needsEmailVerification,
@@ -151,6 +162,17 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  /// [_restoreSession] Firebase null bulduğunda 15 saniye bekler.
+  /// Firebase bu süre içinde gelmezse SessionRestoringPage'den login ekranına düşer.
+  void _startFirebaseRestoreTimeout() {
+    Timer(const Duration(seconds: 15), () {
+      if (state.isAwaitingFirebaseRestore) {
+        debugPrint('[Session] Firebase restore timeout (15s) → login ekranı');
+        state = state.copyWith(isAwaitingFirebaseRestore: false);
+      }
+    });
+  }
+
   /// Firebase Auth geç yüklendikten sonra SharedPreferences'taki local
   /// session'ı restore etmeyi dener. Sadece oturum kapalıyken çağrılır.
   Future<void> _tryAutoRestoreFromLocal(User fbUser) async {
@@ -169,7 +191,7 @@ class AuthNotifier extends Notifier<AuthState> {
       final map = jsonDecode(raw) as Map<String, dynamic>;
       final user = UserModel.fromMap(map);
       debugPrint('[Session] auto-restore başarılı → uid=${user.uid}');
-      state = state.copyWith(user: user);
+      state = state.copyWith(user: user, isAwaitingFirebaseRestore: false);
       _syncUserFromFirestore(user.uid).ignore();
     } catch (e) {
       debugPrint('[Session] auto-restore hata: $e');
@@ -227,11 +249,16 @@ class AuthNotifier extends Notifier<AuthState> {
       } else {
         // Firebase Auth henüz null — Samsung gibi cihazlarda force-kill sonrası
         // Firebase token'ını yüklemek için ağa ihtiyaç duyar ve bu 15sn+ sürebilir.
-        // Session'ı SILMIYORUZ: build()'daki authStateChanges() dinleyicisi
-        // Firebase yüklenince _tryAutoRestoreFromLocal() ile otomatik restore eder.
+        // Session'ı SILMIYORUZ: authStateChanges() Firebase yüklenince
+        // _tryAutoRestoreFromLocal() ile sessiz restore eder.
         // Kullanıcı login olursa _saveSession() zaten üstüne yazar.
-        debugPrint('[Session] Firebase null → session korunuyor, login ekranı (auto-restore bekliyor)');
-        state = state.copyWith(isSessionLoading: false);
+        debugPrint('[Session] Firebase null → restore bekleniyor (SessionRestoringPage gösteriliyor)');
+        state = state.copyWith(
+          isSessionLoading: false,
+          isAwaitingFirebaseRestore: true,
+        );
+        // 15 saniye içinde Firebase gelmezse login ekranına düş.
+        _startFirebaseRestoreTimeout();
       }
     } catch (e) {
       // JSON parse hatası gibi beklenmedik durum → temizle.

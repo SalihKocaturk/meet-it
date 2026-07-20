@@ -2,6 +2,10 @@
 /// Kullanım: context.go(AppRoutes.main)
 abstract class AppRoutes {
   static const splash = '/';
+
+  /// Firebase Auth geç yüklenirken gösterilen "oturum geri yükleniyor" ekranı.
+  /// Samsung force-kill senaryosunda `isAwaitingFirebaseRestore: true` iken açılır.
+  static const restoring = '/restoring';
   static const signIn = '/signin';
   static const signUp = '/signup';
   static const forgotPassword = '/forgot-password';

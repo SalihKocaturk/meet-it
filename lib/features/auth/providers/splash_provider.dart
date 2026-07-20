@@ -10,7 +10,10 @@ import 'package:meetit/features/auth/providers/auth_provider.dart';
 final splashReadyProvider = FutureProvider.autoDispose<bool>((ref) async {
   await Future.delayed(const Duration(seconds: 2));
 
-  // Session yükleniyorsa bitene kadar bekle (genellikle < 50ms)
+  // Session yükleniyorsa bitene kadar bekle (genellikle < 50ms).
+  // NOT: isAwaitingFirebaseRestore durumunda router zaten /restoring'e
+  // yönlendirecek; splashReadyProvider yalnızca normal açılış akışında
+  // (isSessionLoading) kullanılır.
   while (ref.read(authProvider).isSessionLoading) {
     await Future.delayed(const Duration(milliseconds: 50));
   }

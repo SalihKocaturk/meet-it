@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:meetit/features/auth/complete_profile_page.dart';
 import 'package:meetit/features/auth/forgot_password_page.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
+import 'package:meetit/features/auth/session_restoring_page.dart';
 import 'package:meetit/features/auth/sign_in_page.dart';
 import 'package:meetit/features/auth/sign_up_page.dart';
 import 'package:meetit/features/auth/splash_page.dart';
@@ -42,10 +43,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   // authProvider'ı sadece DİNLE (watch değil) — routing'i etkileyen alanlar
   // değişmediği sürece refreshNotifier'ı tetiklemiyoruz.
-  (bool, bool, bool, bool, bool)? lastKey;
+  (bool, bool, bool, bool, bool, bool)? lastKey;
   ref.listen(authProvider, (previous, next) {
     final key = (
       next.isSessionLoading,
+      next.isAwaitingFirebaseRestore,
       next.isAuthenticated,
       next.hasPersonality,
       next.needsEmailVerification,
@@ -66,6 +68,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // En güncel auth state'i her redirect çağrısında taze okuyoruz.
       final authState = ref.read(authProvider);
       final isSessionLoading = authState.isSessionLoading;
+      final isAwaitingFirebaseRestore = authState.isAwaitingFirebaseRestore;
       final isAuthenticated = authState.isAuthenticated;
       // NOT: hasPersonality artık burada kullanılmıyor — quiz zorunlu
       // yönlendirmesi kaldırıldı (bkz. yukarıdaki not).
@@ -75,6 +78,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       // Oturum henüz SharedPreferences'tan yükleniyor → splash'te kal
       if (isSessionLoading) return AppRoutes.splash;
+
+      // Local session var ama Firebase Auth henüz yüklenmedi (Samsung force-kill)
+      // → restore ekranında bekle, Firebase gelince auto-restore olacak
+      if (isAwaitingFirebaseRestore) return AppRoutes.restoring;
 
       // Auth gerektirmeyen rotalar
       const publicRoutes = [
@@ -122,6 +129,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.splash,
         builder: (context, state) => const SplashPage(),
+      ),
+
+      // ── Session Restore (Samsung force-kill) ─────────────────────────────
+      GoRoute(
+        path: AppRoutes.restoring,
+        builder: (context, state) => const SessionRestoringPage(),
       ),
 
       // ── Auth ─────────────────────────────────────────────────────────────
