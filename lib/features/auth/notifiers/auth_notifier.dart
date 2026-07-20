@@ -16,6 +16,19 @@ import 'package:meetit/features/personality/providers/personality_provider.dart'
 
 const _kSessionKey = 'meetit_session';
 
+/// Session versiyonu — UserModel şeması değişince bu sayıyı artır.
+/// Güncelleme sonrası eski versiyondaki session otomatik temizlenir ve
+/// kullanıcıdan bir kez temiz giriş yapması istenir.
+///
+/// Ne zaman artırılmalı:
+///  • UserModel'e yeni ZORUNLU alan eklenince
+///  • fromMap / toMap mantığı geriye dönük uyumsuz değişince
+///
+/// ÖNEMLİ: sadece gerçekten gerektiğinde artır — her artışta tüm
+/// kullanıcılar bir kez daha giriş yapmak zorunda kalır.
+const _kSessionVersion = 1;
+const _kSessionVersionKey = 'meetit_session_ver';
+
 /// `UserModel.personalityHistory` listesinin tutacağı maksimum anlık
 /// görüntü (snapshot) sayısı — sınırsız büyüyüp Firestore doküman boyutunu
 /// şişirmesin diye en eski kayıtlar bu sınırın üzerinde silinir. 40 kayıt,
@@ -152,6 +165,22 @@ class AuthNotifier extends Notifier<AuthState> {
       }
 
       final prefs = await SharedPreferences.getInstance();
+
+      // ── Session versiyon kontrolü ────────────────────────────────────────
+      // Uygulama güncellemelerinde UserModel şeması değişebilir; eski session
+      // verisi eksik/uyumsuz alanlar içirebilir. Versiyonu kontrol edip
+      // uyuşmuyorsa session'ı silerek temiz bir giriş zorunlu kılıyoruz.
+      // Bu, kullanıcının "uygulama verilerini temizle" işlemine gerek kalmadan
+      // kendiliğinden düzelir — yalnızca bir kez tekrar giriş yapmaları yeter.
+      final savedVersion = prefs.getInt(_kSessionVersionKey);
+      if (savedVersion != _kSessionVersion) {
+        // Eski versiyon (veya hiç version key yok) → temizle, login'e zorla.
+        await prefs.remove(_kSessionKey);
+        await prefs.remove(_kSessionVersionKey);
+        state = state.copyWith(isSessionLoading: false);
+        return;
+      }
+
       final raw = prefs.getString(_kSessionKey);
 
       if (raw != null && fbUser != null) {
@@ -168,6 +197,7 @@ class AuthNotifier extends Notifier<AuthState> {
         // Local session var ama Firebase Auth kullanıcıyı tanımıyor
         // (token süresi dolmuş, başka cihazda çıkış yapılmış vb.) → temizle.
         await prefs.remove(_kSessionKey);
+        await prefs.remove(_kSessionVersionKey);
         state = state.copyWith(isSessionLoading: false);
       } else {
         // Hiç session yok.
@@ -197,11 +227,15 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<void> _saveSession(UserModel user) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kSessionKey, jsonEncode(user.toMap()));
+    // Session versiyonunu da kaydet — güncelleme sonrası eski session
+    // tespiti için kullanılır (bkz. _restoreSession).
+    await prefs.setInt(_kSessionVersionKey, _kSessionVersion);
   }
 
   Future<void> _clearSession() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_kSessionKey);
+    await prefs.remove(_kSessionVersionKey);
   }
 
   // ── Firestore Yardımcıları ────────────────────────────────────────────────
