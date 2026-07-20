@@ -126,6 +126,11 @@ class AuthNotifier extends Notifier<AuthState> {
   final _firestore = FirebaseFirestore.instance;
   final _googleSignIn = GoogleSignIn();
 
+  /// Firebase Auth, _restoreSession() çalışmadan önce `null` event'i
+  /// emit ettiyse true olur. Bu durumda token kesinlikle yok — restore
+  /// page göstermeden direkt login'e gönder.
+  bool _firebaseEmittedNullEarly = false;
+
   @override
   AuthState build() {
     // Firebase Auth state'ini sürekli dinle.
@@ -141,19 +146,32 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   /// Firebase Auth state değişikliklerini işle.
-  /// İki durum önemli:
-  ///   1. Splash/login sırasında Firebase geç yüklenirse → local session varsa restore et.
-  ///   2. Kullanıcı giriş yapmışken Firebase null döndürürse → oturumu kapat.
+  /// Üç durum önemli:
+  ///   1. isSessionLoading: true iken Firebase null emit ettiyse → kaydet (token kesinlikle yok).
+  ///   2. Restore beklerken Firebase null gelirse → restore iptal, hızlı login.
+  ///   3. Firebase geç yüklendiyse → local session varsa restore et.
+  ///   4. Kullanıcı giriş yapmışken Firebase null döndürürse → oturumu kapat.
   void _onFirebaseAuthChange(User? fbUser) {
-    // _restoreSession() henüz çalışıyorsa (isSessionLoading: true) → bekle.
-    // Oradan zaten kontrol edilecek.
-    if (state.isSessionLoading) return;
+    if (state.isSessionLoading) {
+      // _restoreSession() henüz çalışıyor. Firebase null event'ini kaydet —
+      // token gerçekten yok demektir. _restoreSession() bunu okuyunca restore
+      // page göstermeden direkt login ekranına gider.
+      if (fbUser == null) {
+        _firebaseEmittedNullEarly = true;
+        debugPrint('[Session] Firebase early null — token yok (session loading sırasında)');
+      }
+      return;
+    }
 
     if (fbUser != null && !state.isAuthenticated) {
       // Firebase geç yüklendi (Samsung force-kill senaryosu).
       // Login ekranındayken arka planda token geldi → local session varsa restore et.
       debugPrint('[Session] Firebase geç yüklendi → auto-restore deneniyor');
       _tryAutoRestoreFromLocal(fbUser).ignore();
+    } else if (fbUser == null && state.isAwaitingFirebaseRestore) {
+      // Restore page gösterilirken Firebase null bildirdi → token yok, bekleme anlamsız.
+      debugPrint('[Session] Firebase null → restore iptal → login ekranı');
+      state = state.copyWith(isAwaitingFirebaseRestore: false);
     } else if (fbUser == null && state.isAuthenticated) {
       // Firebase kullanıcıyı iptal etti (şifre değişti, hesap silindi vb.)
       // → oturumu kapat.
@@ -247,18 +265,26 @@ class AuthNotifier extends Notifier<AuthState> {
         // Arka planda Firestore'dan güncel veriyi çek (isPremium vb.).
         _syncUserFromFirestore(user.uid).ignore();
       } else {
-        // Firebase Auth henüz null — Samsung gibi cihazlarda force-kill sonrası
-        // Firebase token'ını yüklemek için ağa ihtiyaç duyar ve bu 15sn+ sürebilir.
-        // Session'ı SILMIYORUZ: authStateChanges() Firebase yüklenince
-        // _tryAutoRestoreFromLocal() ile sessiz restore eder.
-        // Kullanıcı login olursa _saveSession() zaten üstüne yazar.
-        debugPrint('[Session] Firebase null → restore bekleniyor (SessionRestoringPage gösteriliyor)');
-        state = state.copyWith(
-          isSessionLoading: false,
-          isAwaitingFirebaseRestore: true,
-        );
-        // 15 saniye içinde Firebase gelmezse login ekranına düş.
-        _startFirebaseRestoreTimeout();
+        // Firebase Auth henüz null. İki ihtimal:
+        //   a) authStateChanges() zaten null emit etti (token kesinlikle yok)
+        //      → restore page gösterme, direkt login.
+        //   b) Firebase henüz hiç emit etmedi (token yolda olabilir)
+        //      → SessionRestoringPage göster, 15s bekle.
+        if (_firebaseEmittedNullEarly) {
+          // Samsung force-kill: Firebase kendi token'ını da kaybetmiş.
+          // Beklemenin faydası yok, doğrudan login ekranına git.
+          debugPrint('[Session] Firebase zaten null (early) → restore atlanıyor → login ekranı');
+          state = state.copyWith(isSessionLoading: false);
+        } else {
+          // Firebase henüz bir şey söylemedi — belki token geliyor.
+          debugPrint('[Session] Firebase null → restore bekleniyor (SessionRestoringPage)');
+          state = state.copyWith(
+            isSessionLoading: false,
+            isAwaitingFirebaseRestore: true,
+          );
+          // 15 saniye içinde Firebase gelmezse login ekranına düş.
+          _startFirebaseRestoreTimeout();
+        }
       }
     } catch (e) {
       // JSON parse hatası gibi beklenmedik durum → temizle.
