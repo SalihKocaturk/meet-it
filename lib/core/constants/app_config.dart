@@ -65,6 +65,13 @@ class AppConfig {
     'ADMOB_BANNER_ID',
   );
 
+  /// AdMob Interstitial (tam ekran) reklam birimi ID'si.
+  /// dart_defines.json'a ADMOB_INTERSTITIAL_ID olarak eklenmeli (gitignore'da).
+  /// Debug modda Google'ın resmi test ID'si kullanılır (bkz. AdService).
+  static const String admobInterstitialUnitId = String.fromEnvironment(
+    'ADMOB_INTERSTITIAL_ID',
+  );
+
   /// Places API (New) — Nearby Search endpoint'i (POST, JSON body).
   ///
   /// ⚠️ Bu, eski (Legacy) `maps.googleapis.com/maps/api/place/nearbysearch/

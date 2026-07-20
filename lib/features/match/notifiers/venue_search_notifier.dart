@@ -151,6 +151,18 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
     state = state.copyWith(currentPage: state.currentPage - 1);
   }
 
+  // ── Otomatik kalite yeniden araması ──────────────────────────────────────
+  //
+  // Kullanıcı geri bildirimi: bazen çıkan 3 mekanın hepsi 4 puan altında
+  // oluyordu (düşük reytingli bölge / nadir aktivite seçimi gibi durumlar).
+  // Çözüm: arama sonuçları önceki aramadan farklıysa VE tümü 4.0 altındaysa
+  // minRating: 4.0 şartıyla bir kez daha aranıyor — varsa kaliteli mekan
+  // otomatik olarak onların listesi gösterilir.
+  //
+  // "Farklı batch" kontrolü: aynı mekanlar tekrar tekrar geliyorsa
+  // yeniden aramak anlamsız — çıkacak sonuç zaten aynı olur. Batch en az
+  // %50 farklıysa "farklı" sayılır.
+  Set<String> _lastResultIds = {};
   // ── Kısa süreli "az önce gösterilen mekan" hafızası ────────────────────────
   //
   // Kullanıcı şikayeti: aynı arkadaşla peş peşe 3 kez arama yapınca 1.
@@ -551,6 +563,27 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
         }
       }
 
+      // ── Otomatik kalite yeniden araması ──────────────────────────────────
+      // Tüm mekanlar 4.0 altındaysa VE önceki aramadan farklı bir batch
+      // geldiyse, minRating: 4.0 şartıyla bir kez daha ara.
+      // Döngüsel tekrarı önlemek için yalnızca bir kez tetiklenir.
+      results = await _autoRetryIfLowQuality(
+        results: results,
+        searchLat: searchLat,
+        searchLng: searchLng,
+        userProfile: userProfile,
+        friendProfile: friendProfile,
+        selectedActivities: selectedActivities,
+        priceLevel: priceLevel,
+        searchRadius: searchRadius,
+        usingMidpoint: usingMidpoint,
+        excludeIds: excludeIds,
+        behavioralBoosts: behavioralBoosts,
+        maxVenueDistanceKm: maxVenueDistanceKm,
+      );
+      // Sonuçları bir sonraki aramada "farklı batch" kontrolü için kaydet
+      _lastResultIds = results.map((v) => v.placeId).toSet();
+
       if (usingMidpoint) {
         // Orta noktaya en yakın 3 mekan ayrı gösterilir.
         //
@@ -644,6 +677,67 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
       _searchTimer?.cancel();
       _searchTimer = null;
     }
+  }
+
+  /// Otomatik kalite yeniden araması.
+  ///
+  /// Koşullar (her ikisi de sağlanmalı):
+  ///  1. Mevcut tüm sonuçlar 4.0 puan altında (kalite düşük).
+  ///  2. En az %50'si önceki aramadan FARKLI (yeni bir batch — aynı mekanlar
+  ///     tekrar gelirse yeniden aramak anlamsız).
+  ///
+  /// İki koşul da sağlanırsa `minRating: 4.0` ile tek bir ek arama yapılır.
+  /// Daha kaliteli sonuç bulunursa onu döner, bulunamazsa orijinal listeyi döner.
+  Future<List<PlaceResult>> _autoRetryIfLowQuality({
+    required List<PlaceResult> results,
+    required double searchLat,
+    required double searchLng,
+    required PersonalityProfile userProfile,
+    required PersonalityProfile friendProfile,
+    required List<String> selectedActivities,
+    required int? priceLevel,
+    required int searchRadius,
+    required bool usingMidpoint,
+    required Set<String> excludeIds,
+    required Map<String, double> behavioralBoosts,
+    required double? maxVenueDistanceKm,
+  }) async {
+    if (results.isEmpty) return results;
+
+    // Koşul 1: hepsi 4.0 altında mı?
+    final allLowRating = results.every((v) => v.rating < 4.0);
+    if (!allLowRating) return results;
+
+    // Koşul 2: önceki aramadan farklı mı? (%50 eşiği)
+    if (_lastResultIds.isNotEmpty) {
+      final overlapCount =
+          results.where((v) => _lastResultIds.contains(v.placeId)).length;
+      final overlapRatio = overlapCount / results.length;
+      if (overlapRatio >= 0.5) return results; // çok benzer, tekrar arama
+    }
+
+    // Her iki koşul da tamam → kalite filtresiyle yeniden ara
+    try {
+      final betterResults = await PlacesService.searchVenues(
+        lat: searchLat,
+        lng: searchLng,
+        userProfile: userProfile,
+        friendProfile: friendProfile,
+        selectedActivities: selectedActivities,
+        priceLevel: priceLevel,
+        radius: searchRadius,
+        minRating: 4.0, // kalite eşiği yükselt
+        excludePlaceIds: excludeIds,
+        behavioralTypeBoosts: behavioralBoosts,
+        resolvePhotos: false,
+        strictRadius: maxVenueDistanceKm != null,
+      );
+      if (betterResults.isNotEmpty) return betterResults;
+    } catch (_) {
+      // Yeniden arama başarısız → orijinal sonuçlarla devam
+    }
+
+    return results;
   }
 
   /// Mekan listesi ekrana çıktıktan SONRA ulaşım sürelerini arka planda

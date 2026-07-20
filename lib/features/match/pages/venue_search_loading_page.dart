@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/services/ad_service.dart';
-import 'package:meetit/core/widgets/ad_banner_widget.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/match/providers/venue_search_provider.dart';
@@ -80,13 +79,13 @@ class _VenueSearchLoadingPageState
   late final Animation<double> _slideAnim;
 
   // ── State ─────────────────────────────────────────────────────────────────
-  bool _searchStarted  = false;
-  bool _popping        = false;
-  bool _navigated      = false; // çifte pop koruması (Atla + oto-geçiş yarışı)
-  bool _searchDone     = false;
-  bool _inSearchMode   = false; // false=intro, true=büyüteçli yürüyüş
-  bool _showSkipButton = false; // %100 olunca gösterilir
-  bool _showAd         = false; // bu aramada reklam gösterilecek mi?
+  bool _searchStarted    = false;
+  bool _popping          = false;
+  bool _navigated        = false; // çifte pop koruması (Atla + oto-geçiş yarışı)
+  bool _searchDone       = false;
+  bool _inSearchMode     = false; // false=intro, true=büyüteçli yürüyüş
+  bool _showSkipButton   = false; // %100 olunca gösterilir
+  bool _showInterstitial = false; // bu aramada tam ekran reklam gösterilecek mi?
   int  _phaseIdx       = 0;
   late final DateTime _startTime;
   Timer? _phaseTimer;
@@ -167,10 +166,15 @@ class _VenueSearchLoadingPageState
     // ── Reklam kararı ───────────────────────────────────────────────────
     // • Simülasyon modunda reklam gösterilmez.
     // • Debug modunda _kShowAdInDebug sabiti false ise gösterilmez.
-    // • Gerçek aramada: free kullanıcılar için AdService 2'de 1 true döner.
+    // • Gerçek aramada: her 4 aramadan 1'inde tam ekran (interstitial) reklam.
+    //   Sayaç önce artırılır, ardından bu aramada reklam var mı kontrol edilir.
     if (!widget.simulationMode && (kReleaseMode || _kShowAdInDebug)) {
       final isPremium = ref.read(isPremiumProvider);
-      _showAd = AdService.shouldShowAd(isPremium: isPremium);
+      AdService.incrementSearchCount();
+      _showInterstitial = AdService.shouldShowAd(isPremium: isPremium);
+      // Reklam bu aramada gösterilecekse hemen yüklemeye başla (arama süresiyle
+      // örtüşsün — kullanıcı beklemek zorunda kalmasın).
+      if (_showInterstitial) AdService.preloadInterstitial();
     }
 
     if (widget.simulationMode) {
@@ -241,7 +245,18 @@ class _VenueSearchLoadingPageState
     _phaseTimer?.cancel();
     _introTimer?.cancel();
     _simTimer?.cancel();
-    Navigator.of(context).pop();
+
+    // Bu aramada interstitial gösterilecekse → önce tam ekran reklam,
+    // reklam kapanınca (ya da gösterilemezse) gerçek navigasyon yapılır.
+    if (_showInterstitial) {
+      AdService.showInterstitial(
+        onDismissed: () {
+          if (mounted) Navigator.of(context).pop();
+        },
+      );
+    } else {
+      Navigator.of(context).pop();
+    }
   }
 
   // ── Dispose ──────────────────────────────────────────────────────────────
@@ -395,19 +410,7 @@ class _VenueSearchLoadingPageState
                 ),
               ),
 
-              // ── Reklam banner (free kullanıcılar, 2'de 1 arama) ──────────
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 500),
-                child: _showAd
-                    ? Padding(
-                        key: const ValueKey('ad_banner'),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        child: const AdBannerWidget(),
-                      )
-                    : const SizedBox(key: ValueKey('ad_hidden')),
-              ),
-
-              if (!_showAd) const Spacer(),
+              const Spacer(),
 
               // ── Progress bölümü ────────────────────────────────────────────
               Padding(
