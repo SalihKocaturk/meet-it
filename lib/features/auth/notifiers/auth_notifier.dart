@@ -180,12 +180,17 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
-  /// [_restoreSession] Firebase null bulduğunda 15 saniye bekler.
-  /// Firebase bu süre içinde gelmezse SessionRestoringPage'den login ekranına düşer.
+  /// [_restoreSession] Firebase null bulduğunda kısa süre bekler.
+  ///
+  /// Samsung gibi cihazlarda force-kill sonrası Firebase Auth 20-30 saniye askıda
+  /// kalabilir. 3 saniye sonra SessionRestoringPage'den login ekranına geçilir,
+  /// ANCAK authStateChanges() dinleyicisi arka planda çalışmaya devam eder:
+  /// Firebase geç yüklenirse (_onFirebaseAuthChange) kullanıcı login ekranındayken
+  /// bile auto-restore edilir → SignInPage'deki ref.listen ana ekrana yönlendirir.
   void _startFirebaseRestoreTimeout() {
-    Timer(const Duration(seconds: 15), () {
+    Timer(const Duration(seconds: 3), () {
       if (state.isAwaitingFirebaseRestore) {
-        debugPrint('[Session] Firebase restore timeout (15s) → login ekranı');
+        debugPrint('[Session] Firebase restore timeout (3s) → login ekranı (arka planda dinleniyor)');
         state = state.copyWith(isAwaitingFirebaseRestore: false);
       }
     });

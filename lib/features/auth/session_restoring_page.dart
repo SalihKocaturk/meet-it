@@ -3,12 +3,13 @@ import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/features/auth/widgets/pulsing_logo.dart';
 
 /// Samsung gibi agresif süreç yönetimi olan cihazlarda force-kill sonrası
-/// Firebase Auth token'ını yükleyemeyebilir. Bu sürede kullanıcıyı boş/login
-/// ekranında bırakmak yerine bu sayfa gösterilir.
+/// Firebase Auth token'ını yükleyemeyebilir. Bu sürede kullanıcıyı login
+/// ekranında bırakmak yerine 3 saniyelik bir "oturum yükleniyor" ekranı gösterilir.
 ///
 /// AuthNotifier'daki `authStateChanges()` Firebase'i dinler:
-///   • Firebase yüklenirse → auto-restore → /main
-///   • 15 saniye geçerse  → `isAwaitingFirebaseRestore: false` → /signin
+///   • Firebase 3s içinde yüklenirse  → auto-restore → /main
+///   • 3 saniye geçerse              → /signin (arka planda dinleme devam eder)
+///   • Firebase /signin'deyken gelirse → SignInPage.ref.listen → auto-restore → /main
 class SessionRestoringPage extends StatelessWidget {
   const SessionRestoringPage({super.key});
 
