@@ -36,6 +36,7 @@ class AppTextField extends StatefulWidget {
     this.focusNode,
     this.inputFormatters,
     this.autofocus = false,
+    this.maxWidth = 560,
   });
 
   final TextEditingController? controller;
@@ -69,6 +70,10 @@ class AppTextField extends StatefulWidget {
   final FocusNode? focusNode;
   final List<TextInputFormatter>? inputFormatters;
   final bool autofocus;
+
+  /// Tablet gibi geniş ekranlarda maksimum genişlik.
+  /// Varsayılan 560 — telefonda etkisiz, tablette sınırlar.
+  final double maxWidth;
 
   @override
   State<AppTextField> createState() => _AppTextFieldState();
@@ -126,7 +131,9 @@ class _AppTextFieldState extends State<AppTextField> {
           )
         : widget.suffixIcon;
 
-    return Column(
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: widget.maxWidth),
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -301,6 +308,7 @@ class _AppTextFieldState extends State<AppTextField> {
           ),
         ],
       ],
+      ),
     );
   }
 }
