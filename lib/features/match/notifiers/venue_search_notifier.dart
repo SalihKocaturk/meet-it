@@ -705,7 +705,7 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
     if (results.isEmpty) return results;
 
     // Koşul 1: hepsi 4.0 altında mı?
-    final allLowRating = results.every((v) => v.rating < 4.0);
+    final allLowRating = results.every((v) => (v.rating ?? 0.0) < 4.0);
     if (!allLowRating) return results;
 
     // Koşul 2: önceki aramadan farklı mı? (%50 eşiği)
