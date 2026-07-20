@@ -140,68 +140,42 @@ class AuthNotifier extends Notifier<AuthState> {
 
       final raw = prefs.getString(_kSessionKey);
 
-      // Local session yoksa hiç beklemeden bitir.
       if (raw == null) {
+        // Hiç session yok.
         state = state.copyWith(isSessionLoading: false);
         return;
       }
 
-      // ── Cache-first restore ──────────────────────────────────────────────
-      // Local session varsa HEMEN restore et — Firebase Auth'un yüklenmesini
-      // bekleme. Böylece:
-      //   • Uygulama anında açılır (spinner görmeden kullanıcı içeri girer).
-      //   • Token yenileme yavaş/başarısız olsa bile kullanıcı kapı dışında
-      //     bırakılmaz.
-      //   • Firebase doğrulaması arka planda tamamlanır.
-      //
-      // NEDEN ESKISI BOZUKTU: Önceki implementasyon `fbUser == null` iken
-      // session'ı siliyordu. Android'de force-kill sonrası Firebase token'ı
-      // 1 saatlik JWT süresini geçmişse yenilemek için ağ gerekir; bu 5
-      // saniyelik timeout'u aşabilir → masum session siliniyordu. Ardından
-      // `signIn()` çağrılsa da, `_restoreSession()` yine aynı koşulla
-      // yeni kaydedilen session'ı da silebilir → sonsuz döngü.
-      final map = jsonDecode(raw) as Map<String, dynamic>;
-      final user = UserModel.fromMap(map);
-      state = state.copyWith(user: user, isSessionLoading: false);
-
-      // ── Firebase Auth doğrulaması (arka plan) ────────────────────────────
-      // Hızlı yol: currentUser sync'te doluysa Firestore sync'i başlat.
+      // ── Firebase Auth kontrolü ───────────────────────────────────────────
+      // main.dart'ta `runApp`'tan önce Firebase Auth pre-warm yapıldığı için
+      // bu noktada `currentUser` güvenilir bir değer taşır:
+      //   • Giriş yapılmışsa → non-null (token refresh dahil tamamlandı).
+      //   • Çıkış yapılmışsa / timeout'sa → null.
+      // Bu sayede session'ı yanlışlıkla silme riski ortadan kalktı.
       final fbUser = FirebaseAuth.instance.currentUser;
+
       if (fbUser != null) {
+        // Firebase Auth onayladı + local session var → güvenli restore.
+        // Firestore token'ı hazır; provider'ların sorguları çalışır.
+        final map = jsonDecode(raw) as Map<String, dynamic>;
+        final user = UserModel.fromMap(map);
+        state = state.copyWith(user: user, isSessionLoading: false);
+
+        // Arka planda Firestore'dan güncel veriyi çek (isPremium vb.).
         _syncUserFromFirestore(user.uid).ignore();
       } else {
-        // Firebase henüz yüklemedi (cold-start, token refresh, vb.) →
-        // stream'i uzun bir timeout ile arka planda izle.
-        _awaitFirebaseAndSync(user).ignore();
+        // Firebase Auth kullanıcıyı tanımıyor (gerçekten çıkış yapılmış,
+        // şifre değişmiş, hesap silinmiş vb.) → session'ı temizle.
+        await prefs.remove(_kSessionKey);
+        await prefs.remove(_kSessionVersionKey);
+        state = state.copyWith(isSessionLoading: false);
       }
     } catch (_) {
-      // JSON parse hatası gibi beklenmedik bir durum → temizle.
+      // JSON parse hatası gibi beklenmedik durum → temizle.
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_kSessionKey);
       await prefs.remove(_kSessionVersionKey);
       state = state.copyWith(isSessionLoading: false);
-    }
-  }
-
-  /// Firebase Auth'un yüklenmesini arka planda bekler; onaylanırsa Firestore
-  /// sync başlatır, reddedilirse (gerçekten oturum yok) kullanıcıyı çıkarır.
-  Future<void> _awaitFirebaseAndSync(UserModel cachedUser) async {
-    try {
-      await FirebaseAuth.instance
-          .authStateChanges()
-          .firstWhere((u) => u != null)
-          .timeout(const Duration(seconds: 30));
-      // Firebase onayladı → fresh veri çek
-      _syncUserFromFirestore(cachedUser.uid).ignore();
-    } on TimeoutException {
-      // 30 saniyede Firebase doğrulaması gelmedi — büyük ihtimalle gerçekten
-      // çıkış yapılmış (başka cihaz, şifre değişimi vb.) → güvenli çıkış.
-      await _clearSession();
-      state = state.copyWith(clearUser: true);
-    } catch (_) {
-      // Beklenmedik Firebase hatası → aynı şekilde çıkış yap.
-      await _clearSession();
-      state = state.copyWith(clearUser: true);
     }
   }
 
