@@ -127,16 +127,28 @@ class AuthNotifier extends Notifier<AuthState> {
       //
       // Timeout (3 sn): kullanıcı gerçekten çıkış yapmışsa non-null event
       // asla gelmez. Bu durumda SharedPreferences session'ı da geçersizdir.
-      User? fbUser;
-      try {
-        fbUser = await FirebaseAuth.instance
-            .authStateChanges()
-            .firstWhere((u) => u != null)
-            .timeout(const Duration(seconds: 3));
-      } on TimeoutException {
-        // 3 saniyede Firebase Auth tokenı doğrulanamadı.
-      } catch (_) {
-        // StateError (stream kapandı) veya başka hata — fbUser null kalır.
+      // ── Önce senkron currentUser — uygulama güncellemesi sonrası güvenli ──
+      // Firebase, auth state'i secure storage'da tutar ve `currentUser`
+      // uygulama başlar başlamaz (ağ gerekmeden) senkron olarak dolu gelir.
+      // Önceki implementasyonda yalnızca stream kullanılıyordu ve 3 saniyelik
+      // timeout, güncelleme sonrası token refresh'in gecikmesi durumunda
+      // session'ı siliyordu → kullanıcı her güncellemeden sonra tekrar giriş
+      // yapmak zorunda kalıyordu. Artık:
+      //   1. currentUser senkron kontrol edilir (anında, hata riski yok).
+      //   2. Sadece null ise stream'e başvurulur (5 sn timeout — daha geniş).
+      User? fbUser = FirebaseAuth.instance.currentUser;
+
+      if (fbUser == null) {
+        try {
+          fbUser = await FirebaseAuth.instance
+              .authStateChanges()
+              .firstWhere((u) => u != null)
+              .timeout(const Duration(seconds: 5));
+        } on TimeoutException {
+          // 5 saniyede Firebase Auth tokenı gelmedi → gerçekten çıkış yapılmış.
+        } catch (_) {
+          // StateError veya başka hata — fbUser null kalır.
+        }
       }
 
       final prefs = await SharedPreferences.getInstance();
