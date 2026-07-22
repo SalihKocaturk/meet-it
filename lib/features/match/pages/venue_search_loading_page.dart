@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/services/ad_service.dart';
+import 'package:meetit/core/widgets/ad_banner_widget.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/match/providers/venue_search_provider.dart';
@@ -277,8 +278,9 @@ class _VenueSearchLoadingPageState
   // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final me     = ref.watch(currentUserProvider);
-    final friend = ref.watch(selectedFriendProvider);
+    final me        = ref.watch(currentUserProvider);
+    final friend    = ref.watch(selectedFriendProvider);
+    final isPremium = ref.watch(isPremiumProvider);
     final isSolo = widget.friendUid == null;
 
     final myType     = widget.userProfile.dominantType;
@@ -411,6 +413,13 @@ class _VenueSearchLoadingPageState
               ),
 
               const Spacer(),
+
+              // ── Banner reklam (her aramada, premium olmayan kullanıcılara) ──
+              if (!widget.simulationMode && !isPremium)
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(0, 0, 0, 10),
+                  child: AdBannerWidget(),
+                ),
 
               // ── Progress bölümü ────────────────────────────────────────────
               Padding(
