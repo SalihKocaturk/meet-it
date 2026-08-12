@@ -1,19 +1,24 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:meetit/core/constants/app_config.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Reklam gösterim mantığını ve AdMob SDK yaşam döngüsünü yöneten servis.
 ///
 /// ── Kullanım:
 ///    1. `main.dart`'ta `await AdService.initialize()` çağır.
-///    2. Loading sayfasında `AdService.incrementSearchCount()` çağır.
+///    2. Loading sayfasında `await AdService.incrementSearchCount()` çağır.
 ///    3. `shouldShowAd(isPremium)` → bu aramada büyük reklam gösterilecek mi?
 ///    4. Gösterilecekse: `preloadInterstitial()` → search bittikten sonra `showInterstitial()`.
 ///
 /// Reklam kadansı: her [_adInterval] aramadan 1'inde TAM EKRAN (interstitial) reklam.
 /// Premium kullanıcılar hiç reklam görmez.
 ///
-/// Sayaç in-memory (oturum bazlı) — uygulama kapatılınca sıfırlanır.
+/// Sayaç SharedPreferences'a yazılır — uygulama kapatılıp açılsa bile
+/// kaldığı yerden devam eder. Örneğin 3 arama yapıp çıkan kullanıcı
+/// geri döndüğünde 4. aramasında interstitial görür.
 class AdService {
   AdService._();
 
@@ -25,26 +30,36 @@ class AdService {
   /// Kaç aramada bir büyük reklam gösterilsin? (4 = her 4 aramadan 1'i)
   static const int _adInterval = 4;
 
+  static const String _kSearchCountKey = 'ad_search_count';
+
   // ── Test ID'leri (kDebugMode) ────────────────────────────────────────────
   static const String _testInterstitialId =
       'ca-app-pub-3940256099942544/1033173712'; // Android test interstitial
 
   // ── Init ────────────────────────────────────────────────────────────────
 
-  /// AdMob SDK'yı başlat. `main.dart`'ta Firebase init'ten sonra çağrılmalı.
+  /// AdMob SDK'yı başlat ve kalıcı sayacı yükle.
+  /// `main.dart`'ta Firebase init'ten sonra çağrılmalı.
   static Future<void> initialize() async {
     if (_initialized) return;
     await MobileAds.instance.initialize();
+    // Kalıcı sayacı SharedPreferences'tan yükle
+    final prefs = await SharedPreferences.getInstance();
+    _searchCount = prefs.getInt(_kSearchCountKey) ?? 0;
     _initialized = true;
   }
 
   // ── Sayaç ───────────────────────────────────────────────────────────────
 
   /// Her mekan araması başlamadan önce çağrılmalı.
-  /// Sayaç artar; [shouldShowAd] ve [shouldShowInterstitial] bu sayaca bakar.
-  static void incrementSearchCount() => _searchCount++;
+  /// Sayaç artar ve SharedPreferences'a yazılır — uygulama kapansa bile korunur.
+  static Future<void> incrementSearchCount() async {
+    _searchCount++;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_kSearchCountKey, _searchCount);
+  }
 
-  /// Bu aramada reklam gösterilmeli mi?
+  /// Bu aramada interstitial gösterilmeli mi?
   ///
   /// Premium kullanıcılar için her zaman false.
   /// [_adInterval] aramadan 1'inde true döner.
@@ -118,6 +133,10 @@ class AdService {
   /// Yüklü interstitial var mı?
   static bool get isInterstitialReady => _interstitialAd != null;
 
-  /// Test/geliştirme amaçlı sayacı sıfırla.
-  static void resetCounterForTesting() => _searchCount = 0;
+  /// Test/geliştirme amaçlı sayacı sıfırla (hem bellekte hem kalıcı depoda).
+  static Future<void> resetCounterForTesting() async {
+    _searchCount = 0;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kSearchCountKey);
+  }
 }
