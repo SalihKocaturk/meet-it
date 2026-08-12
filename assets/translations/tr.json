@@ -433,7 +433,8 @@
     "view_analysis": "Kişilik Analizini İncele",
     "view_analysis_desc": "Profilinin zamanla nasıl değiştiğini gör",
     "friend_compat": "Arkadaşlarla Uyum",
-    "friend_compat_desc": "Kim seninle daha uyumlu, keşfet"
+    "friend_compat_desc": "Kim seninle daha uyumlu, keşfet",
+    "personalized_section": "Sana Özel Mekanlar"
   },
   "friend_profile": {
     "friends_since": "{date} tarihinden beri arkadaşsınız"

@@ -87,6 +87,7 @@ class _VenueSearchLoadingPageState
   bool _inSearchMode     = false; // false=intro, true=büyüteçli yürüyüş
   bool _showSkipButton   = false; // %100 olunca gösterilir
   bool _showInterstitial = false; // bu aramada tam ekran reklam gösterilecek mi?
+  bool _adDismissed      = true;  // reklam yok ya da kapandı → geçişe izin ver
   int  _phaseIdx       = 0;
   late final DateTime _startTime;
   Timer? _phaseTimer;
@@ -115,13 +116,26 @@ class _VenueSearchLoadingPageState
     _slideAnim = CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOutBack);
     _slideCtrl.forward();
 
-    // Progress: 5 sn'de %88'e dolar; arama bitince %100'e zıplar
+    // Progress: iki fazlı — takılı görünmemesi için 80%'de hız düşer.
+    //   Faz 1: 0 → %80 — 3.5 sn, easeOut (hızlı başlar, yavaşlar)
+    //   Faz 2: %80 → %95 — 9 sn, linear (çok yavaş ama daima hareket ediyor)
+    //   Arama bitince: %100'e 480 ms'de zıplar
     _progressCtrl = AnimationController(vsync: this, value: 0);
-    _progressCtrl.animateTo(
-      0.88,
-      duration: const Duration(milliseconds: 5000),
-      curve: Curves.easeOut,
-    );
+    _progressCtrl
+        .animateTo(
+          0.80,
+          duration: const Duration(milliseconds: 3500),
+          curve: Curves.easeOut,
+        )
+        .then((_) {
+      // Faz 1 bitti → arama zaten tamamlandıysa ikinci fazı başlatma
+      if (!mounted || _searchDone) return;
+      _progressCtrl.animateTo(
+        0.95,
+        duration: const Duration(milliseconds: 9000),
+        curve: Curves.linear,
+      );
+    });
 
     // Shimmer şeridi
     _shimmerCtrl = AnimationController(
@@ -168,14 +182,34 @@ class _VenueSearchLoadingPageState
     // • Simülasyon modunda reklam gösterilmez.
     // • Debug modunda _kShowAdInDebug sabiti false ise gösterilmez.
     // • Gerçek aramada: her 4 aramadan 1'inde tam ekran (interstitial) reklam.
-    //   Sayaç önce artırılır, ardından bu aramada reklam var mı kontrol edilir.
+    //
+    // ÖNEMLİ: Reklam artık ARAMA SONUNDA değil, YÜKLEME BAŞINDA gösterilir.
+    // Kullanıcı "Mekan Bul" diye bastığında loading sayfası açılır; reklam
+    // hemen (800ms sonra) belirir ve arama arka planda yürür. Reklam kapanınca
+    // + arama bitince geçiş yapılır → bekleme süresini reklamla değerlendirmiş
+    // oluruz, sonuçları ayrıca bekletmeyiz.
     if (!widget.simulationMode && (kReleaseMode || _kShowAdInDebug)) {
       final isPremium = ref.read(isPremiumProvider);
-      AdService.incrementSearchCount();
+      AdService.incrementSearchCount().ignore();
       _showInterstitial = AdService.shouldShowAd(isPremium: isPremium);
-      // Reklam bu aramada gösterilecekse hemen yüklemeye başla (arama süresiyle
-      // örtüşsün — kullanıcı beklemek zorunda kalmasın).
-      if (_showInterstitial) AdService.preloadInterstitial();
+      if (_showInterstitial) {
+        _adDismissed = false; // geçişi kilitle: reklam kapanana dek beklenir
+        AdService.preloadInterstitial();
+        // 800ms sonra göster: kullanıcı loading sayfasını anlık görüp bağlamı
+        // kavrasın, ardından reklam açılsın.
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (!mounted) return;
+          AdService.showInterstitial(
+            onDismissed: () {
+              if (!mounted) return;
+              setState(() => _adDismissed = true);
+              // Reklam kapandığında arama da bittiyse hemen geçiş yap
+              if (_popping && !_navigated) _doNavigate();
+            },
+          );
+        });
+      }
+      // _showInterstitial = false ise _adDismissed zaten true (geçişi kilitlemez)
     }
 
     if (widget.simulationMode) {
@@ -242,22 +276,17 @@ class _VenueSearchLoadingPageState
     // Atla"ya basıldıktan hemen sonra 3 sn'lik oto-geçiş de tetiklenirse
     // Navigator iki kez pop edilir ve alttaki sayfa da kapanırdı (crash).
     if (!mounted || _navigated) return;
+
+    // Reklam açıksa bekle: onDismissed callback'i tekrar çağırır.
+    // (Reklam yoksa veya kapandıysa _adDismissed == true, engel yok.)
+    if (!_adDismissed) return;
+
     _navigated = true;
     _phaseTimer?.cancel();
     _introTimer?.cancel();
     _simTimer?.cancel();
 
-    // Bu aramada interstitial gösterilecekse → önce tam ekran reklam,
-    // reklam kapanınca (ya da gösterilemezse) gerçek navigasyon yapılır.
-    if (_showInterstitial) {
-      AdService.showInterstitial(
-        onDismissed: () {
-          if (mounted) Navigator.of(context).pop();
-        },
-      );
-    } else {
-      Navigator.of(context).pop();
-    }
+    Navigator.of(context).pop();
   }
 
   // ── Dispose ──────────────────────────────────────────────────────────────

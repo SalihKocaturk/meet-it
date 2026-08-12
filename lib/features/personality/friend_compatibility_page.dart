@@ -208,6 +208,46 @@ class FriendCompatibilityDetailPage extends ConsumerWidget {
     return 'friend_compat.tier_different';
   }
 
+  /// İki kişilik tipine göre ideal aktivite önerisi döner.
+  /// Sıralama index'e göre yapılır (A+B = B+A).
+  String _activitySuggestion(PersonalityType a, PersonalityType b) {
+    final sorted = [a, b]..sort((x, y) => x.index.compareTo(y.index));
+    final key = '${sorted[0].name}_${sorted[1].name}';
+    const suggestions = {
+      'sosyalKelebek_sosyalKelebek':
+          '🎉 Bar, konser alanı veya eğlence mekanına gidin — ikisi de sever.',
+      'sakinRuh_sosyalKelebek':
+          '☕ Kafe veya bahçeli bir restoran her ikinize de hitap eder.',
+      'maceraperest_sosyalKelebek':
+          '🎳 Kaçış odası, bowling veya aktivite merkezi eğlenceli olur.',
+      'entelektuel_sosyalKelebek':
+          '🎨 Sanat galerisi ya da kitabevi kafe güzel bir buluşma noktası.',
+      'gurme_sosyalKelebek':
+          '🍽️ Popüler veya yeni açılan bir restoranı birlikte keşfedebilirsiniz.',
+      'sakinRuh_sakinRuh':
+          '🌿 Sessiz bir kafe veya yeşil bir park mükemmel olur.',
+      'maceraperest_sakinRuh':
+          '🚶 Parkta yürüyüş veya hafif açık hava aktivitesi iyi denge kurar.',
+      'entelektuel_sakinRuh':
+          '📚 Müze, antika kafe veya kütüphane kafe iyi uyar.',
+      'gurme_sakinRuh':
+          '🥞 Keyifli bir kahvaltı mekanı veya sakin restoran idealdir.',
+      'maceraperest_maceraperest':
+          '🏃 Spor aktivitesi, paintball veya doğa yürüyüşü harika olur.',
+      'entelektuel_maceraperest':
+          '🏛️ Bilim müzesi, sergi veya tarihi bir mekan ilgi çeker.',
+      'gurme_maceraperest':
+          '🍜 Yeni bir deneyim restoranı veya sokak yemeği turu ideal.',
+      'entelektuel_entelektuel':
+          '🖼️ Müze, sanat galerisi veya kitabevi doğal tercih.',
+      'gurme_entelektuel':
+          '🍷 Fine dining veya tematik kafe ikinize de uyar.',
+      'gurme_gurme':
+          '🌟 Özel bir gastronomi restoranı veya yemek turu sizi bekliyor.',
+    };
+    return suggestions[key] ?? '';
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final me = ref.watch(currentUserProvider);
@@ -382,7 +422,37 @@ class FriendCompatibilityDetailPage extends ConsumerWidget {
                   color: context.colors.textSecondary,
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 10),
+              // ── Kişilik bazlı aktivite önerisi ───────────────────────
+              Builder(builder: (context) {
+                final suggestion = _activitySuggestion(
+                  myProfile.dominantType,
+                  friendProfile.dominantType,
+                );
+                if (suggestion.isEmpty) return const SizedBox.shrink();
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: context.colors.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: context.colors.primary.withOpacity(0.15),
+                    ),
+                  ),
+                  child: Text(
+                    suggestion,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: context.colors.textPrimary,
+                      height: 1.4,
+                    ),
+                  ),
+                );
+              }),
+              const SizedBox(height: 20),
 
               // ── Üst üste bindirilmiş radar chart ──────────────────────
               //

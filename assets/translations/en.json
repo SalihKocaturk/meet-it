@@ -433,7 +433,8 @@
     "view_analysis": "View Personality Analysis",
     "view_analysis_desc": "See how your profile has changed over time",
     "friend_compat": "Friend Compatibility",
-    "friend_compat_desc": "Discover who matches you best"
+    "friend_compat_desc": "Discover who matches you best",
+    "personalized_section": "Places For You"
   },
   "friend_profile": {
     "friends_since": "Friends since {date}"

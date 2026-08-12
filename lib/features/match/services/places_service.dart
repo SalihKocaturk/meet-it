@@ -2022,4 +2022,87 @@ class PlacesService {
 
     return types.take(6).toList();
   }
+
+  // ── Ana Sayfa Kişisel Önerileri ───────────────────────────────────────────
+
+  /// Kullanıcının kişilik tipine göre kişiselleştirilmiş mekan önerileri getirir.
+  ///
+  /// ── Strateji (maliyet bilinci):
+  ///    1. Önce mevcut havuz cache'ini kontrol et — ücretsiz, anlık.
+  ///    2. Cache yoksa TEK bir Nearby Search çağrısı yap (hafif fetch, 5km).
+  ///    3. Rating ≥ 4.0 + min 20 yorum + içerik filtreleri uygula.
+  ///    4. Rating'e göre sıralı, en fazla [maxCount] sonuç döndür.
+  ///
+  /// Cache hit'te 0 API çağrısı, cache miss'te 1 API çağrısı.
+  /// Ana sayfa "Sana Özel" bölümü için tasarlandı.
+  static Future<List<PlaceResult>> fetchRecommendedVenues({
+    required double lat,
+    required double lng,
+    required PersonalityProfile profile,
+    int maxCount = 5,
+  }) async {
+    final types = _personalityTypes[profile.dominantType];
+    if (types == null || types.isEmpty) return [];
+
+    // 1. Havuz cache kontrolü — searchVenues() ile aynı key/radius
+    List<PlaceResult>? pool = await VenueSearchCacheService.getCached(
+      lat: lat,
+      lng: lng,
+      types: types,
+      radius: _poolCacheRadius,
+    );
+
+    // 2. Cache miss → tek hafif API çağrısı
+    if (pool == null || pool.isEmpty) {
+      try {
+        final stage = await ApiUsageService.currentStage();
+        final topTypes = types.take(5).toList();
+        final fetched = stage.usesNewApi
+            ? await _fetchNearbyNew(
+                lat: lat,
+                lng: lng,
+                types: topTypes,
+                radius: 5000,
+              )
+            : await _fetchNearbyLegacy(
+                lat: lat,
+                lng: lng,
+                types: topTypes,
+                radius: 5000,
+              );
+        ApiUsageService.recordSearchCall(isNew: stage.usesNewApi).ignore();
+
+        if (fetched.isNotEmpty) {
+          await VenueSearchCacheService.setCached(
+            lat: lat,
+            lng: lng,
+            types: types,
+            radius: _poolCacheRadius,
+            places: fetched,
+          );
+          pool = fetched;
+        }
+      } catch (_) {
+        return [];
+      }
+    }
+
+    if (pool == null || pool.isEmpty) return [];
+
+    // 3. Kalite filtreleri
+    final qualified = pool.where((p) {
+      if (p.rating == null || p.rating! < 4.0) return false;
+      if (p.userRatingsTotal != null &&
+          p.userRatingsTotal! < _minReviewCount) return false;
+      if (_hasSuspiciousName(p.name)) return false;
+      for (final t in p.types) {
+        if (_alwaysExcluded.contains(t)) return false;
+      }
+      return true;
+    }).toList();
+
+    // 4. Rating'e göre sırala → en fazla maxCount döndür
+    qualified.sort((a, b) => (b.rating ?? 0).compareTo(a.rating ?? 0));
+    return qualified.take(maxCount).toList();
+  }
 }
