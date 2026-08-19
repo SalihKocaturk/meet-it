@@ -97,17 +97,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return AppRoutes.signIn;
       }
 
-      // NOT: Email doğrulama ve kişilik testi (quiz) ZORUNLU yönlendirmeleri
-      // BURADAN KALDIRILDI (kullanıcı şikayeti: kayıt olur olmaz uygulamayı
-      // hiç görmeden zorunlu ekranlara hapsoluyordu). Artık bu iki kontrol
-      // sadece kullanıcı "önemli" bir işlem denediğinde (arkadaş ekleme,
-      // mekan/buluşma arama) just-in-time olarak devreye giriyor —
-      // bkz. `lib/core/utils/important_action_guard.dart`
-      // (`ensureEmailVerified` / `ensurePersonalityReady`).
-      // `needsEmailVerification` ve `hasPersonality` değişkenleri yine de
-      // yukarıda okunuyor çünkü `needsProfileCompletion` kontrolü email
-      // doğrulama durumuna bakıyor (Google ile girişte doğrulama hiç
-      // gerekmiyor).
+      // Email/şifre ile kayıt olan ama henüz mailini doğrulamamış kullanıcı →
+      // verification bekleme sayfasında tut. Router redirect burada güvenlik
+      // ağı görevi görür: sign_up_page ve sign_in_page kendi context.go()'sunu
+      // zaten yapıyor, ama uygulama herhangi bir yerden bu state'e düşerse
+      // (session restore, deep link vb.) burada da yakalanır.
+      // NOT: Google ile giriş yapanlar bu daldan GEÇMEZ — signInWithGoogle()
+      // hiçbir zaman needsEmailVerification = true set etmiyor (Google hesapları
+      // Google tarafından zaten doğrulanmış sayılır).
+      if (isAuthenticated &&
+          needsEmailVerification &&
+          location != AppRoutes.verification) {
+        return AppRoutes.verification;
+      }
 
       // Google ile ilk kez giriş yapan ve konum/yaş/cinsiyet alanları eksik
       // kalan kullanıcı → profil tamamlama sayfasına git. Bu kontrol
@@ -172,7 +174,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.verification,
         builder: (context, state) {
-          final email = state.extra as String? ?? '';
+          // sign_up/sign_in sayfalarından gelen extra'da email var.
+          // Router redirect ile gelince extra boş kalır — auth state'ten al.
+          final extraEmail = state.extra as String? ?? '';
+          final email = extraEmail.isNotEmpty
+              ? extraEmail
+              : ref.read(authProvider).user?.email ?? '';
           return VerificationPage(email: email);
         },
       ),

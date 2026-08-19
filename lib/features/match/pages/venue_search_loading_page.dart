@@ -194,19 +194,21 @@ class _VenueSearchLoadingPageState
       _showInterstitial = AdService.shouldShowAd(isPremium: isPremium);
       if (_showInterstitial) {
         _adDismissed = false; // geçişi kilitle: reklam kapanana dek beklenir
-        AdService.preloadInterstitial();
-        // 800ms sonra göster: kullanıcı loading sayfasını anlık görüp bağlamı
-        // kavrasın, ardından reklam açılsın.
-        Future.delayed(const Duration(milliseconds: 800), () {
-          if (!mounted) return;
-          AdService.showInterstitial(
-            onDismissed: () {
-              if (!mounted) return;
-              setState(() => _adDismissed = true);
-              // Reklam kapandığında arama da bittiyse hemen geçiş yap
-              if (_popping && !_navigated) _doNavigate();
-            },
-          );
+        // Reklamı yükle; yüklenir yüklenmez göster (minimum 800ms bekle).
+        final loadStart = DateTime.now();
+        AdService.preloadInterstitial(onLoaded: () {
+          final elapsed = DateTime.now().difference(loadStart).inMilliseconds;
+          final wait = (800 - elapsed).clamp(0, 800);
+          Future.delayed(Duration(milliseconds: wait), () {
+            if (!mounted) return;
+            AdService.showInterstitial(
+              onDismissed: () {
+                if (!mounted) return;
+                setState(() => _adDismissed = true);
+                if (_popping && !_navigated) _doNavigate();
+              },
+            );
+          });
         });
       }
       // _showInterstitial = false ise _adDismissed zaten true (geçişi kilitlemez)

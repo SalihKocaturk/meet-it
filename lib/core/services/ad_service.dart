@@ -80,8 +80,11 @@ class AdService {
   ///
   /// Arama başladıktan kısa süre sonra çağrılabilir — yüklenme süresi
   /// arama süresiyle örtüştüğü için kullanıcı beklemez.
-  static Future<void> preloadInterstitial() async {
-    if (_interstitialAd != null || _isLoadingInterstitial) return;
+  static Future<void> preloadInterstitial({VoidCallback? onLoaded}) async {
+    if (_interstitialAd != null || _isLoadingInterstitial) {
+      onLoaded?.call();
+      return;
+    }
     final unitId = _unitId();
     if (unitId.isEmpty) return;
 
@@ -93,6 +96,7 @@ class AdService {
         onAdLoaded: (ad) {
           _interstitialAd = ad;
           _isLoadingInterstitial = false;
+          onLoaded?.call();
         },
         onAdFailedToLoad: (_) {
           _isLoadingInterstitial = false;

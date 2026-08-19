@@ -42,12 +42,22 @@ class SignInPage extends ConsumerWidget {
         );
       }
 
-      // Giriş başarılı → ana uygulamaya git. NOT: Email doğrulama ve
-      // kişilik testi artık burada ZORUNLU tetiklenmiyor — sadece
-      // kullanıcı "önemli" bir işlem denediğinde devreye giriyor (bkz.
-      // `important_action_guard.dart`).
+      // Giriş başarılı → router redirect hangi sayfaya gidileceğine karar verir.
+      // needsEmailVerification = true ise router /verification'a yönlendirir,
+      // false ise (ve needsProfileCompletion yoksa) /main'e gider.
+      // Biz burada sadece navigasyonu tetikleriz — kararı router'a bırakırız.
       if (!(previous?.isAuthenticated ?? false) && next.isAuthenticated) {
-        context.go(AppRoutes.main);
+        if (next.needsEmailVerification) {
+          // Doğrulanmamış email → verification sayfası.
+          // Router redirect de aynı kararı verecek ama buradan email'i
+          // extra olarak taşıyabiliyoruz.
+          context.go(
+            AppRoutes.verification,
+            extra: next.user?.email ?? '',
+          );
+        } else {
+          context.go(AppRoutes.main);
+        }
       }
     });
 

@@ -94,18 +94,10 @@ class SignUpPage extends ConsumerWidget {
       return;
     }
 
-    showAppAlert(
-      context: context,
-      type: AppAlertType.success,
-      title: 'auth.welcome'.tr(),
-      text: 'auth.account_created'.tr(),
-      confirmBtnText: 'common.ok'.tr(),
-      confirmBtnColor: context.colors.primary,
-      onConfirmBtnTap: () {
-        Navigator.of(context).pop();
-        context.go(AppRoutes.main);
-      },
-    );
+    // Hesap oluşturuldu — doğrulama maili gönderildi.
+    // Kullanıcıyı bekleme sayfasına al; hoş geldin alert'i gösterme,
+    // verification_page zaten durumu açıklıyor.
+    context.go(AppRoutes.verification, extra: email);
   }
 
   @override
