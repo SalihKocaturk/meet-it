@@ -36,13 +36,20 @@
   </div>
 
   <h1>Gizlilik Politikası</h1>
-  <p class="subtitle">Son güncelleme: Temmuz 2025</p>
+  <p class="subtitle">Son güncelleme: Ağustos 2026</p>
 
   <p>MeetIt uygulamasını ("Uygulama") kullandığınız için teşekkür ederiz. Bu Gizlilik Politikası, kişisel verilerinizi nasıl topladığımızı, kullandığımızı ve koruduğumuzu açıklar. Uygulamayı kullanarak bu politikayı kabul etmiş sayılırsınız.</p>
 
   <h2>1. Topladığımız Veriler</h2>
   <p><strong>Hesap bilgileri:</strong> Kayıt sırasında ad, e-posta adresi ve şifre (şifrelenmiş olarak saklanır). Google ile giriş yapıyorsanız Google hesabınızdan ad ve profil fotoğrafı alınır.</p>
-  <p><strong>Profil bilgileri:</strong> Seçtiğiniz cinsiyet ve konum (şehir/ilçe düzeyinde). Kesin GPS koordinatlarınız yalnızca mekan aramalarında anlık olarak kullanılır ve sunucularımızda saklanmaz.</p>
+  <p><strong>Profil bilgileri:</strong> Seçtiğiniz cinsiyet, yaş ve konum bilgisi (şehir/ilçe).</p>
+  <p><strong>Konum verisi:</strong> MeetIt iki tür konum kullanır:</p>
+  <ul>
+    <li><strong>Kayıtlı konumunuz:</strong> Kayıt olurken veya profilinizi düzenlerken harita üzerinden seçtiğiniz noktanın koordinatları (enlem/boylam) ve semt/şehir bilgisi hesabınıza kaydedilir. Bunu, arkadaşınızla aranızdaki orta noktayı hesaplamak için kullanırız. Profilinizi düzenleyerek istediğiniz zaman değiştirebilirsiniz.</li>
+    <li><strong>Anlık konumunuz:</strong> Mekan araması yaparken cihazınızın o anki GPS konumu okunur. Bu değer yalnızca arama sırasında kullanılır, sunucularımıza kaydedilmez.</li>
+  </ul>
+  <p>Konumunuz hiçbir kullanıcıya açık adres olarak gösterilmez; diğer kullanıcılar yalnızca profilinizdeki semt/şehir bilgisini görür. Uygulama arka planda konum takibi yapmaz.</p>
+  <p><strong>Fotoğraflar:</strong> Profil fotoğrafınızı kameranızla çekebilir veya galerinizden seçebilirsiniz. Yüklediğiniz fotoğraf Firebase Storage'da saklanır ve profilinizde diğer kullanıcılara görünür. Google ile giriş yaptıysanız Google hesabınızdaki profil fotoğrafı da alınır. Kameranıza ve galerinize yalnızca siz fotoğraf seçmek istediğinizde erişiriz; galerinizdeki diğer içerikler okunmaz.</p>
   <p><strong>Kişilik testi verileri:</strong> Uygulama içindeki soruları yanıtlamanızla elde edilen kişilik profili puanları Firestore'da hesabınıza bağlı olarak saklanır.</p>
   <p><strong>Kullanıcı tarafından oluşturulan içerik:</strong> Mekanlara bıraktığınız yorumlar, verdiğiniz puanlar ve mekan kayıtlarınız.</p>
   <p><strong>Arkadaşlık verileri:</strong> Uygulamada arkadaş olarak eklediğiniz kullanıcılarla olan bağlantı bilgileri ve buluşma geçmişi.</p>
@@ -64,23 +71,29 @@
   <ul>
     <li><strong>Firebase Authentication / Firestore / Cloud Messaging (Google LLC):</strong> Kimlik doğrulama, veri saklama ve push bildirimler için. <a href="https://firebase.google.com/support/privacy">Firebase Gizlilik Politikası</a></li>
     <li><strong>Google Places API / Maps SDK:</strong> Mekan arama ve harita gösterimi için. <a href="https://policies.google.com/privacy">Google Gizlilik Politikası</a></li>
+    <li><strong>Firebase Storage:</strong> Yüklediğiniz profil fotoğraflarının saklanması için.</li>
     <li><strong>Google Sign-In:</strong> Opsiyonel Google hesabıyla giriş için.</li>
+    <li><strong>Google AdMob:</strong> Uygulama içi reklamların gösterilmesi için. <a href="https://policies.google.com/technologies/ads">Google Reklam Politikaları</a></li>
   </ul>
 
-  <h2>4. Veri Paylaşımı</h2>
+  <h2>4. Reklamlar</h2>
+  <p>MeetIt, uygulama içinde Google AdMob üzerinden reklam gösterir. AdMob, reklamları sunmak ve ölçmek için cihazınızın reklam kimliğine (iOS'ta IDFA, Android'de Reklam Kimliği) ve temel cihaz bilgilerine erişebilir. Bu veriler Google tarafından kendi politikaları kapsamında işlenir.</p>
+  <p>iOS'ta uygulama ilk açıldığında görünen izleme izni ekranında "Uygulamanın İzlememesini İste"yi seçerseniz size kişiselleştirilmemiş reklamlar gösterilir. Bu tercihi istediğiniz zaman cihazınızın Ayarlar &rsaquo; Gizlilik ve Güvenlik &rsaquo; İzleme bölümünden değiştirebilirsiniz. Android'de aynı tercihi Ayarlar &rsaquo; Google &rsaquo; Reklamlar bölümünden yönetebilirsiniz.</p>
+
+  <h2>5. Veri Paylaşımı</h2>
   <p>Kişisel verilerinizi üçüncü taraflarla satmıyor, kiralıyor veya ticari amaçla paylaşmıyoruz. Verileriniz yalnızca yukarıda belirtilen üçüncü taraf hizmet sağlayıcılarıyla, hizmetin işleyişi için gerekli olduğu ölçüde paylaşılır.</p>
   <p>Uygulama içinde diğer kullanıcılar tarafından görülebilen bilgiler: adınız, profil fotoğrafınız, kişilik tipiniz ve bıraktığınız mekan yorumları.</p>
 
-  <h2>5. Veri Saklama</h2>
+  <h2>6. Veri Saklama</h2>
   <p>Hesabınızı sildiğinizde, kişisel verileriniz (hesap bilgileri, kişilik profili, mekan kayıtları ve buluşma geçmişi) Firestore'dan 30 gün içinde kalıcı olarak silinir. Bıraktığınız mekan yorumları, mekanın genel içerik bütünlüğü nedeniyle anonim olarak saklanabilir.</p>
 
-  <h2>6. Çocukların Gizliliği</h2>
+  <h2>7. Çocukların Gizliliği</h2>
   <p>MeetIt, 13 yaşın altındaki çocuklara yönelik değildir ve bu yaş grubundan bilerek veri toplamıyoruz. 13 yaşın altında bir kullanıcının veri sağladığını fark edersek, söz konusu verileri derhal sileriz.</p>
 
-  <h2>7. Güvenlik</h2>
+  <h2>8. Güvenlik</h2>
   <p>Verilerinizi korumak için Firebase'in endüstri standardı güvenlik altyapısını kullanıyoruz. E-posta ile kaydolduysanız şifreniz Firebase tarafından hash'lenerek saklanır; biz dahil kimse ham şifrenizi göremez. Bununla birlikte, internet üzerinden hiçbir veri iletiminin %100 güvenli olmadığını hatırlatmak isteriz.</p>
 
-  <h2>8. Haklarınız</h2>
+  <h2>9. Haklarınız</h2>
   <p>Kişisel verilerinizle ilgili olarak aşağıdaki haklara sahipsiniz:</p>
   <ul>
     <li>Verilerinize erişim ve düzeltme talep etme</li>
@@ -88,7 +101,7 @@
     <li>Veri işlemeye itiraz etme</li>
   </ul>
 
-  <h2>9. Bu Politikadaki Değişiklikler</h2>
+  <h2>10. Bu Politikadaki Değişiklikler</h2>
   <p>Bu politikayı zaman zaman güncelleyebiliriz. Önemli değişiklikler olduğunda uygulama içinden veya e-posta ile bilgilendireceğiz. Değişiklikler bu sayfada yayımlandıktan sonra geçerli olur.</p>
 
   <div class="contact">
@@ -96,7 +109,7 @@
     <p>Gizlilik politikamıza ilişkin sorularınız için: <a href="mailto:hafifsaglam61@gmail.com">hafifsaglam61@gmail.com</a></p>
   </div>
 
-  <footer>© 2025 MeetIt. Tüm hakları saklıdır.</footer>
+  <footer><a href="support.html" style="color:#5CB58A">Destek</a> &nbsp;·&nbsp; <a href="delete-account.html" style="color:#5CB58A">Hesabımı Sil</a> &nbsp;·&nbsp; <a href="terms-and-conditions.html" style="color:#5CB58A">Kullanım Koşulları</a><br><br>© 2026 MeetIt. Tüm hakları saklıdır.</footer>
 </div>
 </body>
 </html>
