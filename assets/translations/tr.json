@@ -55,6 +55,7 @@
     "sign_in_failed": "Giriş Başarısız",
     "sign_up_failed": "Kayıt Başarısız",
     "sign_in_with_google": "Google ile Giriş Yap",
+    "sign_in_with_apple": "Apple ile Giriş Yap",
     "forgot_password": "Şifremi Unuttum",
     "forgot_password_title": "Şifremi Unuttum",
     "forgot_password_subtitle": "Şifreni sıfırla",
@@ -509,8 +510,8 @@
   "legal": {
     "terms_title": "Kullanım Koşulları",
     "privacy_title": "Gizlilik Politikası",
-    "terms_last_updated": "Son güncelleme: Haziran 2025",
-    "privacy_last_updated": "Son güncelleme: Haziran 2025",
+    "terms_last_updated": "Son güncelleme: Ağustos 2026",
+    "privacy_last_updated": "Son güncelleme: Ağustos 2026",
     "terms_s1_title": "1. Kabul ve Kapsam",
     "terms_s1_body": "MeetIt uygulamasını kullanarak bu Kullanım Koşulları'nı kabul etmiş olursunuz. Bu koşullar, uygulamayı kullanımınızı düzenler ve sizinle MeetIt arasındaki yasal ilişkiyi belirler. Uygulamayı kullanmaya devam ederek bu koşulları kabul ettiğinizi onaylamış sayılırsınız.",
     "terms_s2_title": "2. Hesap Oluşturma ve Güvenlik",
@@ -530,11 +531,15 @@
     "privacy_s3_title": "3. Bilgi Paylaşımı",
     "privacy_s3_body": "Kişisel bilgileriniz üçüncü taraflarla satılmaz veya kiralanmaz. Hizmetlerimizi sağlamamıza yardımcı olan iş ortaklarıyla (Firebase, Google Maps) yalnızca gerekli ölçüde paylaşılır. Yasal zorunluluk durumunda yetkili makamlarla paylaşım yapılabilir.",
     "privacy_s4_title": "4. Konum Verisi",
-    "privacy_s4_body": "Konum veriniz yalnızca yakınızdaki mekanları önermek ve buluşma noktası hesaplamak amacıyla kullanılır. Konum iznini istediğiniz zaman cihaz ayarlarından geri alabilirsiniz. Konumunuz diğer kullanıcılarla yalnızca sizin onayınızla paylaşılır.",
+    "privacy_s4_body": "MeetIt iki tür konum kullanır. Kayıtlı konumunuz: kayıt olurken veya profilinizi düzenlerken harita üzerinden seçtiğiniz noktanın koordinatları ve semt/şehir bilgisi hesabınıza kaydedilir; bunu arkadaşınızla aranızdaki orta noktayı hesaplamak için kullanırız ve profilinizden istediğiniz zaman değiştirebilirsiniz. Anlık konumunuz: mekan araması yaparken cihazınızın o anki GPS konumu okunur, yalnızca arama sırasında kullanılır ve sunucularımıza kaydedilmez. Konumunuz hiçbir kullanıcıya açık adres olarak gösterilmez; uygulama arka planda konum takibi yapmaz. Konum iznini istediğiniz zaman cihaz ayarlarınızdan kapatabilirsiniz.",
     "privacy_s5_title": "5. Veri Güvenliği",
     "privacy_s5_body": "Verileriniz endüstri standardı şifreleme yöntemleriyle korunmaktadır. Firebase altyapısı üzerinden güvenli biçimde saklanmaktadır. Bununla birlikte hiçbir sistem %100 güvenli değildir; şüpheli bir durum fark etmeniz halinde lütfen bize bildirin.",
-    "privacy_s6_title": "6. Haklarınız ve İletişim",
-    "privacy_s6_body": "Verilerinize erişme, düzeltme veya silme talebinde bulunma hakkına sahipsiniz. Hesabınızı sildiğinizde kişisel verileriniz 30 gün içinde sistemlerimizden kaldırılır. Gizlilik ile ilgili sorularınız için meetit.support@gmail.com adresine ulaşabilirsiniz."
+    "privacy_s6_title": "6. Reklamlar",
+    "privacy_s6_body": "MeetIt, uygulama içinde Google AdMob üzerinden reklam gösterir. AdMob, reklamları sunmak ve ölçmek için cihazınızın reklam kimliğine (iOS'ta IDFA, Android'de Reklam Kimliği) ve temel cihaz bilgilerine erişebilir. iOS'ta izleme izni ekranında izin vermezseniz size kişiselleştirilmemiş reklamlar gösterilir; bu tercihi Ayarlar > Gizlilik ve Güvenlik > İzleme bölümünden değiştirebilirsiniz. Android'de aynı tercihi Ayarlar > Google > Reklamlar bölümünden yönetebilirsiniz.",
+    "privacy_s7_title": "7. Fotoğraflar",
+    "privacy_s7_body": "Profil fotoğrafınızı kameranızla çekebilir veya galerinizden seçebilirsiniz. Yüklediğiniz fotoğraf Firebase Storage'da saklanır ve profilinizde diğer kullanıcılara görünür. Google ile giriş yaptıysanız Google hesabınızdaki profil fotoğrafı da alınır. Kameranıza ve galerinize yalnızca siz fotoğraf seçmek istediğinizde erişiriz; galerinizdeki diğer içerikler okunmaz.",
+    "privacy_s8_title": "8. Haklarınız ve İletişim",
+    "privacy_s8_body": "Verilerinize erişme, düzeltme veya silme talebinde bulunma hakkına sahipsiniz. Hesabınızı sildiğinizde kişisel verileriniz 30 gün içinde sistemlerimizden kaldırılır. Gizlilik ile ilgili sorularınız için hafifsaglam61@gmail.com adresine ulaşabilirsiniz."
   },
   "history": {
     "title": "Bulunan Mekanlar",

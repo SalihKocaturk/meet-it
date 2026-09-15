@@ -741,6 +741,147 @@ class _ReviewTileState extends ConsumerState<_ReviewTile>
     }
   }
 
+  void _showReportSheet(BuildContext context, WidgetRef ref, String reporterUid) {
+    final reasons = [
+      (icon: Iconsax.slash, label: 'Uygunsuz içerik'),
+      (icon: Iconsax.information, label: 'Spam veya yanıltıcı bilgi'),
+      (icon: Iconsax.danger, label: 'Nefret söylemi'),
+      (icon: Iconsax.user_remove, label: 'Taciz veya zorbalık'),
+      (icon: Iconsax.more_circle, label: 'Diğer'),
+    ];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: context.colors.card,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              // Handle
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: context.colors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Başlık satırı
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: context.colors.error.withOpacity(0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Iconsax.warning_2,
+                        color: context.colors.error,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Yorumu Şikayet Et',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                            color: context.colors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          'Şikayet nedeninizi seçin',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: context.colors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Divider(color: context.colors.border, height: 1),
+              const SizedBox(height: 8),
+              ...reasons.map(
+                (r) => InkWell(
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await ref.read(reviewProvider.notifier).reportReview(
+                      reviewId: review.id,
+                      reporterUid: reporterUid,
+                      reason: r.label,
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          backgroundColor: context.colors.card,
+                          content: Row(
+                            children: [
+                              Icon(Iconsax.tick_circle,
+                                  color: context.colors.primary, size: 18),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Şikayetiniz iletildi. Teşekkürler.',
+                                style: TextStyle(
+                                    color: context.colors.textPrimary),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 14),
+                    child: Row(
+                      children: [
+                        Icon(r.icon,
+                            size: 20, color: context.colors.textSecondary),
+                        const SizedBox(width: 14),
+                        Text(
+                          r.label,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: context.colors.textPrimary,
+                          ),
+                        ),
+                        const Spacer(),
+                        Icon(Iconsax.arrow_right_3,
+                            size: 16, color: context.colors.hint),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _confirmDelete(BuildContext context, WidgetRef ref, String uid) {
     showAppAlert(
       context: context,
@@ -835,6 +976,19 @@ class _ReviewTileState extends ConsumerState<_ReviewTile>
                             Iconsax.note_remove,
                             size: 18,
                             color: context.colors.error,
+                          ),
+                        ),
+                      ),
+                    ] else if (user != null) ...[
+                      const SizedBox(width: 4),
+                      GestureDetector(
+                        onTap: () => _showReportSheet(context, ref, user.uid),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(
+                            Iconsax.warning_2,
+                            size: 17,
+                            color: context.colors.textSecondary,
                           ),
                         ),
                       ),

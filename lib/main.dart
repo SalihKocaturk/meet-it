@@ -41,8 +41,10 @@ Future<void> main() async {
         : AppleProvider.deviceCheck,
   );
 
-  // AdMob SDK'yı başlat (Firebase'den sonra çağrılmalı)
-  await AdService.initialize();
+  // AdMob SDK burada BAŞLATILMIYOR — bkz. runApp'ten sonraki
+  // addPostFrameCallback. Sebep: iOS'taki ATT izin diyaloğu ancak uygulama
+  // ekrana gelip aktif olduktan sonra açılabiliyor; main() içinde
+  // çağrılırsa diyalog hiç görünmez, izin sonsuza kadar notDetermined kalır.
 
   // Push bildirim servisini baslat
   await NotificationService.initialize();
@@ -64,6 +66,13 @@ Future<void> main() async {
       ),
     ),
   );
+
+  // İlk kare çizildikten sonra: önce ATT izni, sonra AdMob SDK.
+  // Sıra önemli — AdMob bir kez IDFA'sız başlarsa izin sonradan verilse
+  // bile o oturumda kişiselleştirme yapılmaz.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    AdService.initialize();
+  });
 }
 
 class MyApp extends ConsumerWidget {

@@ -19,6 +19,21 @@ class SignUpPage extends ConsumerWidget {
   const SignUpPage({super.key});
 
   Future<void> _onSignUp(BuildContext context, WidgetRef ref) async {
+    // EULA onayı kontrolü
+    final eulaAccepted = ref.read(_eulaAcceptedProvider);
+    if (!eulaAccepted) {
+      showAppAlert(
+        context: context,
+        type: AppAlertType.warning,
+        title: 'Kullanım Koşulları',
+        text: 'Devam etmek için kullanım koşullarını kabul etmelisiniz.',
+        confirmBtnText: 'Tamam',
+        confirmBtnColor: context.colors.primary,
+        onConfirmBtnTap: () => Navigator.of(context).pop(),
+      );
+      return;
+    }
+
     final name = ref.read(signUpNameControllerProvider).text.trim();
     final email = ref.read(signUpEmailControllerProvider).text.trim();
     final password = ref.read(signUpPasswordControllerProvider).text.trim();
@@ -193,7 +208,12 @@ class SignUpPage extends ConsumerWidget {
                 onChanged: (v) =>
                     ref.read(signUpGenderProvider.notifier).state = v,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
+
+              // EULA / Kullanım Koşulları onayı — Apple App Store şartı
+              _EulaCheckbox(),
+
+              const SizedBox(height: 16),
 
               SizedBox(
                 width: double.infinity,
@@ -254,6 +274,81 @@ class SignUpPage extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── EULA Checkbox ─────────────────────────────────────────────────────────────
+
+final _eulaAcceptedProvider = StateProvider<bool>((ref) => false);
+
+class _EulaCheckbox extends ConsumerWidget {
+  const _EulaCheckbox();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accepted = ref.watch(_eulaAcceptedProvider);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Checkbox(
+          value: accepted,
+          activeColor: context.colors.primary,
+          onChanged: (v) =>
+              ref.read(_eulaAcceptedProvider.notifier).state = v ?? false,
+        ),
+        Expanded(
+          child: GestureDetector(
+            onTap: () =>
+                ref.read(_eulaAcceptedProvider.notifier).state = !accepted,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: RichText(
+                text: TextSpan(
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: context.colors.textSecondary,
+                  ),
+                  children: [
+                    const TextSpan(text: 'Kayıt olarak '),
+                    WidgetSpan(
+                      child: GestureDetector(
+                        onTap: () => context.push(AppRoutes.terms),
+                        child: Text(
+                          'Kullanım Koşullarını',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: context.colors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const TextSpan(text: ' ve '),
+                    WidgetSpan(
+                      child: GestureDetector(
+                        onTap: () => context.push(AppRoutes.privacyPolicy),
+                        child: Text(
+                          'Gizlilik Politikasını',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: context.colors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const TextSpan(
+                      text:
+                          ' kabul ettiğinizi ve uygunsuz içerik oluşturmamanız gerektiğini onaylıyorsunuz.',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

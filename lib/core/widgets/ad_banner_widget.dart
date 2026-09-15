@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/constants/app_config.dart';
+import 'package:meetit/core/services/ad_service.dart';
 
 /// Google Mobile Ads banner widget'ı (320×50 / adaptive format).
 ///
@@ -22,13 +25,17 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
   BannerAd? _bannerAd;
   bool _adLoaded = false;
 
-  // Debug modda Google'ın resmi test ID'si kullanılır.
-  // Bu ID her zaman reklam döndürür, gerçek tıklamaları saymaz.
-  static const String _testUnitId =
-      'ca-app-pub-3940256099942544/6300978111'; // Android test banner
+  // Debug modda Google'ın resmi test ID'leri kullanılır (platform bazlı).
+  // Bu ID'ler her zaman reklam döndürür, gerçek tıklamaları saymaz.
+  static String get _testUnitId => Platform.isIOS
+      ? 'ca-app-pub-3940256099942544/2934735716' // iOS test banner
+      : 'ca-app-pub-3940256099942544/6300978111'; // Android test banner
 
-  String get _unitId =>
-      kDebugMode ? _testUnitId : AppConfig.admobBannerUnitId;
+  String get _unitId => kDebugMode
+      ? _testUnitId
+      : (Platform.isIOS
+          ? AppConfig.admobBannerUnitIdIos
+          : AppConfig.admobBannerUnitId);
 
   @override
   void initState() {
@@ -44,7 +51,7 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
     ad = BannerAd(
       adUnitId: _unitId,
       size: AdSize.banner, // 320×50
-      request: const AdRequest(),
+      request: AdService.adRequest,
       listener: BannerAdListener(
         onAdLoaded: (_) {
           if (!mounted) return;

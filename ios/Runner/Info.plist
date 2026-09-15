@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Uygulama yalnızca standart HTTPS/TLS şifrelemesi kullanır (muaf) -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -54,7 +58,7 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.989610671267-ps4ns9u2iselmrjopl7fo8jqclvl5lu8</string>
+				<string>com.googleusercontent.apps.989610671267-17tcdb8b05fi5bd6kuk8pa42sgs4oac8</string>
 			</array>
 		</dict>
 	</array>
@@ -71,9 +75,15 @@
 		<string>remote-notification</string>
 	</array>
 
-	<!-- AdMob — gerçek iOS App ID alınınca burası güncellenir -->
+	<!-- AdMob iOS App ID -->
 	<key>GADApplicationIdentifier</key>
-	<string>ca-app-pub-3940256099942544~1458002511</string>
+	<string>ca-app-pub-5159705151285978~1859941766</string>
+
+	<!-- App Tracking Transparency (ATT)
+	     AdMob reklam kimliğine (IDFA) eriştiği için iOS 14+ üzerinde bu
+	     izin ekranı zorunlu. Bu anahtar olmadan Apple uygulamayı reddeder. -->
+	<key>NSUserTrackingUsageDescription</key>
+	<string>Sana daha alakalı reklamlar gösterebilmek için bu izni kullanıyoruz. İzin vermezsen de MeetIt'i sorunsuz kullanmaya devam edersin, sadece reklamlar kişiselleştirilmez.</string>
 
 	<!-- Kamera ve Galeri İzinleri -->
 	<key>NSCameraUsageDescription</key>

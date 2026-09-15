@@ -236,6 +236,27 @@ class ReviewNotifier extends Notifier<ReviewState> {
     } catch (_) {}
   }
 
+  /// Yorumu şikayet et — Firestore'a `reports` koleksiyonuna yazar.
+  /// Apple review şartı: kullanıcılar uygunsuz içeriği bildirebilmeli.
+  Future<void> reportReview({
+    required String reviewId,
+    required String reporterUid,
+    required String reason,
+  }) async {
+    try {
+      await _db.collection('reports').add({
+        'type': 'review',
+        'targetId': reviewId,
+        'reporterUid': reporterUid,
+        'reason': reason,
+        'createdAt': FieldValue.serverTimestamp(),
+        'resolved': false,
+      });
+    } catch (e) {
+      debugPrint('[reportReview] error: $e');
+    }
+  }
+
   /// UI [venueReviewsStreamProvider] kullandığı için state.reviews boş kalır
   /// — review stream'den geliyor. Bu yüzden review nesnesini doğrudan alıyoruz.
   Future<void> toggleLike({

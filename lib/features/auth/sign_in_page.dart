@@ -1,8 +1,10 @@
+import 'dart:io';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iconsax/iconsax.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/router/app_routes.dart';
 import 'package:meetit/core/widgets/app_alert.dart';
@@ -22,9 +24,7 @@ class SignInPage extends ConsumerWidget {
     final passwordController = ref.watch(signInPasswordControllerProvider);
 
     // ── Durum Dinleyici ──────────────────────────────────────────────────────
-    // Auth state değişikliklerini izle: hata → QuickAlert, başarı → navigate
     ref.listen<AuthState>(authProvider, (previous, next) {
-      // Yeni bir hata mesajı geldi
       if (next.errorMessage != null &&
           next.errorMessage != previous?.errorMessage) {
         showAppAlert(
@@ -42,26 +42,15 @@ class SignInPage extends ConsumerWidget {
         );
       }
 
-      // Giriş başarılı → router redirect hangi sayfaya gidileceğine karar verir.
-      // needsEmailVerification = true ise router /verification'a yönlendirir,
-      // false ise (ve needsProfileCompletion yoksa) /main'e gider.
-      // Biz burada sadece navigasyonu tetikleriz — kararı router'a bırakırız.
       if (!(previous?.isAuthenticated ?? false) && next.isAuthenticated) {
         if (next.needsEmailVerification) {
-          // Doğrulanmamış email → verification sayfası.
-          // Router redirect de aynı kararı verecek ama buradan email'i
-          // extra olarak taşıyabiliyoruz.
-          context.go(
-            AppRoutes.verification,
-            extra: next.user?.email ?? '',
-          );
+          context.go(AppRoutes.verification, extra: next.user?.email ?? '');
         } else {
           context.go(AppRoutes.main);
         }
       }
     });
 
-    // Klavye yüksekliği — logoyu küçültmek için
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final isKeyboardOpen = keyboardHeight > 50;
 
@@ -85,7 +74,6 @@ class SignInPage extends ConsumerWidget {
                 children: [
                   SizedBox(height: isKeyboardOpen ? 16 : 32),
 
-                  // Logo — klavye açıkken küçül
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     height: isKeyboardOpen ? 60 : 100,
@@ -97,7 +85,6 @@ class SignInPage extends ConsumerWidget {
 
                   SizedBox(height: isKeyboardOpen ? 20 : 36),
 
-                  // Email
                   AppTextField(
                     controller: emailController,
                     label: 'auth.email'.tr(),
@@ -108,7 +95,6 @@ class SignInPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  // Şifre
                   AppTextField(
                     controller: passwordController,
                     label: 'auth.password'.tr(),
@@ -119,9 +105,8 @@ class SignInPage extends ConsumerWidget {
                         _submit(ref, emailController, passwordController),
                   ),
 
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
 
-                  // Şifremi Unuttum
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -136,9 +121,8 @@ class SignInPage extends ConsumerWidget {
                     ),
                   ),
 
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
 
-                  // Giriş Yap Butonu
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -177,9 +161,9 @@ class SignInPage extends ConsumerWidget {
                     ),
                   ),
 
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                  // ── VEYA ayırıcı ──────────────────────────────────────────
+                  // ── VEYA ayırıcı ─────────────────────────────────────────
                   Row(
                     children: [
                       Expanded(child: Divider(color: context.colors.border)),
@@ -197,7 +181,7 @@ class SignInPage extends ConsumerWidget {
                     ],
                   ),
 
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
                   // ── Google ile Giriş ──────────────────────────────────────
                   SizedBox(
@@ -219,13 +203,12 @@ class SignInPage extends ConsumerWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Google logosu
                           Image.asset(
                             'assets/images/google_logo.png',
                             width: 22,
                             height: 22,
                           ),
-                          SizedBox(width: 12),
+                          const SizedBox(width: 12),
                           Text(
                             'auth.sign_in_with_google'.tr(),
                             style: TextStyle(
@@ -239,9 +222,50 @@ class SignInPage extends ConsumerWidget {
                     ),
                   ),
 
-                  SizedBox(height: 16),
+                  // ── Apple ile Giriş — sadece iOS'ta göster ───────────────
+                  if (Platform.isIOS) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: isLoading
+                            ? null
+                            : () => ref
+                                  .read(authProvider.notifier)
+                                  .signInWithApple(),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          side: BorderSide(color: context.colors.border),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          backgroundColor: context.colors.card,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.apple,
+                              size: 24,
+                              color: context.colors.textPrimary,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'auth.sign_in_with_apple'.tr(),
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                                color: context.colors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
 
-                  // Kayıt Ol
+                  const SizedBox(height: 16),
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -264,7 +288,6 @@ class SignInPage extends ConsumerWidget {
 
                   const Spacer(),
 
-                  // Dil seçici kart
                   if (!isKeyboardOpen) ...[
                     const Center(child: LanguageSwitcherCard()),
                     const SizedBox(height: 16),
@@ -279,8 +302,6 @@ class SignInPage extends ConsumerWidget {
     );
   }
 
-  /// Butona basınca veya klavyeden done'a basınca çağrılır.
-  /// Tüm validasyon AuthNotifier.signIn() içinde yapılır.
   void _submit(
     WidgetRef ref,
     TextEditingController email,

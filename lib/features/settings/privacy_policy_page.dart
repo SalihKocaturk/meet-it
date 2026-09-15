@@ -37,6 +37,8 @@ class PrivacyPolicyPage extends StatelessWidget {
             _buildSection(context, 'legal.privacy_s4_title'.tr(), 'legal.privacy_s4_body'.tr()),
             _buildSection(context, 'legal.privacy_s5_title'.tr(), 'legal.privacy_s5_body'.tr()),
             _buildSection(context, 'legal.privacy_s6_title'.tr(), 'legal.privacy_s6_body'.tr()),
+            _buildSection(context, 'legal.privacy_s7_title'.tr(), 'legal.privacy_s7_body'.tr()),
+            _buildSection(context, 'legal.privacy_s8_title'.tr(), 'legal.privacy_s8_body'.tr()),
             const SizedBox(height: 32),
             Text(
               'legal.privacy_last_updated'.tr(),

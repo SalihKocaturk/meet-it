@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,6 +10,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import 'package:meetit/core/services/notification_service.dart';
 import 'package:meetit/features/auth/models/user_model.dart';
@@ -581,6 +584,78 @@ class AuthNotifier extends Notifier<AuthState> {
         errorMessage: 'auth.sign_in_failed',
       );
     }
+  }
+
+  // ── Apple ile Giriş ───────────────────────────────────────────────────────
+
+  Future<void> signInWithApple() async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      // Güvenli nonce oluştur
+      final rawNonce = _generateNonce();
+      final nonce = _sha256ofString(rawNonce);
+
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+
+      final oauthCredential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        rawNonce: rawNonce,
+      );
+
+      final cred = await _auth.signInWithCredential(oauthCredential);
+      final fbUser = cred.user!;
+
+      // Apple sadece ilk girişte isim veriyor — sonraki girişlerde null
+      final fullName = [
+        appleCredential.givenName,
+        appleCredential.familyName,
+      ].where((s) => s != null && s.isNotEmpty).join(' ');
+
+      final userModel = UserModel(
+        uid: fbUser.uid,
+        name: fullName.isNotEmpty
+            ? fullName
+            : fbUser.displayName ?? 'common.user'.tr(),
+        email: fbUser.email ?? appleCredential.email ?? '',
+        photoUrl: fbUser.photoURL,
+        createdAt: DateTime.now(),
+      );
+
+      final savedUser = await _upsertFirestoreUser(userModel);
+      await _saveSession(savedUser);
+      NotificationService.saveFcmToken(savedUser.uid).ignore();
+      state = state.copyWith(user: savedUser, isLoading: false);
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) {
+        state = state.copyWith(isLoading: false);
+        return;
+      }
+      state = state.copyWith(isLoading: false, errorMessage: 'auth.sign_in_failed');
+    } on FirebaseAuthException catch (e) {
+      debugPrint('[AppleSignIn] FirebaseAuthException: ${e.code} | ${e.message}');
+      state = state.copyWith(isLoading: false, errorMessage: '${e.code}: ${e.message}');
+    } catch (e) {
+      debugPrint('[AppleSignIn] unexpected error: $e');
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+    }
+  }
+
+  String _generateNonce([int length = 32]) {
+    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+  }
+
+  String _sha256ofString(String input) {
+    final bytes = utf8.encode(input);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
   }
 
   // ── Şifre Sıfırlama ───────────────────────────────────────────────────────

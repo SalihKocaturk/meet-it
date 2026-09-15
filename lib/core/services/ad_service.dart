@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:meetit/core/constants/app_config.dart';
@@ -27,14 +28,27 @@ class AdService {
   static InterstitialAd? _interstitialAd;
   static bool _isLoadingInterstitial = false;
 
+  /// Kullanıcı izleme izni verdi mi? Vermediyse (veya iOS'ta henüz
+  /// sorulmadıysa) reklamlar kişiselleştirilmeden istenir.
+  static bool _trackingAllowed = false;
+
+  /// Reklam istekleri bu getter üzerinden oluşturulur; izin durumuna göre
+  /// `nonPersonalizedAds` bayrağı otomatik ayarlanır.
+  static AdRequest get adRequest =>
+      AdRequest(nonPersonalizedAds: !_trackingAllowed);
+
+  /// İzleme izni verildi mi? (Android'de her zaman true)
+  static bool get isTrackingAllowed => _trackingAllowed;
+
   /// Kaç aramada bir büyük reklam gösterilsin? (4 = her 4 aramadan 1'i)
   static const int _adInterval = 4;
 
   static const String _kSearchCountKey = 'ad_search_count';
 
-  // ── Test ID'leri (kDebugMode) ────────────────────────────────────────────
-  static const String _testInterstitialId =
-      'ca-app-pub-3940256099942544/1033173712'; // Android test interstitial
+  // ── Test ID'leri (kDebugMode, platform bazlı) ───────────────────────────
+  static String get _testInterstitialId => Platform.isIOS
+      ? 'ca-app-pub-3940256099942544/4411468910' // iOS test interstitial
+      : 'ca-app-pub-3940256099942544/1033173712'; // Android test interstitial
 
   // ── Init ────────────────────────────────────────────────────────────────
 
@@ -42,11 +56,47 @@ class AdService {
   /// `main.dart`'ta Firebase init'ten sonra çağrılmalı.
   static Future<void> initialize() async {
     if (_initialized) return;
+
+    // ÖNEMLİ: ATT izni AdMob'dan ÖNCE sorulmalı. SDK bir kez IDFA'sız
+    // başlatılırsa izin sonradan verilse bile o oturumda kullanılmaz.
+    await _requestTrackingPermission();
+
     await MobileAds.instance.initialize();
     // Kalıcı sayacı SharedPreferences'tan yükle
     final prefs = await SharedPreferences.getInstance();
     _searchCount = prefs.getInt(_kSearchCountKey) ?? 0;
     _initialized = true;
+  }
+
+  /// iOS 14+ üzerinde App Tracking Transparency iznini ister.
+  ///
+  /// Android'de izin diyaloğu yoktur; orada reklam kimliği kullanımı sistem
+  /// ayarlarından yönetilir, bu yüzden [_trackingAllowed] true kabul edilir.
+  ///
+  /// Hata durumunda kişiselleştirilmemiş reklama düşülür — izinsiz takip
+  /// yapmaktansa daha az gelirli reklam göstermek doğru davranış.
+  static Future<void> _requestTrackingPermission() async {
+    if (!Platform.isIOS) {
+      _trackingAllowed = true;
+      return;
+    }
+
+    try {
+      // Diyalog yalnızca uygulama ön planda ve tam aktifken açılır. Açılış
+      // animasyonu bitmeden çağrılırsa sessizce düşer, bu yüzden kısa bekleme.
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+
+      var status = await AppTrackingTransparency.trackingAuthorizationStatus;
+      if (status == TrackingStatus.notDetermined) {
+        status = await AppTrackingTransparency.requestTrackingAuthorization();
+      }
+      _trackingAllowed = status == TrackingStatus.authorized;
+
+      if (kDebugMode) debugPrint('[AdService] ATT durumu: $status');
+    } catch (e) {
+      _trackingAllowed = false;
+      if (kDebugMode) debugPrint('[AdService] ATT isteği başarısız: $e');
+    }
   }
 
   // ── Sayaç ───────────────────────────────────────────────────────────────
@@ -70,11 +120,11 @@ class AdService {
 
   // ── Interstitial ─────────────────────────────────────────────────────────
 
-  String get _interstitialUnitId =>
-      kDebugMode ? _testInterstitialId : AppConfig.admobInterstitialUnitId;
-
-  static String _unitId() =>
-      kDebugMode ? _testInterstitialId : AppConfig.admobInterstitialUnitId;
+  static String _unitId() => kDebugMode
+      ? _testInterstitialId
+      : (Platform.isIOS
+          ? AppConfig.admobInterstitialUnitIdIos
+          : AppConfig.admobInterstitialUnitId);
 
   /// Tam ekran reklamı önceden yükle (fire-and-forget).
   ///
@@ -91,7 +141,7 @@ class AdService {
     _isLoadingInterstitial = true;
     await InterstitialAd.load(
       adUnitId: unitId,
-      request: const AdRequest(),
+      request: adRequest,
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
           _interstitialAd = ad;
