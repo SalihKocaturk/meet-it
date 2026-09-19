@@ -1,4 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,13 +24,16 @@ class CompleteProfilePage extends ConsumerWidget {
   const CompleteProfilePage({super.key});
 
   Future<void> _onSubmit(BuildContext context, WidgetRef ref) async {
+    final needsName =
+        (ref.read(currentUserProvider)?.name ?? '').trim().isEmpty;
+    final name = ref.read(completeProfileNameControllerProvider).text.trim();
     final location =
         ref.read(completeProfileLocationControllerProvider).text.trim();
     final pickedLocation = ref.read(completeProfilePickedLocationProvider);
     final ageText = ref.read(completeProfileAgeControllerProvider).text.trim();
     final gender = ref.read(completeProfileGenderProvider);
 
-    if (location.isEmpty || ageText.isEmpty) {
+    if ((needsName && name.isEmpty) || location.isEmpty || ageText.isEmpty) {
       showAppAlert(
         context: context,
         type: AppAlertType.warning,
@@ -58,6 +62,7 @@ class CompleteProfilePage extends ConsumerWidget {
           location: location,
           age: age,
           gender: gender,
+          name: needsName ? name : null,
           lat: pickedLocation?.lat,
           lng: pickedLocation?.lng,
         );
@@ -87,6 +92,12 @@ class CompleteProfilePage extends ConsumerWidget {
     ref.watch(completeProfileInitProvider);
 
     final isLoading = ref.watch(authLoadingProvider);
+    final currentUser = ref.watch(currentUserProvider);
+    final needsName = (currentUser?.name ?? '').trim().isEmpty;
+    final nameCtrl = ref.watch(completeProfileNameControllerProvider);
+    final isApple = FirebaseAuth.instance.currentUser?.providerData
+            .any((p) => p.providerId == 'apple.com') ??
+        false;
     final selectedGender = ref.watch(completeProfileGenderProvider);
     final ageCtrl = ref.watch(completeProfileAgeControllerProvider);
 
@@ -111,7 +122,10 @@ class CompleteProfilePage extends ConsumerWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'auth.complete_profile_desc'.tr(),
+                (isApple
+                        ? 'auth.complete_profile_desc_apple'
+                        : 'auth.complete_profile_desc')
+                    .tr(),
                 style: TextStyle(
                   fontSize: 13,
                   color: context.colors.textSecondary,
@@ -120,6 +134,18 @@ class CompleteProfilePage extends ConsumerWidget {
               const SizedBox(height: 28),
 
               const CompleteProfileAvatarRow(),
+
+              if (needsName) ...[
+                AppTextField(
+                  controller: nameCtrl,
+                  label: 'auth.name_surname'.tr(),
+                  hint: 'auth.name_hint'.tr(),
+                  prefixIcon: Iconsax.user,
+                  textInputAction: TextInputAction.next,
+                ),
+                const SizedBox(height: 16),
+              ],
+
               const CompleteProfileLocationField(),
               const SizedBox(height: 16),
 
