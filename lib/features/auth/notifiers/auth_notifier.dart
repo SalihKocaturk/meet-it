@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,6 +10,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import 'package:meetit/core/services/notification_service.dart';
 import 'package:meetit/features/auth/models/user_model.dart';
@@ -93,7 +96,10 @@ class AuthState {
     // olması gereken bir alanı fiilen ZORUNLU hale getiriyordu (kullanıcı
     // cinsiyet seçmeden asla devam edemiyordu). Sadece gerçekten zorunlu
     // olan location/age burada kontrol ediliyor.
-    return locationMissing || u.age == null;
+    // Apple ile girişte isim yalnızca ilk izinde geliyor, sonra hiç gelmiyor.
+    // İsimsiz kullanıcıyı da profil tamamlama sayfasına yönlendir.
+    final nameMissing = u.name.trim().isEmpty;
+    return nameMissing || locationMissing || u.age == null;
   }
 
   AuthState copyWith({
@@ -583,6 +589,128 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  // ── Apple ile Giriş ───────────────────────────────────────────────────────
+
+  Future<void> signInWithApple() async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      // Güvenli nonce oluştur
+      final rawNonce = _generateNonce();
+      final nonce = _sha256ofString(rawNonce);
+
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+
+      final idToken = appleCredential.identityToken;
+      if (idToken == null) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'auth.sign_in_failed',
+        );
+        return;
+      }
+
+      // ÖNEMLİ: Firebase iOS SDK'sında genel `OAuthProvider('apple.com')`
+      // yolu geçerli bir Apple token'ını da invalid-credential ile
+      // reddedebiliyor (aynı token REST'e gönderildiğinde 200 dönüyor).
+      // Apple'a özel native yol `AppleAuthProvider` sorunsuz çalışıyor;
+      // diğer iki kombinasyon yedek olarak duruyor.
+      final provider = OAuthProvider('apple.com');
+      final candidates = <AuthCredential>[
+        AppleAuthProvider.credentialWithIDToken(
+          idToken,
+          rawNonce,
+          AppleFullPersonName(
+            givenName: appleCredential.givenName,
+            familyName: appleCredential.familyName,
+          ),
+        ),
+        provider.credential(idToken: idToken, rawNonce: rawNonce),
+        provider.credential(idToken: idToken),
+      ];
+
+      UserCredential? cred;
+      FirebaseAuthException? lastError;
+      for (final c in candidates) {
+        try {
+          cred = await _auth.signInWithCredential(c);
+          break;
+        } on FirebaseAuthException catch (e) {
+          lastError = e;
+          if (e.code != 'invalid-credential') break;
+        }
+      }
+      if (cred == null) throw lastError!;
+
+      final fbUser = cred.user!;
+
+      // Apple ismi SADECE ilk izin anında gönderiyor; sonraki girişlerde
+      // null geliyor ve bir daha asla gelmiyor. Bu yüzden isim boş
+      // kalabilir — CompleteProfilePage kullanıcıya soracak.
+      final fullName = [
+        appleCredential.givenName,
+        appleCredential.familyName,
+      ].where((s) => s != null && s.isNotEmpty).join(' ');
+
+      if (fullName.isNotEmpty && (fbUser.displayName ?? '').isEmpty) {
+        try {
+          await fbUser.updateDisplayName(fullName);
+        } catch (_) {}
+      }
+
+      final userModel = UserModel(
+        uid: fbUser.uid,
+        name: fullName.isNotEmpty ? fullName : (fbUser.displayName ?? ''),
+        email: fbUser.email ?? appleCredential.email ?? '',
+        photoUrl: fbUser.photoURL,
+        createdAt: DateTime.now(),
+      );
+
+      final savedUser = await _upsertFirestoreUser(userModel);
+      await _saveSession(savedUser);
+      NotificationService.saveFcmToken(savedUser.uid).ignore();
+      state = state.copyWith(user: savedUser, isLoading: false);
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) {
+        state = state.copyWith(isLoading: false);
+        return;
+      }
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'auth.sign_in_failed',
+      );
+    } on FirebaseAuthException catch (e) {
+      debugPrint('[AppleSignIn] FirebaseAuthException: ${e.code} | ${e.message}');
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'auth.sign_in_failed',
+      );
+    } catch (e) {
+      debugPrint('[AppleSignIn] unexpected error: $e');
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'auth.sign_in_failed',
+      );
+    }
+  }
+
+  String _generateNonce([int length = 32]) {
+    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+  }
+
+  String _sha256ofString(String input) {
+    final bytes = utf8.encode(input);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
   // ── Şifre Sıfırlama ───────────────────────────────────────────────────────
 
   Future<void> forgotPassword(String email) async {
@@ -656,6 +784,7 @@ class AuthNotifier extends Notifier<AuthState> {
     required String location,
     required int age,
     String? gender,
+    String? name,
     double? lat,
     double? lng,
   }) async {
@@ -664,9 +793,14 @@ class AuthNotifier extends Notifier<AuthState> {
 
     state = state.copyWith(isLoading: true, clearError: true);
 
+    final trimmedName = name?.trim();
+
     final updatedUser = user.copyWith(
       location: location,
       age: age,
+      name: (trimmedName != null && trimmedName.isNotEmpty)
+          ? trimmedName
+          : user.name,
       // Cinsiyet opsiyonel — kullanıcı seçmediyse mevcut (boş) değeri koru,
       // var olan bir değeri sıfırlamayız.
       gender: gender ?? user.gender,

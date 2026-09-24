@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Flat fallback for the adaptive icon background / splash. -->
     <color name="ic_launcher_background">#5CB58A</color>
 </resources>

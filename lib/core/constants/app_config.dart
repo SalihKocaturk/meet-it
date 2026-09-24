@@ -58,18 +58,31 @@ class AppConfig {
     'GOOGLE_MAPS_API_KEY',
   );
 
-  /// AdMob Banner reklam birimi ID'si — derleme zamanında inject edilir.
+  /// AdMob Banner — Android üretim reklam birimi ID'si (önceden var olan key).
   /// dart_defines.json'a ADMOB_BANNER_ID olarak eklenmeli (gitignore'da).
-  /// Debug modda test ID kullanılır (bkz. AdBannerWidget).
+  /// Debug modda Android test ID kullanılır (bkz. AdBannerWidget).
   static const String admobBannerUnitId = String.fromEnvironment(
     'ADMOB_BANNER_ID',
   );
 
-  /// AdMob Interstitial (tam ekran) reklam birimi ID'si.
+  /// AdMob Banner — iOS üretim reklam birimi ID'si.
+  /// dart_defines.json'a ADMOB_BANNER_ID_IOS olarak eklenmeli (gitignore'da).
+  /// Debug modda iOS test ID kullanılır (bkz. AdBannerWidget).
+  static const String admobBannerUnitIdIos = String.fromEnvironment(
+    'ADMOB_BANNER_ID_IOS',
+  );
+
+  /// AdMob Interstitial — Android üretim reklam birimi ID'si (önceden var olan key).
   /// dart_defines.json'a ADMOB_INTERSTITIAL_ID olarak eklenmeli (gitignore'da).
   /// Debug modda Google'ın resmi test ID'si kullanılır (bkz. AdService).
   static const String admobInterstitialUnitId = String.fromEnvironment(
     'ADMOB_INTERSTITIAL_ID',
+  );
+
+  /// AdMob Interstitial — iOS üretim reklam birimi ID'si.
+  /// dart_defines.json'a ADMOB_INTERSTITIAL_ID_IOS olarak eklenmeli (gitignore'da).
+  static const String admobInterstitialUnitIdIos = String.fromEnvironment(
+    'ADMOB_INTERSTITIAL_ID_IOS',
   );
 
   /// Places API (New) — Nearby Search endpoint'i (POST, JSON body).

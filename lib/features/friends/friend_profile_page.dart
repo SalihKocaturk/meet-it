@@ -1,10 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
+import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/models/user_friend_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
@@ -67,6 +69,33 @@ class FriendProfilePage extends ConsumerWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                    ),
+                    // Engelle / Şikayet menüsü
+                    PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.more_vert,
+                        color: context.colors.textSecondary,
+                      ),
+                      onSelected: (value) async {
+                        if (value == 'block') {
+                          _confirmBlock(context, ref);
+                        }
+                      },
+                      itemBuilder: (_) => [
+                        const PopupMenuItem(
+                          value: 'block',
+                          child: Row(
+                            children: [
+                              Icon(Icons.block, size: 18, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text(
+                                'Engelle',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -170,6 +199,52 @@ class FriendProfilePage extends ConsumerWidget {
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
+      ),
+    );
+  }
+
+  void _confirmBlock(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Kullanıcıyı Engelle'),
+        content: Text(
+          '${friend.name} adlı kullanıcıyı engellemek istediğinize emin misiniz? '
+          'Bu kişi sizi bir daha bulamaz.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final currentUid =
+                  ref.read(authProvider).user?.uid;
+              if (currentUid == null) return;
+              await FirebaseFirestore.instance
+                  .collection('blocks')
+                  .add({
+                'blockerUid': currentUid,
+                'blockedUid': friend.uid,
+                'createdAt': FieldValue.serverTimestamp(),
+              });
+              if (context.mounted) {
+                Navigator.of(context).pop(); // profil sayfasını kapat
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${friend.name} engellendi.'),
+                  ),
+                );
+              }
+            },
+            child: const Text(
+              'Engelle',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
       ),
     );
   }

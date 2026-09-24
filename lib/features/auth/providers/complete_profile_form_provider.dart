@@ -16,6 +16,15 @@ final completeProfileLocationControllerProvider =
   return controller;
 });
 
+/// Apple ile girişte isim yalnızca ilk izin anında geliyor; gelmediyse
+/// kullanıcıdan burada isteniyor.
+final completeProfileNameControllerProvider =
+    Provider.autoDispose<TextEditingController>((ref) {
+  final controller = TextEditingController();
+  ref.onDispose(controller.dispose);
+  return controller;
+});
+
 final completeProfileAgeControllerProvider =
     Provider.autoDispose<TextEditingController>((ref) {
   final controller = TextEditingController();
@@ -45,6 +54,9 @@ final completeProfileInitProvider = Provider.autoDispose<void>((ref) {
     final user = ref.read(currentUserProvider);
     if (user == null) return;
 
+    if (user.name.trim().isNotEmpty) {
+      ref.read(completeProfileNameControllerProvider).text = user.name;
+    }
     if (user.location != null && user.location!.trim().isNotEmpty) {
       ref.read(completeProfileLocationControllerProvider).text = user.location!;
     }
