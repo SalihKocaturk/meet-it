@@ -58,7 +58,7 @@
             android:value="meetit_default" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@drawable/ic_notification" />
+            android:resource="@mipmap/ic_launcher" />
     </application>
 
     <!-- Konum izni -->

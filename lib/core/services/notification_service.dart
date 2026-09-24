@@ -106,11 +106,29 @@ class NotificationService {
   /// Token yenilendiğinde otomatik güncelleme de başlatır.
   static Future<void> saveFcmToken(String uid) async {
     try {
-      // iOS'ta APNs token'ı beklenmesi gerekiyor — bu beklemeyi messaging paketi
-      // kendi içinde yapıyor, burada sadece getToken()'ı çağırıyoruz.
-      final token = await _messaging.getToken();
+      // Android'de token ilk girişte henüz hazır olmayabiliyor.
+      // 3 deneme: 0ms, 3sn, 8sn aralıklarla → birinde mutlaka gelir.
+      String? token;
+      const delays = [0, 3000, 8000];
+      for (final delay in delays) {
+        if (delay > 0) {
+          await Future.delayed(Duration(milliseconds: delay));
+        }
+        token = await _messaging.getToken();
+        if (token != null) break;
+        debugPrint('[NotificationService] FCM token henüz hazır değil, tekrar denenecek...');
+      }
+
       if (token == null) {
-        debugPrint('[NotificationService] FCM token alınamadı (henüz hazır değil).');
+        debugPrint('[NotificationService] FCM token alınamadı, onTokenRefresh beklenecek.');
+        // Son çare: token gelince kaydet
+        _messaging.onTokenRefresh.listen((t) async {
+          await _firestore.collection('fcmTokens').doc(uid).set({
+            'token': t,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+          debugPrint('[NotificationService] FCM token onTokenRefresh ile kaydedildi.');
+        });
         return;
       }
 
