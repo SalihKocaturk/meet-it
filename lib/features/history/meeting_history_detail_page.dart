@@ -59,10 +59,12 @@ class _MeetingHistoryDetailPageState
         types: v.types,
         priceLevel: v.priceLevel,
       );
-      final marker = MapMarkerBuilder.buildVenueMarker(
+      final marker = await MapMarkerBuilder.buildVenueMarker(
         place: place,
         rankIndex: i,
         onTap: () => _onMarkerTap(i),
+        // Burada tüm mekanlar aynı anda gösterildiği için normal boy pin.
+        highlighted: false,
       );
       built.add(marker);
     }

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:meetit/features/match/models/place_result.dart';
+import 'package:meetit/features/match/utils/venue_type_pin.dart';
+import 'package:meetit/features/match/utils/venue_type_style.dart';
 
 // ── Harita Pin Üretimi ─────────────────────────────────────────────────────────
 //
@@ -13,29 +15,31 @@ import 'package:meetit/features/match/models/place_result.dart';
 class MapMarkerBuilder {
   MapMarkerBuilder._();
 
-  /// Mekan pini — Google'ın standart pin şekli, sıralamaya göre renklendirilir
-  /// (1. sıra altın, 2. sıra gümüş tonu, 3. sıra bronz tonu, diğerleri kırmızı).
-  /// Kasıtlı olarak kişi pinlerinden (avatar) tamamen farklı/standart bırakıldı.
-  static Marker buildVenueMarker({
+  /// Mekan pini — mekan tipine özel tasarım (bkz. venue_type_pin.dart):
+  /// tipin renginde gradyanlı damla, ortasında tipin ikonu (kafe → kahve
+  /// fincanı, restoran → çatal-bıçak...). Profildeki Kaydedilenler /
+  /// Tarifi Alınanlar haritasıyla AYNI pinler kullanılıyor.
+  ///
+  /// [highlighted]: büyük + parlama halkalı versiyon. Harita görünümünde
+  /// (AttemptMeetPage) aynı anda yalnızca seçili mekanın pini gösterildiği
+  /// için orada varsayılan olarak vurgulu pin kullanılıyor.
+  static Future<Marker> buildVenueMarker({
     required PlaceResult place,
     required int rankIndex,
     required VoidCallback onTap,
-  }) {
-    double hue;
-    if (rankIndex == 0) {
-      hue = 45; // altın/sarı
-    } else if (rankIndex == 1) {
-      hue = 200; // gümüşe yakın açık mavi
-    } else if (rankIndex == 2) {
-      hue = 25; // bronza yakın turuncu-kahve
-    } else {
-      hue = 0; // standart kırmızı
-    }
+    bool highlighted = true,
+  }) async {
+    final icon = await VenueTypePin.get(
+      VenueTypeStyle.of(place),
+      selected: highlighted,
+    );
     return Marker(
       markerId: MarkerId(place.placeId),
       position: LatLng(place.lat, place.lng),
-      icon: BitmapDescriptor.defaultMarkerWithHue(hue),
-      anchor: const Offset(0.5, 1.0),
+      icon: icon,
+      anchor: VenueTypePin.anchorFor(selected: highlighted),
+      // Üst sıradaki mekanlar üst üste binmede önde kalsın.
+      zIndex: (1000 - rankIndex).toDouble(),
       onTap: onTap,
     );
   }

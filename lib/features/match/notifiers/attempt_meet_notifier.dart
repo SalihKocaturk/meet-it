@@ -138,7 +138,7 @@ class AttemptMeetNotifier extends AsyncNotifier<AttemptMeetState> {
     final venueMarkers = <String, Marker>{};
     for (var i = 0; i < venues.length; i++) {
       final place = venues[i];
-      venueMarkers[place.placeId] = MapMarkerBuilder.buildVenueMarker(
+      venueMarkers[place.placeId] = await MapMarkerBuilder.buildVenueMarker(
         place: place,
         rankIndex: i,
         onTap: () => selectVenue(i),
