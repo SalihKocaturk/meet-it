@@ -327,7 +327,12 @@
     "no_reviews_desc": "Pick a venue you've visited to add your first review!",
     "saved_reviews": "Saved",
     "liked_reviews": "Liked",
-    "empty_liked_reviews": "No liked reviews yet."
+    "empty_liked_reviews": "No liked reviews yet.",
+    "view_list": "List",
+    "view_map": "Map",
+    "filter_all": "All",
+    "venue_count": "{count} venues",
+    "directions": "Directions"
   },
   "settings": {
     "title": "Settings",
@@ -576,5 +581,24 @@
     "just_now": "Just now",
     "minutes_ago": "{n}m ago",
     "hours_ago": "{n}h ago"
+  },
+  "venue_types": {
+    "cafe": "Cafe",
+    "restaurant": "Restaurant",
+    "bar": "Bar",
+    "night_club": "Night Club",
+    "bakery": "Bakery",
+    "museum": "Museum",
+    "art_gallery": "Gallery",
+    "park": "Park",
+    "gym": "Gym",
+    "movie_theater": "Cinema",
+    "bowling_alley": "Bowling",
+    "library": "Library",
+    "amusement_park": "Amusement Park",
+    "shopping_mall": "Mall",
+    "spa": "Spa",
+    "tourist_attraction": "Attraction",
+    "other": "Other"
   }
 }

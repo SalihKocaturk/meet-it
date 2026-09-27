@@ -327,7 +327,12 @@
     "no_reviews_desc": "İlk yorumunu eklemek için gittiğin bir mekanı seç!",
     "saved_reviews": "Kaydedilenler",
     "liked_reviews": "Beğenilenler",
-    "empty_liked_reviews": "Henüz beğendiğin yorum yok."
+    "empty_liked_reviews": "Henüz beğendiğin yorum yok.",
+    "view_list": "Liste",
+    "view_map": "Harita",
+    "filter_all": "Tümü",
+    "venue_count": "{count} mekan",
+    "directions": "Tarif Al"
   },
   "settings": {
     "title": "Ayarlar",
@@ -576,5 +581,24 @@
     "just_now": "Az önce",
     "minutes_ago": "{n} dakika önce",
     "hours_ago": "{n} saat önce"
+  },
+  "venue_types": {
+    "cafe": "Kafe",
+    "restaurant": "Restoran",
+    "bar": "Bar",
+    "night_club": "Gece Kulübü",
+    "bakery": "Pastane",
+    "museum": "Müze",
+    "art_gallery": "Galeri",
+    "park": "Park",
+    "gym": "Spor Salonu",
+    "movie_theater": "Sinema",
+    "bowling_alley": "Bowling",
+    "library": "Kütüphane",
+    "amusement_park": "Eğlence Parkı",
+    "shopping_mall": "AVM",
+    "spa": "Spa",
+    "tourist_attraction": "Turistik",
+    "other": "Diğer"
   }
 }

@@ -14,22 +14,14 @@ import 'package:meetit/features/main/main_page.dart' show mainTabIndexProvider;
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/providers/saved_venues_provider.dart';
 import 'package:meetit/features/profile/saved_page.dart';
+import 'package:meetit/features/profile/widgets/venue_collection_view.dart';
+import 'package:meetit/features/match/utils/venue_type_style.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:meetit/core/widgets/app_alert.dart';
 import 'package:meetit/core/widgets/network_status_banner.dart';
-import 'package:url_launcher/url_launcher.dart';
-
-/// Kaydedilen/tarif alınan mekanlar listesinde "tekrar tarif al" butonuna
-/// basılınca Google Maps'i mekanın konumuyla açar.
-Future<void> _reopenDirections(PlaceResult place) async {
-  final uri = Uri.parse(place.googleMapsUrl);
-  if (await canLaunchUrl(uri)) {
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-}
 
 // Profil tab index
 final profileTabProvider = StateProvider.autoDispose<int>((ref) => 0);
@@ -53,37 +45,121 @@ class ProfilePage extends ConsumerWidget {
     final savedVenues     = ref.watch(savedVenuesProvider);
     final navigatedVenues = ref.watch(navigatedVenuesProvider);
 
+    // Kaydedilenler (1) / Tarifi Alınanlar (2) sekmeleri için ortak veri.
+    final isVenueTab = tabIndex != 0;
+    final venueKind = tabIndex == 1
+        ? VenueCollectionKind.saved
+        : VenueCollectionKind.navigated;
+    final tabVenues = tabIndex == 1 ? savedVenues : navigatedVenues;
+    final filteredVenues = applyVenueFilter(
+      tabVenues,
+      ref.watch(venueCollectionFilterProvider(venueKind)),
+    );
+    // Harita görünümü: sekmede en az bir mekan varsa. Boş sekmede her
+    // zaman liste düzenindeki "henüz mekan yok" mesajı gösterilir.
+    final isMapMode = isVenueTab &&
+        tabVenues.isNotEmpty &&
+        ref.watch(venueCollectionMapModeProvider);
+    // ÖNEMLİ: Ana sekmeler IndexedStack içinde — Profil sekmesi başka bir
+    // sekme açıkken de arka planda canlı kalıyor. GoogleMap ise native bir
+    // platform view olduğu için GİZLİYKEN bile ekranın o bölgesindeki
+    // dokunuşları yutabiliyor (örn. Ana Sayfa'daki kayan mekan carousel'i
+    // durdurulamıyor / tıklanamıyordu). Bu yüzden harita SADECE Profil
+    // sekmesi gerçekten ekrandayken oluşturuluyor.
+    final isProfileVisible = ref.watch(mainTabIndexProvider) == 3;
+
+    final header = _ProfileHeader(
+      user: user,
+      postsCount: myReviews.length,
+      friendsCount: connections.length,
+      totalLikes: totalLikes,
+    );
+    void onTabChanged(int i) =>
+        ref.read(profileTabProvider.notifier).state = i;
+
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
             const NetworkStatusBanner(),
             Expanded(
-              child: NestedScrollView(
-                headerSliverBuilder: (context, _) => [
-                  SliverToBoxAdapter(
-                    child: _ProfileHeader(
-                      user: user,
-                      postsCount: myReviews.length,
-                      friendsCount: connections.length,
-                      totalLikes: totalLikes,
+              child: isMapMode
+                  // ── Harita görünümü ────────────────────────────────────
+                  // NestedScrollView içinde harita hem dikey sürükleme
+                  // çakışması yaşar hem de alt kısmı (kart + filtreler)
+                  // başlık kaydırılana kadar ekran dışında kalırdı; bu
+                  // yüzden harita modunda sabit bir Column düzeni var.
+                  ? Column(
+                      children: [
+                        header,
+                        _ProfileTabs(
+                          tabIndex: tabIndex,
+                          onTabChanged: onTabChanged,
+                        ),
+                        Expanded(
+                          child: isProfileVisible
+                              ? VenueCollectionMapView(
+                                  key: ValueKey(venueKind),
+                                  kind: venueKind,
+                                  venues: tabVenues,
+                                )
+                              : const SizedBox.shrink(),
+                        ),
+                      ],
+                    )
+                  : Stack(
+                      children: [
+                        NestedScrollView(
+                          headerSliverBuilder: (context, _) => [
+                            SliverToBoxAdapter(child: header),
+                            SliverPersistentHeader(
+                              pinned: true,
+                              delegate: _TabBarDelegate(
+                                tabIndex: tabIndex,
+                                onTabChanged: onTabChanged,
+                              ),
+                            ),
+                          ],
+                          body: switch (tabIndex) {
+                            0 => _ReviewsGrid(reviews: myReviews),
+                            1 => _SavedVenuesList(
+                              venues: filteredVenues,
+                              isEmpty: savedVenues.isEmpty,
+                            ),
+                            _ => _NavigatedVenuesList(
+                              venues: filteredVenues,
+                              isEmpty: navigatedVenues.isEmpty,
+                            ),
+                          },
+                        ),
+                        // ── Alt: mekan tipi filtreleri ─────────────────
+                        if (isVenueTab && tabVenues.isNotEmpty)
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              padding: const EdgeInsets.only(top: 14, bottom: 6),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    context.colors.scaffold
+                                        .withValues(alpha: 0),
+                                    context.colors.scaffold
+                                        .withValues(alpha: 0.95),
+                                  ],
+                                ),
+                              ),
+                              child: VenueTypeFilterBar(
+                                kind: venueKind,
+                                venues: tabVenues,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                  ),
-                  SliverPersistentHeader(
-                    pinned: true,
-                    delegate: _TabBarDelegate(
-                      tabIndex: tabIndex,
-                      onTabChanged: (i) =>
-                          ref.read(profileTabProvider.notifier).state = i,
-                    ),
-                  ),
-                ],
-                body: switch (tabIndex) {
-                  0 => _ReviewsGrid(reviews: myReviews),
-                  1 => _SavedVenuesList(venues: savedVenues),
-                  _ => _NavigatedVenuesList(venues: navigatedVenues),
-                },
-              ),
             ),
           ],
         ),
@@ -269,29 +345,46 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    return Row(
-      children: [
-        _Tab(
-          icon: Iconsax.grid_1,
-          isSelected: tabIndex == 0,
-          onTap: () => onTabChanged(0),
-        ),
-        _Tab(
-          icon: Iconsax.save_2,
-          isSelected: tabIndex == 1,
-          onTap: () => onTabChanged(1),
-        ),
-        _Tab(
-          icon: Iconsax.send_2,
-          isSelected: tabIndex == 2,
-          onTap: () => onTabChanged(2),
-        ),
-      ],
-    );
+    return _ProfileTabs(tabIndex: tabIndex, onTabChanged: onTabChanged);
   }
 
   @override
   bool shouldRebuild(_TabBarDelegate old) => old.tabIndex != tabIndex;
+}
+
+/// Profil sekme satırı — hem NestedScrollView'daki sabit başlıkta hem de
+/// harita görünümünün Column düzeninde kullanılır.
+class _ProfileTabs extends StatelessWidget {
+  final int tabIndex;
+  final ValueChanged<int> onTabChanged;
+
+  const _ProfileTabs({required this.tabIndex, required this.onTabChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 44,
+      child: Row(
+        children: [
+          _Tab(
+            icon: Iconsax.grid_1,
+            isSelected: tabIndex == 0,
+            onTap: () => onTabChanged(0),
+          ),
+          _Tab(
+            icon: Iconsax.save_2,
+            isSelected: tabIndex == 1,
+            onTap: () => onTabChanged(1),
+          ),
+          _Tab(
+            icon: Iconsax.send_2,
+            isSelected: tabIndex == 2,
+            onTap: () => onTabChanged(2),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _Tab extends StatelessWidget {
@@ -487,43 +580,62 @@ class _ReviewPlaceholderTile extends StatelessWidget {
 // ── Kaydedilen Mekanlar ───────────────────────────────────────────────────────
 
 class _SavedVenuesList extends ConsumerWidget {
+  /// Tip filtresi UYGULANMIŞ liste.
   final List<PlaceResult> venues;
 
-  const _SavedVenuesList({required this.venues});
+  /// Filtreden bağımsız olarak sekmede hiç kayıt yok mu.
+  final bool isEmpty;
+
+  const _SavedVenuesList({required this.venues, required this.isEmpty});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (venues.isEmpty) {
+    if (isEmpty) {
       return _EmptyTab(
         icon: Iconsax.save_2,
         message: 'profile.no_saved_venues'.tr(),
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: venues.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
-      itemBuilder: (_, i) => _VenueTile(
-        place: venues[i],
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            GestureDetector(
-              onTap: () =>
-                  ref.read(savedVenuesProvider.notifier).toggle(venues[i]),
-              child: Icon(Iconsax.save_add,
-                  color: context.colors.primary, size: 22),
+    return Column(
+      children: [
+        VenueCollectionToolbar(count: venues.length),
+        Expanded(
+          child: ListView.separated(
+            // Alttaki filtre butonlarının arkasında son kart kalmasın diye
+            // pay — butonlar birden fazla satıra geçebildiği için ölçülen
+            // gerçek yüksekliğe göre.
+            padding: EdgeInsets.fromLTRB(
+              16,
+              12,
+              16,
+              ref.watch(venueFilterBarHeightProvider) + 28,
             ),
-            const SizedBox(width: 12),
-            GestureDetector(
-              onTap: () => _reopenDirections(venues[i]),
-              child: Icon(Iconsax.routing,
-                  color: context.colors.primary, size: 22),
+            itemCount: venues.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
+            itemBuilder: (_, i) => _VenueTile(
+              place: venues[i],
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: () =>
+                        ref.read(savedVenuesProvider.notifier).toggle(venues[i]),
+                    child: Icon(Iconsax.save_add,
+                        color: context.colors.primary, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: () => launchVenueDirections(venues[i]),
+                    child: Icon(Iconsax.routing,
+                        color: context.colors.primary, size: 22),
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -531,71 +643,92 @@ class _SavedVenuesList extends ConsumerWidget {
 // ── Tarifi Alınan Mekanlar ────────────────────────────────────────────────────
 
 class _NavigatedVenuesList extends ConsumerWidget {
+  /// Tip filtresi UYGULANMIŞ liste.
   final List<PlaceResult> venues;
 
-  const _NavigatedVenuesList({required this.venues});
+  /// Filtreden bağımsız olarak sekmede hiç kayıt yok mu.
+  final bool isEmpty;
+
+  const _NavigatedVenuesList({required this.venues, required this.isEmpty});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (venues.isEmpty) {
+    if (isEmpty) {
       return _EmptyTab(
         icon: Iconsax.send_2,
         message: 'profile.no_navigated_venues'.tr(),
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: venues.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
-      itemBuilder: (_, i) {
-        final place = venues[i];
-        return _VenueTile(
-          place: place,
-          // Eski "Feedde Paylaş" (CreatePostPage) butonu yerine "Yorum Ekle" —
-          // bu mekan zaten navigatedVenuesProvider'da olduğu için doğrudan
-          // _AddReviewSheet açılabiliyor. Ayrıca insanlar bu mekana zaten bir
-          // kez tarif aldığı için tekrar tarif alabilmesi için bir buton da
-          // eklendi.
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              GestureDetector(
-                onTap: () => showAddReviewSheet(context, ref, place),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: context.colors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Iconsax.message_add_1,
-                          size: 13, color: context.colors.primary),
-                      const SizedBox(width: 4),
-                      Text(
-                        'profile.add_review'.tr(),
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: context.colors.primary,
-                            fontWeight: FontWeight.w600),
+    return Column(
+      children: [
+        VenueCollectionToolbar(count: venues.length),
+        Expanded(
+          child: ListView.separated(
+            // Alttaki filtre butonlarının arkasında son kart kalmasın diye
+            // pay — butonlar birden fazla satıra geçebildiği için ölçülen
+            // gerçek yüksekliğe göre.
+            padding: EdgeInsets.fromLTRB(
+              16,
+              12,
+              16,
+              ref.watch(venueFilterBarHeightProvider) + 28,
+            ),
+            itemCount: venues.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
+            itemBuilder: (_, i) {
+              final place = venues[i];
+              return _VenueTile(
+                place: place,
+                // Tarifi alınan mekanlarda Google yıldızı gösterilmiyor.
+                showRating: false,
+                // Eski "Feedde Paylaş" (CreatePostPage) butonu yerine "Yorum Ekle" —
+                // bu mekan zaten navigatedVenuesProvider'da olduğu için doğrudan
+                // _AddReviewSheet açılabiliyor. Ayrıca insanlar bu mekana zaten bir
+                // kez tarif aldığı için tekrar tarif alabilmesi için bir buton da
+                // eklendi.
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () => showAddReviewSheet(context, ref, place),
+                      child: Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: context.colors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Iconsax.message_add_1,
+                                size: 13, color: context.colors.primary),
+                            const SizedBox(width: 4),
+                            Text(
+                              'profile.add_review'.tr(),
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: context.colors.primary,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 10),
+                    GestureDetector(
+                      onTap: () => launchVenueDirections(place),
+                      child: Icon(Iconsax.routing,
+                          color: context.colors.primary, size: 22),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 10),
-              GestureDetector(
-                onTap: () => _reopenDirections(place),
-                child: Icon(Iconsax.routing,
-                    color: context.colors.primary, size: 22),
-              ),
-            ],
+              );
+            },
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 }
@@ -606,29 +739,46 @@ class _VenueTile extends StatelessWidget {
   final PlaceResult place;
   final Widget trailing;
 
-  const _VenueTile({required this.place, required this.trailing});
+  /// Google yıldız puanı gösterilsin mi (Tarifi Alınanlar'da gizli).
+  final bool showRating;
+
+  const _VenueTile({
+    required this.place,
+    required this.trailing,
+    this.showRating = true,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    // Karta dokununca mekan detay sayfası açılır. Sağdaki aksiyon
+    // butonlarının (kaydet / yorum / tarif) kendi GestureDetector'ları
+    // olduğu için onlara dokunmak detay sayfasını AÇMAZ.
+    return Material(
+      color: context.colors.card,
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => openVenueDetail(context, place),
+        child: Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: context.colors.card,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: context.colors.border),
       ),
       child: Row(
         children: [
-          // Küçük fotoğraf veya emoji
+          // Mekan fotoğrafı — kayıtlı foto yoksa, yüklenirken veya
+          // yüklenemezse tipin ikonlu kutusu (restoran → çatal-bıçak vb.).
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: place.photoUrl != null
-                ? Image.network(
-                    place.photoUrl!,
+                ? CachedNetworkImage(
+                    imageUrl: place.photoUrl!,
                     width: 52,
                     height: 52,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => _PlaceholderBox(place),
+                    placeholder: (_, _) => _PlaceholderBox(place),
+                    errorWidget: (_, _, _) => _PlaceholderBox(place),
                   )
                 : _PlaceholderBox(place),
           ),
@@ -661,26 +811,9 @@ class _VenueTile extends StatelessWidget {
                 Row(
                   children: [
                     Flexible(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: context.colors.primary.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          place.primaryTypeLabel,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: context.colors.primary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
+                      child: VenueTypeBadge(style: VenueTypeStyle.of(place)),
                     ),
-                    if (place.rating != null) ...[
+                    if (showRating && place.rating != null) ...[
                       const SizedBox(width: 6),
                       RatingBarIndicator(
                         rating: place.rating!,
@@ -711,6 +844,8 @@ class _VenueTile extends StatelessWidget {
           trailing,
         ],
       ),
+        ),
+      ),
     );
   }
 }
@@ -721,22 +856,8 @@ class _PlaceholderBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 52,
-      height: 52,
-      decoration: BoxDecoration(
-        color: context.colors.primary.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Center(
-        child: Text(
-          place.primaryTypeLabel.isNotEmpty
-              ? place.primaryTypeLabel[0]
-              : '📍',
-          style: const TextStyle(fontSize: 20),
-        ),
-      ),
-    );
+    // Fotoğraf yoksa tipin ikonu (kafe → kahve fincanı vb.)
+    return VenueTypeIconBox(style: VenueTypeStyle.of(place), size: 52);
   }
 }
 
