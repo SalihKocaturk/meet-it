@@ -188,31 +188,32 @@ class _VenueSearchLoadingPageState
     // hemen (800ms sonra) belirir ve arama arka planda yürür. Reklam kapanınca
     // + arama bitince geçiş yapılır → bekleme süresini reklamla değerlendirmiş
     // oluruz, sonuçları ayrıca bekletmeyiz.
-    if (!widget.simulationMode && (kReleaseMode || _kShowAdInDebug)) {
-      final isPremium = ref.read(isPremiumProvider);
-      AdService.incrementSearchCount().ignore();
-      _showInterstitial = AdService.shouldShowAd(isPremium: isPremium);
-      if (_showInterstitial) {
-        _adDismissed = false; // geçişi kilitle: reklam kapanana dek beklenir
-        // Reklamı yükle; yüklenir yüklenmez göster (minimum 800ms bekle).
-        final loadStart = DateTime.now();
-        AdService.preloadInterstitial(onLoaded: () {
-          final elapsed = DateTime.now().difference(loadStart).inMilliseconds;
-          final wait = (800 - elapsed).clamp(0, 800);
-          Future.delayed(Duration(milliseconds: wait), () {
-            if (!mounted) return;
-            AdService.showInterstitial(
-              onDismissed: () {
-                if (!mounted) return;
-                setState(() => _adDismissed = true);
-                if (_popping && !_navigated) _doNavigate();
-              },
-            );
-          });
-        });
-      }
-      // _showInterstitial = false ise _adDismissed zaten true (geçişi kilitlemez)
-    }
+    // Reklamlar geçici olarak devre dışı bırakıldı.
+    // if (!widget.simulationMode && (kReleaseMode || _kShowAdInDebug)) {
+    //   final isPremium = ref.read(isPremiumProvider);
+    //   AdService.incrementSearchCount().ignore();
+    //   _showInterstitial = AdService.shouldShowAd(isPremium: isPremium);
+    //   if (_showInterstitial) {
+    //     _adDismissed = false; // geçişi kilitle: reklam kapanana dek beklenir
+    //     // Reklamı yükle; yüklenir yüklenmez göster (minimum 800ms bekle).
+    //     final loadStart = DateTime.now();
+    //     AdService.preloadInterstitial(onLoaded: () {
+    //       final elapsed = DateTime.now().difference(loadStart).inMilliseconds;
+    //       final wait = (800 - elapsed).clamp(0, 800);
+    //       Future.delayed(Duration(milliseconds: wait), () {
+    //         if (!mounted) return;
+    //         AdService.showInterstitial(
+    //           onDismissed: () {
+    //             if (!mounted) return;
+    //             setState(() => _adDismissed = true);
+    //             if (_popping && !_navigated) _doNavigate();
+    //           },
+    //         );
+    //       });
+    //     });
+    //   }
+    //   // _showInterstitial = false ise _adDismissed zaten true (geçişi kilitlemez)
+    // }
 
     if (widget.simulationMode) {
       // Simülasyon: 8 sn sonra tamamlan, sonra atla butonu göster
@@ -311,7 +312,7 @@ class _VenueSearchLoadingPageState
   Widget build(BuildContext context) {
     final me        = ref.watch(currentUserProvider);
     final friend    = ref.watch(selectedFriendProvider);
-    final isPremium = ref.watch(isPremiumProvider);
+    // final isPremium = ref.watch(isPremiumProvider); // Reklamlar devre dışı — kullanılmıyor
     final isSolo = widget.friendUid == null;
 
     final myType     = widget.userProfile.dominantType;
@@ -446,11 +447,12 @@ class _VenueSearchLoadingPageState
               const Spacer(),
 
               // ── Banner reklam (her aramada, premium olmayan kullanıcılara) ──
-              if (!widget.simulationMode && !isPremium)
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(0, 0, 0, 10),
-                  child: AdBannerWidget(),
-                ),
+              // Reklamlar geçici olarak devre dışı bırakıldı.
+              // if (!widget.simulationMode && !isPremium)
+              //   const Padding(
+              //     padding: EdgeInsets.fromLTRB(0, 0, 0, 10),
+              //     child: AdBannerWidget(),
+              //   ),
 
               // ── Progress bölümü ────────────────────────────────────────────
               Padding(
