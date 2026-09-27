@@ -7,6 +7,7 @@ import 'package:meetit/core/widgets/network_status_banner.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/history/meeting_history_page.dart';
+import 'package:meetit/features/main/main_page.dart' show mainTabIndexProvider;
 import 'package:meetit/features/match/attempt_meet_page.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/match/providers/venue_search_provider.dart';
@@ -73,8 +74,19 @@ class MatchPage extends ConsumerWidget {
     // yönetiyor (bkz. AttemptMeetPage.build) — burada doğrudan onu
     // döndürüyoruz, MatchPage'in normal Scaffold'unu SARMIYORUZ (gereksiz
     // iç içe Scaffold olmasın diye).
+    //
+    // ÖNEMLİ: Ana sekmeler IndexedStack içinde — bu sayfa başka bir sekme
+    // açıkken de arka planda canlı kalıyor. GoogleMap native bir platform
+    // view olduğu için GİZLİYKEN bile ekranın o bölgesindeki dokunuşları
+    // yutabiliyor (Ana Sayfa carousel'i durdurulamıyor/tıklanamıyordu).
+    // Bu yüzden harita SADECE Buluşma sekmesi ekrandayken oluşturuluyor;
+    // pin/seçim durumu provider'larda tutulduğu için geri dönünce aynen
+    // kaldığı yerden devam eder.
     if (showVenues && showMapView) {
-      return const AttemptMeetPage();
+      final isMatchTabVisible = ref.watch(mainTabIndexProvider) == 1;
+      return isMatchTabVisible
+          ? const AttemptMeetPage()
+          : const SizedBox.shrink();
     }
 
     return Scaffold(

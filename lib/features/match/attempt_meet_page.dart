@@ -130,8 +130,10 @@ class AttemptMeetPage extends ConsumerWidget {
       }
     });
 
+    // Sekmeye geri dönülünce harita yeniden oluşturuluyor (bkz.
+    // match_page.dart) — son seçili mekandan başlasın.
     final initialTarget = venues.isNotEmpty
-        ? LatLng(venues.first.lat, venues.first.lng)
+        ? LatLng(venues[selectedIndex].lat, venues[selectedIndex].lng)
         : const LatLng(41.0082, 28.9784); // İstanbul varsayılan
     // `ThemeMode.system` durumunda gerçek koyu/açık bilgisini almak için
     // doğrudan == ThemeMode.dark karşılaştırması yerine isEffectivelyDark
@@ -170,7 +172,7 @@ class AttemptMeetPage extends ConsumerWidget {
                 ctrl.setMapStyle(isDark ? darkMapStyle : null);
                 if (venues.isNotEmpty) {
                   Future.delayed(const Duration(milliseconds: 200), () {
-                    _focusOn(ref, venues.first);
+                    _focusOn(ref, venues[selectedIndex]);
                   });
                 }
               },
