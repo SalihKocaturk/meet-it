@@ -423,7 +423,7 @@
     "searching": "Konum aranıyor...",
     "drag_hint": "Pini sürükleyerek konumu ayarlayın",
     "location_error": "Konum alınamadı",
-    "out_of_scope_warning": "Uygulama şimdilik sadece İstanbul içinde kullanılabiliyor. Lütfen İstanbul sınırları içinde bir konum seçin."
+    "out_of_scope_warning": "Uygulama şu an yalnızca şu şehirlerde kullanılabiliyor: {cities}. Lütfen bu şehirlerden birinde bir konum seçin."
   },
   "home": {
     "greeting": "Merhaba, {name}!",

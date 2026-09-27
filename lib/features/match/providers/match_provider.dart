@@ -1,3 +1,4 @@
+import 'package:meetit/core/constants/supported_cities.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/features/friends/models/user_friend_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
@@ -43,27 +44,19 @@ class UserLocation {
 // `currentUserProvider` değiştiğinde (örn. konum DB'ye yazıldıktan
 // sonra) bu da otomatik senkronize olur.
 //
-// ⚠️ İstanbul kapsam kontrolü: Uygulama şimdilik sadece İstanbul'da
-// çalışıyor. DB'deki koordinatlar İstanbul dışındaysa (eski kayıt,
-// GPS hatası vb.) null dönülür; kullanıcı "Yeni Konum Seç" ile
-// geçerli bir İstanbul konumu seçmek zorunda kalır.
-// Bu sınırlar MapLocationPickerPage._IstanbulBounds ile eşleşmeli.
-const _istMinLat = 40.80, _istMaxLat = 41.60;
-const _istMinLng = 27.85, _istMaxLng = 29.95;
-
-bool _isInIstanbul(double lat, double lng) =>
-    lat >= _istMinLat &&
-    lat <= _istMaxLat &&
-    lng >= _istMinLng &&
-    lng <= _istMaxLng;
+// ⚠️ Kapsam kontrolü: Uygulama Türkiye'nin en büyük 10 ilinde açık (bkz.
+// core/constants/supported_cities.dart). DB'deki koordinatlar bu illerin
+// dışındaysa (eski kayıt, GPS hatası vb.) null dönülür; kullanıcı
+// "Yeni Konum Seç" ile desteklenen bir ilde konum seçmek zorunda kalır.
+// MapLocationPickerPage de AYNI listeyi kullanıyor.
 
 final userLocationProvider = StateProvider<UserLocation?>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user?.hasCoords ?? false) {
     final lat = user!.lat!;
     final lng = user.lng!;
-    // İstanbul dışı koordinatları sessizce reddet
-    if (!_isInIstanbul(lat, lng)) return null;
+    // Desteklenen şehirler dışındaki koordinatları sessizce reddet
+    if (!SupportedCities.contains(lat, lng)) return null;
     return UserLocation(
       text: (user.location != null && user.location!.trim().isNotEmpty)
           ? user.location!

@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/constants/app_config.dart';
 import 'package:meetit/core/constants/map_styles.dart';
+import 'package:meetit/core/constants/supported_cities.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 
 // ── Harita ile Konum Seçme Sayfası ───────────────────────────────────────────
@@ -22,31 +23,35 @@ class MapLocationPickerPage extends StatefulWidget {
   State<MapLocationPickerPage> createState() => _MapLocationPickerPageState();
 }
 
-/// 🗺️ KAPSAM SINIRLAMASI (2026-06-28): Uygulama şimdilik SADECE İstanbul
-/// içinde kullanılabiliyor (eşleşme/mekan önerisi mantığı henüz başka
-/// şehirler için test edilmedi). Bu kutu, İstanbul ilinin tüm ilçelerini
-/// (Silivri'den Şile'ye) kapsayacak kadar geniş tutuldu. İleride başka
-/// şehirler/bölgeler eklenmek istenirse bu tek nokta güncellenmeli — ya da
-/// dinamik bir "desteklenen bölgeler" listesine dönüştürülmeli.
-class _IstanbulBounds {
-  // LatLngBounds'un constructor'ı const değil (runtime'da enlem/boylam
-  // sınırlarını doğruluyor) — bu yüzden 'const' yerine 'final' kullanıyoruz.
-  static final LatLngBounds box = LatLngBounds(
-    southwest: const LatLng(40.80, 27.85),
-    northeast: const LatLng(41.60, 29.95),
-  );
+/// 🗺️ KAPSAM (2026-09-27): Uygulama Türkiye'nin en büyük 10 ilinde açık —
+/// liste ve il kutuları `core/constants/supported_cities.dart`'ta (önceden
+/// burada sadece İstanbul kutusu vardı). Harita Türkiye geneline
+/// kaydırılabiliyor; seçilen noktanın desteklenen bir ilde olup olmadığı
+/// kamera durduğunda ve onay anında kontrol ediliyor.
+bool _isSupported(LatLng pos) =>
+    SupportedCities.contains(pos.latitude, pos.longitude);
 
-  static bool contains(LatLng pos) {
-    return pos.latitude >= box.southwest.latitude &&
-        pos.latitude <= box.northeast.latitude &&
-        pos.longitude >= box.southwest.longitude &&
-        pos.longitude <= box.northeast.longitude;
-  }
-}
+final LatLngBounds _turkeyBox = LatLngBounds(
+  southwest: const LatLng(
+    SupportedCities.turkeyMinLat,
+    SupportedCities.turkeyMinLng,
+  ),
+  northeast: const LatLng(
+    SupportedCities.turkeyMaxLat,
+    SupportedCities.turkeyMaxLng,
+  ),
+);
+
+String _outOfScopeText() => 'map_picker.out_of_scope_warning'.tr(
+  namedArgs: {'cities': SupportedCities.namesText},
+);
 
 class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
   GoogleMapController? _mapController;
-  LatLng _center = const LatLng(41.0082, 28.9784); // İstanbul varsayılan
+  LatLng _center = LatLng(
+    SupportedCities.fallback.centerLat,
+    SupportedCities.fallback.centerLng,
+  ); // varsayılan: listedeki ilk şehir (İstanbul)
   String? _address;
   String? _outOfScopeWarning;
 
@@ -61,11 +66,10 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
   void initState() {
     super.initState();
     if (widget.initial != null) {
-      // Daha önce kaydedilmiş bir konum İstanbul dışındaysa (örn. eski bir
-      // kayıt veya GPS hatası), kullanıcıyı doğrudan o noktada bırakmak
-      // yerine İstanbul varsayılanına çekiyoruz — harita zaten İstanbul
-      // dışına çıkılamayacak şekilde sınırlı.
-      _center = _IstanbulBounds.contains(widget.initial!)
+      // Daha önce kaydedilmiş bir konum desteklenen şehirlerin dışındaysa
+      // (örn. eski bir kayıt veya GPS hatası), kullanıcıyı doğrudan o
+      // noktada bırakmak yerine varsayılan şehre çekiyoruz.
+      _center = _isSupported(widget.initial!)
           ? widget.initial!
           : _center;
     } else {
@@ -90,12 +94,11 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
         ),
       );
       final latLng = LatLng(pos.latitude, pos.longitude);
-      if (!_IstanbulBounds.contains(latLng)) {
-        // Kullanıcının GERÇEK GPS konumu İstanbul dışında — uygulama
-        // şimdilik sadece İstanbul kapsamında çalıştığından, haritayı
-        // İstanbul varsayılanında bırakıp kullanıcıyı bilgilendiriyoruz.
+      if (!_isSupported(latLng)) {
+        // Kullanıcının GERÇEK GPS konumu desteklenen şehirlerin dışında —
+        // haritayı varsayılan şehirde bırakıp kullanıcıyı bilgilendiriyoruz.
         setState(() {
-          _outOfScopeWarning = 'map_picker.out_of_scope_warning'.tr();
+          _outOfScopeWarning = _outOfScopeText();
         });
         return;
       }
@@ -169,18 +172,15 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
 
   void _onCameraMove(CameraPosition pos) {
     _center = pos.target;
-    // cameraTargetBounds zaten İstanbul dışına kaydırmayı engelliyor; bu
-    // sadece ek bir güvenlik kontrolü (örn. zoom-out sınırında küçük taşmalar
-    // için). Uyarı banner'ını anlık güncelliyoruz, setState'i build sırasında
-    // tetiklememek için doğrudan burada çağırmıyoruz — onCameraIdle'da.
+    // Kapsam kontrolü (desteklenen şehir mi) kamera durunca
+    // (onCameraIdle) yapılıyor — setState'i her kamera karesinde
+    // tetiklememek için burada çağırmıyoruz.
   }
 
   void _onCameraIdle() {
-    final outOfScope = !_IstanbulBounds.contains(_center);
+    final outOfScope = !_isSupported(_center);
     setState(() {
-      _outOfScopeWarning = outOfScope
-          ? 'map_picker.out_of_scope_warning'.tr()
-          : null;
+      _outOfScopeWarning = outOfScope ? _outOfScopeText() : null;
     });
     if (!outOfScope) {
       _fetchAddress(_center);
@@ -188,11 +188,10 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
   }
 
   Future<void> _confirm() async {
-    if (!_IstanbulBounds.contains(_center)) {
-      // Güvenlik ağı: cameraTargetBounds normalde buraya gelmeyi
-      // engelliyor ama yine de son bir kontrol yapıyoruz.
+    if (!_isSupported(_center)) {
+      // Desteklenen şehirlerin dışında bir nokta onaylanamaz.
       setState(() {
-        _outOfScopeWarning = 'map_picker.out_of_scope_warning'.tr();
+        _outOfScopeWarning = _outOfScopeText();
       });
       return;
     }
@@ -213,18 +212,29 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
     );
   }
 
+  /// Üstteki şehir butonlarından birine dokununca haritayı o şehrin
+  /// merkezine götürür (kamera durunca adres + kapsam kontrolü kendiliğinden
+  /// çalışır).
+  void _jumpToCity(SupportedCity city) {
+    final target = LatLng(city.centerLat, city.centerLng);
+    _center = target;
+    _mapController?.animateCamera(CameraUpdate.newLatLngZoom(target, 12));
+  }
+
   @override
   Widget build(BuildContext context) {
+    final currentCity =
+        SupportedCities.cityAt(_center.latitude, _center.longitude);
     return Scaffold(
       body: Stack(
         children: [
           // ── Harita ───────────────────────────────────────────────────────
           GoogleMap(
             initialCameraPosition: CameraPosition(target: _center, zoom: 14),
-            // Uygulama şimdilik sadece İstanbul kapsamında çalıştığı için
-            // harita kamerası İstanbul kutusunun dışına kaydırılamıyor.
-            cameraTargetBounds: CameraTargetBounds(_IstanbulBounds.box),
-            minMaxZoomPreference: const MinMaxZoomPreference(9, 20),
+            // Harita Türkiye geneline kaydırılabiliyor; desteklenen şehir
+            // kontrolü onCameraIdle / onay anında yapılıyor.
+            cameraTargetBounds: CameraTargetBounds(_turkeyBox),
+            minMaxZoomPreference: const MinMaxZoomPreference(5, 20),
             // Uygulama teması koyu ise haritayı da koyu stille aç.
             style: Theme.of(context).brightness == Brightness.dark
                 ? darkMapStyle
@@ -257,88 +267,137 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
             ),
           ),
 
-          // ── Üst: geri + başlık ───────────────────────────────────────────
+          // ── Üst: geri + başlık + şehir butonları ─────────────────────────
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: context.colors.card,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.12),
-                            blurRadius: 8,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: context.colors.card,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.12),
+                                blurRadius: 8,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: Icon(
-                        Iconsax.arrow_left_2,
-                        size: 16,
-                        color: Theme.of(context).brightness != Brightness.dark
-                            ? Colors.black87
-                            : Colors.white70,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: context.colors.card,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 8,
+                          child: Icon(
+                            Iconsax.arrow_left_2,
+                            size: 16,
+                            color: Theme.of(context).brightness != Brightness.dark
+                                ? Colors.black87
+                                : Colors.white70,
                           ),
-                        ],
+                        ),
                       ),
-                      child: _isLoading
-                          ? Row(
-                              children: [
-                                SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: context.colors.primary,
-                                  ),
-                                ),
-                                SizedBox(width: 8),
-                                Text(
-                                  'map_picker.searching'.tr(),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: context.colors.card,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          child: _isLoading
+                              ? Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: context.colors.primary,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'map_picker.searching'.tr(),
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: context.colors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Text(
+                                  _address ?? 'map_picker.drag_hint'.tr(),
                                   style: TextStyle(
                                     fontSize: 13,
-                                    color: context.colors.textSecondary,
+                                    color: context.colors.textPrimary,
+                                    fontWeight: FontWeight.w500,
                                   ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ],
-                            )
-                          : Text(
-                              _address ?? 'map_picker.drag_hint'.tr(),
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: context.colors.textPrimary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                    ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                // Desteklenen şehirler — dokununca harita o şehre gider.
+                SizedBox(
+                  height: 34,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    itemCount: SupportedCities.all.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 6),
+                    itemBuilder: (_, i) {
+                      final city = SupportedCities.all[i];
+                      final selected = currentCity?.name == city.name;
+                      return GestureDetector(
+                        onTap: () => _jumpToCity(city),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? context.colors.primary
+                                : context.colors.card,
+                            borderRadius: BorderRadius.circular(17),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.10),
+                                blurRadius: 6,
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            city.name,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: selected
+                                  ? Colors.white
+                                  : context.colors.textPrimary,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -370,7 +429,7 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
             ),
           ),
 
-          // ── Kapsam dışı uyarısı (İstanbul dışı) ─────────────────────────────
+          // ── Kapsam dışı uyarısı (desteklenen şehirler dışı) ─────────────────────────────
           if (_outOfScopeWarning != null)
             Positioned(
               left: 20,

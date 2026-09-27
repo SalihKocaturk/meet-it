@@ -423,7 +423,7 @@
     "searching": "Searching location...",
     "drag_hint": "Drag the pin to set your location",
     "location_error": "Could not get location",
-    "out_of_scope_warning": "The app currently only works within Istanbul. Please choose a location inside Istanbul."
+    "out_of_scope_warning": "The app is currently available only in: {cities}. Please pick a location in one of these cities."
   },
   "home": {
     "greeting": "Hi, {name}!",
