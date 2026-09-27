@@ -38,6 +38,16 @@ class UserModel {
   /// (eski kullanıcılar) varsayılan olarak false döner.
   final bool isPremium;
 
+  /// Kullanıcı "18 yaşından büyüğüm" kutusunu onayladı mı.
+  /// App Store 5.1.1: yaşı ZORUNLU istemek yasak, ama 18+ uygulamada
+  /// yaş teyidi (onay kutusu) kabul ediliyor.
+  final bool adultConfirmed;
+
+  /// Eski kullanıcılar kayıtta zorunlu olarak 18+ yaş girmişti — onları
+  /// tekrar onay ekranına düşürmemek için yaşları da teyit sayılır.
+  bool get isAdultConfirmed =>
+      adultConfirmed || (age != null && age! >= 18);
+
   const UserModel({
     required this.uid,
     required this.name,
@@ -52,6 +62,7 @@ class UserModel {
     this.lat,
     this.lng,
     this.isPremium = false,
+    this.adultConfirmed = false,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -80,6 +91,7 @@ class UserModel {
       lat: (map['lat'] as num?)?.toDouble(),
       lng: (map['lng'] as num?)?.toDouble(),
       isPremium: map['isPremium'] as bool? ?? false,
+      adultConfirmed: map['adultConfirmed'] as bool? ?? false,
     );
   }
 
@@ -101,6 +113,7 @@ class UserModel {
       if (lat != null) 'lat': lat,
       if (lng != null) 'lng': lng,
       if (isPremium) 'isPremium': isPremium,
+      if (adultConfirmed) 'adultConfirmed': true,
     };
   }
 
@@ -121,6 +134,7 @@ class UserModel {
     double? lat,
     double? lng,
     bool? isPremium,
+    bool? adultConfirmed,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -137,6 +151,7 @@ class UserModel {
       lat: lat ?? this.lat,
       lng: lng ?? this.lng,
       isPremium: isPremium ?? this.isPremium,
+      adultConfirmed: adultConfirmed ?? this.adultConfirmed,
     );
   }
 }

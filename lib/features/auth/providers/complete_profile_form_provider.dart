@@ -32,6 +32,10 @@ final completeProfileAgeControllerProvider =
   return controller;
 });
 
+/// "18 yaşından büyüğüm" onayı — App Store 5.1.1 yaş teyidi.
+final completeProfileAdultProvider =
+    StateProvider.autoDispose<bool>((ref) => false);
+
 final completeProfileGenderProvider =
     StateProvider.autoDispose<String?>((ref) => null);
 

@@ -34,6 +34,20 @@ class SignUpPage extends ConsumerWidget {
       return;
     }
 
+    // 18+ teyidi — App Store 5.1.1 yaşı zorunlu istemeyi yasaklıyor ama
+    // 18+ bir uygulamada onay kutusuyla yaş teyidi kabul ediliyor.
+    if (!ref.read(_adultConfirmedProvider)) {
+      showAppAlert(
+        context: context,
+        type: AppAlertType.warning,
+        title: 'validation.invalid_age'.tr(),
+        text: 'validation.must_be_18'.tr(),
+        confirmBtnText: 'common.ok'.tr(),
+        confirmBtnColor: context.colors.primary,
+      );
+      return;
+    }
+
     final name = ref.read(signUpNameControllerProvider).text.trim();
     final email = ref.read(signUpEmailControllerProvider).text.trim();
     final password = ref.read(signUpPasswordControllerProvider).text.trim();
@@ -42,11 +56,8 @@ class SignUpPage extends ConsumerWidget {
     final ageText = ref.read(signUpAgeControllerProvider).text.trim();
     final gender = ref.read(signUpGenderProvider);
 
-    if (name.isEmpty ||
-        email.isEmpty ||
-        password.isEmpty ||
-        location.isEmpty ||
-        ageText.isEmpty) {
+    // Konum, yaş ve cinsiyet OPSİYONEL (App Store 5.1.1).
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
       showAppAlert(
         context: context,
         type: AppAlertType.warning,
@@ -70,8 +81,8 @@ class SignUpPage extends ConsumerWidget {
       return;
     }
 
-    final age = int.tryParse(ageText) ?? 0;
-    if (age < 18) {
+    final int? age = ageText.isEmpty ? null : int.tryParse(ageText);
+    if (ageText.isNotEmpty && (age == null || age < 18)) {
       showAppAlert(
         context: context,
         type: AppAlertType.error,
@@ -87,11 +98,12 @@ class SignUpPage extends ConsumerWidget {
           email: email,
           password: password,
           name: name,
-          location: location,
+          location: location.isEmpty ? null : location,
           age: age,
           gender: gender,
           lat: pickedLocation?.lat,
           lng: pickedLocation?.lng,
+          adultConfirmed: true,
         );
 
     if (!context.mounted) return;
@@ -210,6 +222,9 @@ class SignUpPage extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
 
+              // 18+ teyidi — App Store 5.1.1
+              const _AdultCheckbox(),
+
               // EULA / Kullanım Koşulları onayı — Apple App Store şartı
               _EulaCheckbox(),
 
@@ -278,6 +293,43 @@ class SignUpPage extends ConsumerWidget {
   }
 }
 
+// ── 18+ Checkbox ──────────────────────────────────────────────────────────────
+
+final _adultConfirmedProvider = StateProvider<bool>((ref) => false);
+
+class _AdultCheckbox extends ConsumerWidget {
+  const _AdultCheckbox();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final confirmed = ref.watch(_adultConfirmedProvider);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Checkbox(
+          value: confirmed,
+          activeColor: context.colors.primary,
+          onChanged: (v) =>
+              ref.read(_adultConfirmedProvider.notifier).state = v ?? false,
+        ),
+        Expanded(
+          child: GestureDetector(
+            onTap: () =>
+                ref.read(_adultConfirmedProvider.notifier).state = !confirmed,
+            child: Text(
+              'auth.adult_confirm'.tr(),
+              style: TextStyle(
+                fontSize: 13,
+                color: context.colors.textSecondary,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // ── EULA Checkbox ─────────────────────────────────────────────────────────────
 
 final _eulaAcceptedProvider = StateProvider<bool>((ref) => false);
@@ -340,7 +392,7 @@ class _EulaCheckbox extends ConsumerWidget {
                     ),
                     const TextSpan(
                       text:
-                          ' kabul ettiğinizi ve uygunsuz içerik oluşturmamanız gerektiğini onaylıyorsunuz.',
+                          ' kabul ettiğinizi onaylıyorsunuz. MeetIt, uygunsuz içeriğe ve taciz eden kullanıcılara karşı sıfır tolerans uygular: bu tür içerikler kaldırılır ve hesaplar kapatılır.',
                     ),
                   ],
                 ),

@@ -33,7 +33,25 @@ class CompleteProfilePage extends ConsumerWidget {
     final ageText = ref.read(completeProfileAgeControllerProvider).text.trim();
     final gender = ref.read(completeProfileGenderProvider);
 
-    if ((needsName && name.isEmpty) || location.isEmpty || ageText.isEmpty) {
+    final needsAdult =
+        !(ref.read(currentUserProvider)?.isAdultConfirmed ?? false);
+    final adultConfirmed = ref.read(completeProfileAdultProvider);
+
+    // App Store 5.1.1: konum, yaş ve cinsiyet OPSİYONEL. Zorunlu olan tek
+    // şeyler isim (boşsa) ve 18+ teyidi.
+    if (needsAdult && !adultConfirmed) {
+      showAppAlert(
+        context: context,
+        type: AppAlertType.warning,
+        title: 'validation.invalid_age'.tr(),
+        text: 'validation.must_be_18'.tr(),
+        confirmBtnText: 'common.ok'.tr(),
+        confirmBtnColor: context.colors.primary,
+      );
+      return;
+    }
+
+    if (needsName && name.isEmpty) {
       showAppAlert(
         context: context,
         type: AppAlertType.warning,
@@ -45,8 +63,8 @@ class CompleteProfilePage extends ConsumerWidget {
       return;
     }
 
-    final age = int.tryParse(ageText) ?? 0;
-    if (age < 18) {
+    final int? age = ageText.isEmpty ? null : int.tryParse(ageText);
+    if (ageText.isNotEmpty && (age == null || age < 18)) {
       showAppAlert(
         context: context,
         type: AppAlertType.error,
@@ -59,10 +77,11 @@ class CompleteProfilePage extends ConsumerWidget {
     }
 
     await ref.read(authProvider.notifier).completeProfile(
-          location: location,
+          location: location.isEmpty ? null : location,
           age: age,
           gender: gender,
           name: needsName ? name : null,
+          adultConfirmed: needsAdult ? true : null,
           lat: pickedLocation?.lat,
           lng: pickedLocation?.lng,
         );
@@ -165,7 +184,30 @@ class CompleteProfilePage extends ConsumerWidget {
                     .read(completeProfileGenderProvider.notifier)
                     .state = v,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
+
+              if (!(currentUser?.isAdultConfirmed ?? false))
+                Row(
+                  children: [
+                    Checkbox(
+                      value: ref.watch(completeProfileAdultProvider),
+                      activeColor: context.colors.primary,
+                      onChanged: (v) => ref
+                          .read(completeProfileAdultProvider.notifier)
+                          .state = v ?? false,
+                    ),
+                    Expanded(
+                      child: Text(
+                        'auth.adult_confirm'.tr(),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: context.colors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 16),
 
               SizedBox(
                 width: double.infinity,

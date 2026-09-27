@@ -1,3 +1,4 @@
+import 'package:meetit/core/utils/content_filter.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -143,6 +144,11 @@ class ReviewNotifier extends Notifier<ReviewState> {
 
       final photoUrl = await _uploadPhoto(authorUid, photo);
 
+      // App Store 1.2: uygunsuz içerik filtresi — kaydetmeden önce maskele.
+      final safeComment = (comment == null || comment.trim().isEmpty)
+          ? comment
+          : ContentFilter.mask(comment);
+
       final review = VenueReviewModel(
         id: '',
         authorUid: authorUid,
@@ -166,7 +172,7 @@ class ReviewNotifier extends Notifier<ReviewState> {
         // kartları ve detay sayfası bunu ek API çağrısı olmadan gösterir.
         googleRating: venue.rating,
         googleRatingCount: venue.userRatingsTotal,
-        comment: comment,
+        comment: safeComment,
         photoUrl: photoUrl,
         createdAt: DateTime.now(),
       );

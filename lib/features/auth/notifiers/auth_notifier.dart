@@ -87,19 +87,13 @@ class AuthState {
   bool get needsProfileCompletion {
     final u = user;
     if (u == null) return false;
-    final locationMissing = u.location == null || u.location!.trim().isEmpty;
-    // NOT (bug fix): `gender` BİLEREK bu kontrole dahil EDİLMİYOR. Cinsiyet
-    // alanı tüm formlarda (sign_up, edit_profile, complete_profile) UI'da
-    // "opsiyonel" olarak etiketleniyor ve `UserModel.gender` nullable —
-    // ama bu getter eskiden gender boşsa da kullanıcıyı sürekli
-    // CompleteProfilePage'e geri yönlendiriyordu, bu da gerçekte opsiyonel
-    // olması gereken bir alanı fiilen ZORUNLU hale getiriyordu (kullanıcı
-    // cinsiyet seçmeden asla devam edemiyordu). Sadece gerçekten zorunlu
-    // olan location/age burada kontrol ediliyor.
-    // Apple ile girişte isim yalnızca ilk izinde geliyor, sonra hiç gelmiyor.
-    // İsimsiz kullanıcıyı da profil tamamlama sayfasına yönlendir.
+    // App Store 5.1.1: konum, yaş ve cinsiyet ZORUNLU tutulamaz. Profil
+    // tamamlamaya yalnızca gerçekten zorunlu olanlar için düşülür:
+    //  - isim (Apple ile girişte ilk izinden sonra bir daha gelmiyor)
+    //  - 18+ onayı (yaş teyidi — yaşın kendisi değil)
+    // Konum, kullanıcı ilk kez mekan aramaya çalıştığında istenir.
     final nameMissing = u.name.trim().isEmpty;
-    return nameMissing || locationMissing || u.age == null;
+    return nameMissing || !u.isAdultConfirmed;
   }
 
   AuthState copyWith({
@@ -471,6 +465,7 @@ class AuthNotifier extends Notifier<AuthState> {
     String? photoUrl,
     double? lat,
     double? lng,
+    bool adultConfirmed = false,
   }) async {
     if (email.isEmpty || password.isEmpty || name.isEmpty) {
       state = state.copyWith(errorMessage: 'validation.fill_required');
@@ -508,6 +503,7 @@ class AuthNotifier extends Notifier<AuthState> {
         createdAt: DateTime.now(),
         lat: lat,
         lng: lng,
+        adultConfirmed: adultConfirmed,
       );
 
       await _firestore.collection('users').doc(user.uid).set(user.toMap());
@@ -781,12 +777,13 @@ class AuthNotifier extends Notifier<AuthState> {
   /// adımı YOK (Google hesapları zaten doğrulanmış sayılır), bu yüzden
   /// `needsEmailVerification` hiç set edilmiyor/dokunulmuyor.
   Future<void> completeProfile({
-    required String location,
-    required int age,
+    String? location,
+    int? age,
     String? gender,
     String? name,
     double? lat,
     double? lng,
+    bool? adultConfirmed,
   }) async {
     final user = state.user;
     if (user == null) return;
@@ -796,8 +793,11 @@ class AuthNotifier extends Notifier<AuthState> {
     final trimmedName = name?.trim();
 
     final updatedUser = user.copyWith(
-      location: location,
-      age: age,
+      location: (location != null && location.trim().isNotEmpty)
+          ? location.trim()
+          : user.location,
+      age: age ?? user.age,
+      adultConfirmed: adultConfirmed ?? user.adultConfirmed,
       name: (trimmedName != null && trimmedName.isNotEmpty)
           ? trimmedName
           : user.name,

@@ -79,9 +79,21 @@ class FriendProfilePage extends ConsumerWidget {
                       onSelected: (value) async {
                         if (value == 'block') {
                           _confirmBlock(context, ref);
+                        } else if (value == 'report') {
+                          _openReportSheet(context, ref);
                         }
                       },
                       itemBuilder: (_) => [
+                        const PopupMenuItem(
+                          value: 'report',
+                          child: Row(
+                            children: [
+                              Icon(Icons.flag_outlined, size: 18),
+                              SizedBox(width: 8),
+                              Text('Şikâyet Et'),
+                            ],
+                          ),
+                        ),
                         const PopupMenuItem(
                           value: 'block',
                           child: Row(
@@ -203,6 +215,107 @@ class FriendProfilePage extends ConsumerWidget {
     );
   }
 
+  /// Şikâyet akışı — App Store Guideline 1.2 gereği kullanıcıların
+  /// uygunsuz içerik/davranış bildirebilmesi zorunlu.
+  void _openReportSheet(BuildContext context, WidgetRef ref) {
+    const reasons = <String>[
+      'Uygunsuz veya müstehcen içerik',
+      'Taciz, hakaret veya nefret söylemi',
+      'Sahte profil veya kimlik taklidi',
+      'Spam veya dolandırıcılık',
+      'Şiddet veya tehdit',
+      'Diğer',
+    ];
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.colors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${friend.name} kullanıcısını şikâyet et',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: context.colors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Şikâyetler 24 saat içinde incelenir. Uygunsuz içerik '
+                'kaldırılır ve ihlal eden hesap kapatılır.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: context.colors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              for (final reason in reasons)
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    reason,
+                    style: TextStyle(color: context.colors.textPrimary),
+                  ),
+                  trailing: Icon(
+                    Icons.chevron_right,
+                    color: context.colors.textSecondary,
+                  ),
+                  onTap: () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    Navigator.pop(sheetContext);
+                    final currentUid = ref.read(authProvider).user?.uid;
+                    if (currentUid == null) return;
+                    try {
+                      await FirebaseFirestore.instance
+                          .collection('reports')
+                          .add({
+                        'reporterUid': currentUid,
+                        'reportedUid': friend.uid,
+                        'reportedName': friend.name,
+                        'reason': reason,
+                        'status': 'open',
+                        'createdAt': FieldValue.serverTimestamp(),
+                      });
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Şikâyetin alındı. 24 saat içinde incelenecek.',
+                          ),
+                        ),
+                      );
+                    } catch (e) {
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text('Şikâyet gönderilemedi: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _confirmBlock(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
@@ -219,22 +332,32 @@ class FriendProfilePage extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final navigator = Navigator.of(context);
               Navigator.pop(context);
-              final currentUid =
-                  ref.read(authProvider).user?.uid;
+              final currentUid = ref.read(authProvider).user?.uid;
               if (currentUid == null) return;
-              await FirebaseFirestore.instance
-                  .collection('blocks')
-                  .add({
-                'blockerUid': currentUid,
-                'blockedUid': friend.uid,
-                'createdAt': FieldValue.serverTimestamp(),
-              });
-              if (context.mounted) {
-                Navigator.of(context).pop(); // profil sayfasını kapat
-                ScaffoldMessenger.of(context).showSnackBar(
+              try {
+                await FirebaseFirestore.instance.collection('blocks').add({
+                  'blockerUid': currentUid,
+                  'blockedUid': friend.uid,
+                  'createdAt': FieldValue.serverTimestamp(),
+                });
+                // Engellenen kişi artık arkadaş listesinde durmasın.
+                try {
+                  await ref
+                      .read(friendsProvider.notifier)
+                      .removeFriend(friend.uid);
+                } catch (_) {}
+                navigator.pop(); // profil sayfasını kapat
+                messenger.showSnackBar(
+                  SnackBar(content: Text('${friend.name} engellendi.')),
+                );
+              } catch (e) {
+                messenger.showSnackBar(
                   SnackBar(
-                    content: Text('${friend.name} engellendi.'),
+                    content: Text('Engelleme başarısız: $e'),
+                    backgroundColor: Colors.red,
                   ),
                 );
               }

@@ -90,6 +90,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         AppRoutes.signUp,
         AppRoutes.forgotPassword,
         AppRoutes.verification,
+        // Yasal metinler giriş yapmadan da açılabilmeli — App Store
+        // incelemesi kayıt ekranındaki EULA linklerini test ediyor ve
+        // buraya eklenmediğinde kullanıcı sign-in'e geri atılıyordu.
+        AppRoutes.terms,
+        AppRoutes.privacyPolicy,
       ];
 
       // Giriş yapmamışsa public'e git
