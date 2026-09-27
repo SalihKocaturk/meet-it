@@ -1339,12 +1339,44 @@ class PlacesService {
             : (place.photoReference != null
                   ? [place.photoReference!]
                   : <String>[]);
-        if (namesToCache.isEmpty) return place;
         try {
-          final cachedUrls = await VenuePhotoCacheService.resolvePhotoUrls(
+          // 1) ÖNCE paylaşımlı önbellek (tek Firestore okuması, Google'a
+          //    istek YOK). Bu mekanın fotoğrafları daha önce (arama, detay
+          //    sayfası, yorum...) herhangi bir yoldan önbelleğe alındıysa
+          //    doğrudan onlar kullanılır — havuzdaki foto adları eskimiş
+          //    olsa bile Google'a boşuna (hata alacak) istek gitmez.
+          final cachedOnly = await VenuePhotoCacheService.getCachedPhotoUrls(
+            placeId: place.placeId,
+            limit: _maxGalleryPhotos,
+          );
+          if (cachedOnly.isNotEmpty) {
+            return place.copyWith(
+              photoReference: cachedOnly.first,
+              photoReferences: cachedOnly,
+            );
+          }
+          // Havuzda foto adı hiç yoksa Google'a gidilmiyor — gerçekten
+          // fotoğrafı olmayan mekanlar için her aramada boşuna ödenmesin.
+          if (namesToCache.isEmpty) return place;
+
+          // 2) Önbellekte yok → havuzdaki foto adlarıyla indir + önbelleğe al
+          //    (eskiden de yapılan, normal akış).
+
+          var cachedUrls = await VenuePhotoCacheService.resolvePhotoUrls(
             placeId: place.placeId,
             photoNames: namesToCache,
           );
+          // 3) 📍 ESKİMİŞ FOTO ADI (2026-09-27): Havuzdaki adlar geçersizse
+          //    (bkz. VenuePhotoCacheService.resolvePhotoUrl) detay sayfasıyla
+          //    AYNI yoldan güncel adlar alınır ve önbelleğe yazılır — mekan
+          //    başına BİR KEZ, tüm kullanıcılar için; sonraki aramalar 1.
+          //    adımdan ücretsiz döner. Foto kotası kapalıysa hiç denenmez.
+          if (cachedUrls.isEmpty) {
+            final stage = await ApiUsageService.currentStage();
+            if (stage.photosEnabled) {
+              cachedUrls = await fetchPhotoUrls(place.placeId);
+            }
+          }
           // Kota hatası yüzünden TÜM fotoğraflar elenmiş olabilir (bkz.
           // VenuePhotoCacheService.resolvePhotoUrl — kota hatasında '' döner,
           // resolvePhotoUrls bunları filtreler). Bu durumda mekanı fotosuz

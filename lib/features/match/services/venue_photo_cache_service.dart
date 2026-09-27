@@ -136,6 +136,21 @@ class VenuePhotoCacheService {
         return '';
       }
 
+      // 📍 ESKİMİŞ FOTO ADI (2026-09-27): Google foto adları ("places/.../
+      // photos/...") kalıcı değil — bir süre sonra geçersizleşiyor. Mekan
+      // havuzu (venueSearchCache) ise uzun süre saklandığı için arama
+      // sonuçları sıklıkla eskimiş adlar taşıyor; Google bunlara 400/404
+      // dönüyor. Önceden bu durumda ham Google URL'i döndürülüyordu — o URL
+      // de aynı hatayı verdiği için kartta HİÇ görsel çıkmıyordu (detay
+      // sayfası ise güncel adlarla yeniden çektiği için görsel geliyordu).
+      // Artık boş dönülüyor; çağıran taraf (PlacesService.resolvePhotosFor)
+      // güncel adlarla yeniden deniyor.
+      if (response.statusCode == 400 ||
+          response.statusCode == 404 ||
+          response.statusCode == 410) {
+        return '';
+      }
+
       if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
         return googleUrl; // indirilemedi — ham URL ile devam
       }
