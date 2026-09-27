@@ -38,6 +38,12 @@ class VenueReviewModel {
   /// Yıldız değerlendirmesi (1-5) — her yorum için zorunlu
   final int rating;
 
+  /// Mekanın yorum yazıldığı andaki GOOGLE puanı ve değerlendirme sayısı
+  /// (kullanıcının kendi [rating]'inden farklı). Eski yorumlarda null —
+  /// o durumda VenueRatingService önbellekten/Google'dan tamamlar.
+  final double? googleRating;
+  final int? googleRatingCount;
+
   /// Kullanıcının yazdığı yorum metni
   final String? comment;
 
@@ -63,6 +69,8 @@ class VenueReviewModel {
     this.lng,
     this.venueType,
     required this.rating,
+    this.googleRating,
+    this.googleRatingCount,
     this.comment,
     this.photoUrl,
     this.likedBy = const [],
@@ -115,6 +123,8 @@ class VenueReviewModel {
         name: venueName,
         vicinity: venueAddress,
         photoReference: venuePhotoReference,
+        rating: googleRating,
+        userRatingsTotal: googleRatingCount,
         lat: lat ?? 0,
         lng: lng ?? 0,
       );
@@ -134,6 +144,8 @@ class VenueReviewModel {
       lng: (map['lng'] as num?)?.toDouble(),
       venueType: map['venueType'] as String?,
       rating: (map['rating'] as num?)?.toInt() ?? 0,
+      googleRating: (map['googleRating'] as num?)?.toDouble(),
+      googleRatingCount: (map['googleRatingCount'] as num?)?.toInt(),
       comment: map['comment'] as String?,
       photoUrl: map['photoUrl'] as String?,
       likedBy: List<String>.from(map['likedBy'] as List? ?? []),
@@ -157,6 +169,8 @@ class VenueReviewModel {
         if (lng != null) 'lng': lng,
         if (venueType != null) 'venueType': venueType,
         'rating': rating,
+        if (googleRating != null) 'googleRating': googleRating,
+        if (googleRatingCount != null) 'googleRatingCount': googleRatingCount,
         if (comment != null) 'comment': comment,
         if (photoUrl != null) 'photoUrl': photoUrl,
         'likedBy': likedBy,
@@ -183,6 +197,8 @@ class VenueReviewModel {
         lng: lng,
         venueType: venueType ?? this.venueType,
         rating: rating ?? this.rating,
+        googleRating: googleRating,
+        googleRatingCount: googleRatingCount,
         comment: comment ?? this.comment,
         photoUrl: photoUrl,
         likedBy: likedBy ?? this.likedBy,

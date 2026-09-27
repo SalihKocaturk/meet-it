@@ -12,6 +12,7 @@ import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/services/places_service.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/core/services/notification_service.dart';
+import 'package:meetit/features/match/services/venue_rating_service.dart';
 
 /// Belirli bir mekana ait yorumların durumu (yüklenen/yükleniyor/hata).
 class ReviewState {
@@ -161,6 +162,10 @@ class ReviewNotifier extends Notifier<ReviewState> {
         lng: venue.lng,
         venueType: venue.primaryType,
         rating: rating,
+        // Mekanın Google puanı da yorumla birlikte saklanıyor — ana sayfa
+        // kartları ve detay sayfası bunu ek API çağrısı olmadan gösterir.
+        googleRating: venue.rating,
+        googleRatingCount: venue.userRatingsTotal,
         comment: comment,
         photoUrl: photoUrl,
         createdAt: DateTime.now(),
@@ -168,6 +173,12 @@ class ReviewNotifier extends Notifier<ReviewState> {
 
       final docRef = _db.collection('venue_reviews').doc();
       await docRef.set(review.toMap());
+      // Bilinen Google puanını paylaşımlı önbelleğe de yaz (ücretsiz).
+      VenueRatingService.remember(
+        venue.placeId,
+        rating: venue.rating,
+        count: venue.userRatingsTotal,
+      ).ignore();
 
       // 💸 MALİYET DÜŞÜRME (2026-06-28): Bir mekana yorum yapıldı demek, bu
       // mekan ARTIK görece "popüler"/tekrar görüntülenecek bir mekan demektir

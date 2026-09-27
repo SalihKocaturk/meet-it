@@ -440,7 +440,9 @@
     "view_analysis_desc": "See how your profile has changed over time",
     "friend_compat": "Friend Compatibility",
     "friend_compat_desc": "Discover who matches you best",
-    "personalized_section": "Places For You"
+    "personalized_section": "Places For You",
+    "recommended_by_friends": "Recommended by your friends",
+    "user_favorite": "User Favorite"
   },
   "friend_profile": {
     "friends_since": "Friends since {date}"

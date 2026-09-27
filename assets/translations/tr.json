@@ -440,7 +440,9 @@
     "view_analysis_desc": "Profilinin zamanla nasıl değiştiğini gör",
     "friend_compat": "Arkadaşlarla Uyum",
     "friend_compat_desc": "Kim seninle daha uyumlu, keşfet",
-    "personalized_section": "Sana Özel Mekanlar"
+    "personalized_section": "Sana Özel Mekanlar",
+    "recommended_by_friends": "Arkadaşların tarafından öneriliyor",
+    "user_favorite": "Kullanıcı Favorisi"
   },
   "friend_profile": {
     "friends_since": "{date} tarihinden beri arkadaşsınız"

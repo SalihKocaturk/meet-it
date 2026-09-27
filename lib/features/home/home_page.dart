@@ -4,7 +4,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
@@ -42,6 +41,54 @@ final class _ReviewItem extends _HybridItem {
 final class _PlaceItem extends _HybridItem {
   final PlaceResult place;
   const _PlaceItem(this.place);
+}
+
+// ── Sosyal kanıt: arkadaş önerisi + "Kullanıcı Favorisi" ─────────────────────
+//
+// "İyi yorum" = 4 yıldız ve üzeri.
+//   • Arkadaşlarından biri bir mekana iyi yorum yaptıysa kartta
+//     "Arkadaşların tarafından öneriliyor" yazar.
+//   • [_kUserFavoriteMinReviewers] veya daha fazla FARKLI kullanıcı iyi yorum
+//     yaptıysa fotoğrafın üstünde "Kullanıcı Favorisi" rozeti çıkar.
+// Veri: `venueReviewsProvider(placeId)` — mekanın TÜM yorumları (carousel'in
+// kendi 50'lik örnekleminden bağımsız, sayım doğru olsun diye).
+const _kGoodReviewMinRating = 4;
+const _kUserFavoriteMinReviewers = 5;
+
+class _VenueSocialProof {
+  final bool friendRecommended;
+  final bool isUserFavorite;
+
+  const _VenueSocialProof({
+    this.friendRecommended = false,
+    this.isUserFavorite = false,
+  });
+
+  static _VenueSocialProof watch(
+    WidgetRef ref,
+    String placeId, {
+    VenueReviewModel? seed,
+  }) {
+    // Tam liste henüz yüklenmediyse elimizdeki tek yorumla başla (kart
+    // boş görünmesin), yüklenince kendiliğinden güncellenir.
+    final reviews = ref.watch(venueReviewsProvider(placeId)).valueOrNull ??
+        (seed != null ? [seed] : const <VenueReviewModel>[]);
+    final myUid = ref.watch(currentUserProvider)?.uid;
+    final friendUids = ref
+        .watch(connectionsProvider)
+        .map((f) => f.uid)
+        .where((uid) => uid != myUid)
+        .toSet();
+
+    final goodReviewers = <String>{
+      for (final r in reviews)
+        if (r.rating >= _kGoodReviewMinRating) r.authorUid,
+    };
+    return _VenueSocialProof(
+      friendRecommended: goodReviewers.any(friendUids.contains),
+      isUserFavorite: goodReviewers.length >= _kUserFavoriteMinReviewers,
+    );
+  }
 }
 
 /// Ana Sayfa (eski Feed sekmesinin yerine geçti).
@@ -136,6 +183,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     if (uid.isNotEmpty)
                       ref.read(friendsProvider.notifier).loadAll(uid),
                     Future(() => ref.invalidate(topReviewsProvider)),
+                    Future(() => ref.invalidate(venueReviewsProvider)),
                     Future(() => ref.invalidate(personalizedVenuesProvider)),
                     Future.delayed(const Duration(milliseconds: 700)),
                   ]);
@@ -260,7 +308,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                           }
 
                           // Hibrit liste: yorumlar önce, ardından API önerileri.
-                          final reviews = topReviewsAsync.valueOrNull ?? [];
+                          // Aynı mekana birden fazla yorum varsa carousel'de
+                          // mekan tek kart olarak görünür (en yüksek puanlı
+                          // yorum — liste zaten puana göre sıralı).
+                          final seenPlaces = <String>{};
+                          final reviews = (topReviewsAsync.valueOrNull ?? [])
+                              .where((r) => seenPlaces.add(r.placeId))
+                              .toList();
                           final apiVenues = personalizedAsync.valueOrNull ?? [];
                           final reviewIds =
                               reviews.map((r) => r.placeId).toSet();
@@ -688,6 +742,16 @@ class _ReviewCarouselCard extends ConsumerWidget {
             ? fetchedPhotos.value!.first
             : null;
     final displayUrl = freshPhotoUrl ?? review.displayPhotoUrl;
+    final social = _VenueSocialProof.watch(ref, review.placeId, seed: review);
+    // Mekanın GOOGLE puanı: yeni yorumlar bunu kendi dokümanında taşıyor;
+    // eski yorumlarda paylaşımlı önbellekten / tek seferlik Google
+    // isteğinden tamamlanıyor (bkz. venueGoogleRatingProvider).
+    final fallbackRating = review.googleRating == null
+        ? ref.watch(venueGoogleRatingProvider(review.placeId)).valueOrNull
+        : null;
+    final googleRating = review.googleRating ?? fallbackRating?.rating;
+    final googleRatingCount =
+        review.googleRatingCount ?? fallbackRating?.count;
     return GestureDetector(
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
@@ -696,6 +760,8 @@ class _ReviewCarouselCard extends ConsumerWidget {
             venueName: review.venueName,
             venueAddress: review.venueAddress,
             venuePhotoUrl: displayUrl,
+            googleRating: googleRating,
+            googleRatingCount: googleRatingCount,
             lat: review.lat,
             lng: review.lng,
           ),
@@ -727,6 +793,12 @@ class _ReviewCarouselCard extends ConsumerWidget {
                           errorWidget: (_, _, _) => _VenueCardFallback(),
                         )
                       : _VenueCardFallback(),
+                  if (social.isUserFavorite)
+                    const Positioned(
+                      top: 8,
+                      left: 8,
+                      child: _UserFavoriteBadge(),
+                    ),
                 ],
               ),
             ),
@@ -748,16 +820,11 @@ class _ReviewCarouselCard extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 3),
-                    RatingBarIndicator(
-                      rating: review.rating.toDouble(),
-                      itemBuilder: (context, _) => const Icon(
-                        Icons.star_rounded,
-                        color: Color(0xFFFFB800),
-                      ),
-                      itemCount: 5,
-                      itemSize: 12,
-                      unratedColor: Colors.grey.withOpacity(0.3),
-                    ),
+                    // Store tarzı tek yıldız + Google puanı (örn. ★ 4.8 (1280))
+                    if (googleRating != null)
+                      _StarScore(value: googleRating, count: googleRatingCount)
+                    else
+                      const SizedBox(height: 15),
                     const SizedBox(height: 5),
                     Row(
                       children: [
@@ -788,16 +855,19 @@ class _ReviewCarouselCard extends ConsumerWidget {
                       ],
                     ),
                     const SizedBox(height: 5),
-                    Text(
-                      review.authorName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: context.colors.primary,
+                    if (social.friendRecommended)
+                      const _FriendRecommendedLabel()
+                    else
+                      Text(
+                        review.authorName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: context.colors.primary,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -827,6 +897,7 @@ class _PlaceCarouselCard extends ConsumerWidget {
         fetchedPhotos.value?.isNotEmpty == true
             ? fetchedPhotos.value!.first
             : venue.photoUrl;
+    final social = _VenueSocialProof.watch(ref, venue.placeId);
 
     return GestureDetector(
       onTap: () => Navigator.of(context).push(
@@ -836,6 +907,8 @@ class _PlaceCarouselCard extends ConsumerWidget {
             venueName: venue.name,
             venueAddress: venue.vicinity,
             venuePhotoUrl: photoUrl,
+            googleRating: venue.rating,
+            googleRatingCount: venue.userRatingsTotal,
             lat: venue.lat,
             lng: venue.lng,
           ),
@@ -855,15 +928,26 @@ class _PlaceCarouselCard extends ConsumerWidget {
             SizedBox(
               height: 100,
               width: double.infinity,
-              child: photoUrl != null
-                  ? CachedNetworkImage(
-                      imageUrl: photoUrl,
-                      fit: BoxFit.cover,
-                      placeholder: (_, _) =>
-                          Container(color: context.colors.border),
-                      errorWidget: (_, _, _) => _VenueCardFallback(),
-                    )
-                  : _VenueCardFallback(),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  photoUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: photoUrl,
+                          fit: BoxFit.cover,
+                          placeholder: (_, _) =>
+                              Container(color: context.colors.border),
+                          errorWidget: (_, _, _) => _VenueCardFallback(),
+                        )
+                      : _VenueCardFallback(),
+                  if (social.isUserFavorite)
+                    const Positioned(
+                      top: 8,
+                      left: 8,
+                      child: _UserFavoriteBadge(),
+                    ),
+                ],
+              ),
             ),
             Expanded(
               child: Padding(
@@ -883,25 +967,15 @@ class _PlaceCarouselCard extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 3),
+                    // Store tarzı tek yıldız + Google puanı (örn. ★ 4.6 (1280))
                     if (venue.rating != null)
-                      RatingBarIndicator(
-                        rating: venue.rating!,
-                        itemBuilder: (context, _) => const Icon(
-                          Icons.star_rounded,
-                          color: Color(0xFFFFB800),
-                        ),
-                        itemCount: 5,
-                        itemSize: 12,
-                        unratedColor: Colors.grey.withOpacity(0.3),
+                      _StarScore(
+                        value: venue.rating!,
+                        count: venue.userRatingsTotal,
                       ),
                     const SizedBox(height: 5),
                     Row(
                       children: [
-                        if (venue.userRatingsTotal != null)
-                          _VenueChip(
-                            icon: Icons.star_rounded,
-                            label: '${venue.userRatingsTotal}',
-                          ),
                         if (venue.lat != null &&
                             currentUser?.lat != null &&
                             currentUser?.lng != null) ...[
@@ -924,26 +998,120 @@ class _PlaceCarouselCard extends ConsumerWidget {
                       ],
                     ),
                     const SizedBox(height: 5),
-                    // Boş satır yerine puan metni — _ReviewCarouselCard'daki
-                    // yazar adı satırına karşılık gelir, kart yüksekliği sabit
-                    // kalır.
-                    if (venue.rating != null)
-                      Text(
-                        '${venue.rating!.toStringAsFixed(1)} / 5.0',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: context.colors.primary,
-                        ),
-                      ),
+                    // _ReviewCarouselCard'daki yazar adı satırına karşılık
+                    // gelir: arkadaşlardan biri iyi yorum yaptıysa bu yazı.
+                    if (social.friendRecommended)
+                      const _FriendRecommendedLabel(),
                   ],
                 ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Store tarzı puan: tek sarı yıldız + "4.8" (+ opsiyonel yorum sayısı).
+class _StarScore extends StatelessWidget {
+  final double value;
+  final int? count;
+  const _StarScore({required this.value, this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.star_rounded, size: 15, color: Color(0xFFFFB800)),
+        const SizedBox(width: 3),
+        Text(
+          value.toStringAsFixed(1),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: context.colors.textPrimary,
+          ),
+        ),
+        if (count != null) ...[
+          const SizedBox(width: 4),
+          Text(
+            '($count)',
+            style: TextStyle(fontSize: 11, color: context.colors.hint),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// "Arkadaşların tarafından öneriliyor" satırı.
+class _FriendRecommendedLabel extends StatelessWidget {
+  const _FriendRecommendedLabel();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(Iconsax.people, size: 12, color: context.colors.primary),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            'home.recommended_by_friends'.tr(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: context.colors.primary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Fotoğrafın sol üstündeki altın "Kullanıcı Favorisi" rozeti.
+class _UserFavoriteBadge extends StatelessWidget {
+  const _UserFavoriteBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFC53D), Color(0xFFFF8A00)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFF8A00).withValues(alpha: 0.35),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.workspace_premium_rounded,
+            size: 12,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            'home.user_favorite'.tr(),
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+        ],
       ),
     );
   }

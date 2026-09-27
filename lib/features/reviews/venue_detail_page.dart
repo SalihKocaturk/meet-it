@@ -15,6 +15,7 @@ import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/providers/saved_venues_provider.dart';
 import 'package:meetit/features/match/services/places_service.dart';
+import 'package:meetit/features/match/services/venue_rating_service.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -32,6 +33,14 @@ final venuePhotosProvider = FutureProvider.family<List<String>, String>((
   placeId,
 ) {
   return PlacesService.fetchPhotoUrls(placeId);
+});
+
+/// Mekanın Google puanı — elde PlaceResult yokken (yorum kartları vb.)
+/// kullanılır. Önce paylaşımlı önbellek, yoksa tek seferlik Google isteği
+/// (bkz. VenueRatingService).
+final venueGoogleRatingProvider =
+    FutureProvider.family<VenueGoogleRating, String>((ref, placeId) {
+  return VenueRatingService.fetch(placeId);
 });
 
 /// Tek bir mekanın detay sayfası: fotoğraf + Google puanı + yorum listesi +
@@ -87,6 +96,13 @@ class VenueDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Google puanı: sayfaya PlaceResult'la geldiyse o; gelmediyse (örn.
+    // ana sayfadaki yorum kartından açıldıysa) önbellek/Google'dan tamamlanır.
+    final fallbackRating = googleRating == null
+        ? ref.watch(venueGoogleRatingProvider(placeId)).valueOrNull
+        : null;
+    final gRating = googleRating ?? fallbackRating?.rating;
+    final gRatingCount = googleRatingCount ?? fallbackRating?.count;
     // Stream provider: beğeni/silme/yeni yorum tüm cihazlara anında yansır.
     final reviewsAsync = ref.watch(venueReviewsStreamProvider(placeId));
     final navigatedVenues = ref.watch(navigatedVenuesProvider);
@@ -128,8 +144,8 @@ class VenueDetailPage extends ConsumerWidget {
       placeId: placeId,
       name: venueName,
       vicinity: venueAddress,
-      rating: googleRating,
-      userRatingsTotal: googleRatingCount,
+      rating: gRating,
+      userRatingsTotal: gRatingCount,
       lat: lat ?? 0,
       lng: lng ?? 0,
     );
@@ -233,12 +249,12 @@ class VenueDetailPage extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  if (googleRating != null) ...[
+                  if (gRating != null) ...[
                     const SizedBox(height: 8),
                     Row(
                       children: [
                         RatingBarIndicator(
-                          rating: googleRating!,
+                          rating: gRating,
                           itemBuilder: (context, _) => const Icon(
                             Icons.star_rounded,
                             color: Color(0xFFFFB800),
@@ -249,18 +265,18 @@ class VenueDetailPage extends ConsumerWidget {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          googleRating!.toStringAsFixed(1),
+                          gRating.toStringAsFixed(1),
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
                             color: context.colors.textPrimary,
                           ),
                         ),
-                        if (googleRatingCount != null) ...[
+                        if (gRatingCount != null) ...[
                           const SizedBox(width: 4),
                           Text(
                             'venue_detail.rating_count'.tr(
-                              namedArgs: {'count': '$googleRatingCount'},
+                              namedArgs: {'count': '$gRatingCount'},
                             ),
                             style: TextStyle(
                               fontSize: 12,
@@ -380,8 +396,8 @@ class VenueDetailPage extends ConsumerWidget {
                             // var); gerçek fotoğrafı venuePhotoUrlOverride
                             // ile veriyoruz.
                             photoReference: null,
-                            rating: googleRating,
-                            userRatingsTotal: googleRatingCount,
+                            rating: gRating,
+                            userRatingsTotal: gRatingCount,
                             lat: lat ?? 0,
                             lng: lng ?? 0,
                           ),
