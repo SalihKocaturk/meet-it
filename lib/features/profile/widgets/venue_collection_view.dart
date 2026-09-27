@@ -66,7 +66,7 @@ void openVenueDetail(BuildContext context, PlaceResult place) {
 
 /// Google Maps'i mekanın konumuyla açar.
 Future<void> launchVenueDirections(PlaceResult place) async {
-  final uri = Uri.parse(place.googleMapsUrl);
+  final uri = Uri.parse(place.googleMapsDirectionsUrl);
   if (await canLaunchUrl(uri)) {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }

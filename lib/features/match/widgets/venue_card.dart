@@ -39,7 +39,7 @@ class VenueCard extends ConsumerWidget {
     // 📍 GECİKME DÜZELTMESİ (2026-06-28): bkz. attempt_meet_page.dart'taki
     // aynı düzeltme — bu kayıt artık AWAIT EDİLMİYOR, harita anında açılır.
     unawaited(ref.read(navigatedVenuesProvider.notifier).add(place));
-    final uri = Uri.parse(place.googleMapsUrl);
+    final uri = Uri.parse(place.googleMapsDirectionsUrl);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }

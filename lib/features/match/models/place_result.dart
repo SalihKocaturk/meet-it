@@ -139,10 +139,38 @@ class PlaceResult {
         '?maxHeightPx=800&key=${AppConfig.googleMapsApiKey}';
   }
 
-  /// Haritalar uygulamasında aç URL'si — koordinata göre açılıyor (Google
-  /// Maps de Apple Maps de bu formatı destekliyor).
-  String get googleMapsUrl =>
-      'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
+  bool get _hasCoords => lat != 0 || lng != 0;
+
+  /// "Haritada Gör" — Google Maps'te mekanın KENDİ sayfasını açar.
+  ///
+  /// 📍 (2026-09-27): Önceden sadece `query=lat,lng` gönderiliyordu; Maps
+  /// mekan yerine çıplak bir koordinat/adres gösteriyordu. Artık mekan adı +
+  /// `query_place_id` gönderiliyor → Maps doğrudan mekanı (adı, puanı,
+  /// fotoğrafları ile) açar. placeId yoksa eski koordinat davranışına düşer.
+  /// NOT: Google Maps URLs ücretsizdir — API anahtarı/kota KULLANMAZ.
+  String get googleMapsUrl {
+    final hasId = placeId.isNotEmpty;
+    return Uri.https('www.google.com', '/maps/search/', {
+      'api': '1',
+      'query': hasId && name.isNotEmpty
+          ? name
+          : (_hasCoords ? '$lat,$lng' : name),
+      if (hasId) 'query_place_id': placeId,
+    }).toString();
+  }
+
+  /// "Git / Tarif Al / Gitmeye Başla" — Google Maps'te mekana YOL TARİFİ
+  /// açar (hedef olarak mekanın adı görünür). Aynı şekilde ücretsiz.
+  String get googleMapsDirectionsUrl {
+    final hasId = placeId.isNotEmpty;
+    return Uri.https('www.google.com', '/maps/dir/', {
+      'api': '1',
+      'destination': hasId && name.isNotEmpty
+          ? name
+          : (_hasCoords ? '$lat,$lng' : name),
+      if (hasId) 'destination_place_id': placeId,
+    }).toString();
+  }
 
   /// Google Places API (New) "PriceLevel" enum string'ini (örn.
   /// "PRICE_LEVEL_MODERATE") eski Legacy'nin 0-4 int ölçeğine çevirir.

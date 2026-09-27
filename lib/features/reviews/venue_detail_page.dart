@@ -237,7 +237,7 @@ class VenueDetailPage extends ConsumerWidget {
                                   .read(navigatedVenuesProvider.notifier)
                                   .add(place),
                             );
-                            final uri = Uri.parse(place.googleMapsUrl);
+                            final uri = Uri.parse(place.googleMapsDirectionsUrl);
                             if (await canLaunchUrl(uri)) {
                               await launchUrl(
                                 uri,

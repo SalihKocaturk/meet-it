@@ -80,7 +80,7 @@ class AttemptMeetPage extends ConsumerWidget {
     // artık AWAIT EDİLMİYOR. Eskiden harita uygulaması bu kayıt bitene kadar
     // açılmıyordu; artık kayıt arka planda devam ederken harita ANINDA açılır.
     unawaited(ref.read(navigatedVenuesProvider.notifier).add(place));
-    final uri = Uri.parse(place.googleMapsUrl);
+    final uri = Uri.parse(place.googleMapsDirectionsUrl);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
