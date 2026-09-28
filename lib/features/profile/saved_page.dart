@@ -14,6 +14,7 @@ import 'package:meetit/core/widgets/langauge_switcher.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friend_code_page.dart';
 import 'package:meetit/features/match/match_page.dart';
+import 'package:meetit/features/settings/blocked_users_page.dart';
 import 'package:meetit/features/settings/delete_account_page.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
@@ -114,6 +115,13 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
           title: 'settings.add_friend_code'.tr(),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const FriendCodePage()),
+          ),
+        ),
+        _MenuItem(
+          icon: Iconsax.user_remove,
+          title: 'settings.blocked_users'.tr(),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const BlockedUsersPage()),
           ),
         ),
         _MenuItem(
@@ -407,6 +415,16 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                               onTap: () => Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (_) => const FriendCodePage(),
+                                ),
+                              ),
+                            ),
+                            _MenuItem(
+                              icon: Iconsax.user_remove,
+                              title: 'settings.blocked_users'.tr(),
+                              subtitle: 'settings.blocked_users_desc'.tr(),
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const BlockedUsersPage(),
                                 ),
                               ),
                             ),
