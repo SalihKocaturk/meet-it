@@ -12,6 +12,7 @@ import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/auth/providers/complete_profile_form_provider.dart';
 import 'package:meetit/features/auth/widgets/complete_profile_avatar_row.dart';
 import 'package:meetit/features/auth/widgets/complete_profile_location_field.dart';
+import 'package:meetit/features/auth/widgets/eula_checkbox.dart';
 import 'package:meetit/features/auth/widgets/gender_dropdown.dart';
 
 /// Google ile İLK KEZ giriş yapan kullanıcıya gösterilen profil tamamlama
@@ -39,6 +40,22 @@ class CompleteProfilePage extends ConsumerWidget {
 
     // App Store 5.1.1: konum, yaş ve cinsiyet OPSİYONEL. Zorunlu olan tek
     // şeyler isim (boşsa) ve 18+ teyidi.
+    // Google/Apple ile yeni gelen kullanıcı kayıt ekranını hiç görmedi —
+    // kullanım koşulları onayı burada zorunlu (App Store 1.2).
+    if (needsAdult &&
+        (!ref.read(completeProfileEulaProvider) ||
+            !ref.read(completeProfilePrivacyProvider))) {
+      showAppAlert(
+        context: context,
+        type: AppAlertType.warning,
+        title: 'auth.eula_required_title'.tr(),
+        text: 'auth.eula_required_text'.tr(),
+        confirmBtnText: 'common.ok'.tr(),
+        confirmBtnColor: context.colors.primary,
+      );
+      return;
+    }
+
     if (needsAdult && !adultConfirmed) {
       showAppAlert(
         context: context,
@@ -207,6 +224,20 @@ class CompleteProfilePage extends ConsumerWidget {
                     ),
                   ],
                 ),
+              if (!(currentUser?.isAdultConfirmed ?? false)) ...[
+                LegalConsentCheckbox.terms(
+                  value: ref.watch(completeProfileEulaProvider),
+                  onChanged: (v) => ref
+                      .read(completeProfileEulaProvider.notifier)
+                      .state = v,
+                ),
+                LegalConsentCheckbox.privacy(
+                  value: ref.watch(completeProfilePrivacyProvider),
+                  onChanged: (v) => ref
+                      .read(completeProfilePrivacyProvider.notifier)
+                      .state = v,
+                ),
+              ],
               const SizedBox(height: 16),
 
               SizedBox(

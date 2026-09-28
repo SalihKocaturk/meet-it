@@ -97,6 +97,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         AppRoutes.privacyPolicy,
       ];
 
+      // Yasal metinler hiçbir zorunlu adımda engellenmemeli: kayıt ve profil
+      // tamamlama ekranlarındaki onay kutuları bu sayfalara link veriyor.
+      // Muaf tutulmadıklarında aşağıdaki yönlendirmeler kullanıcıyı geldiği
+      // ekrana geri atıyordu.
+      final isLegalRoute = location == AppRoutes.terms ||
+          location == AppRoutes.privacyPolicy;
+
       // Giriş yapmamışsa public'e git
       if (!isAuthenticated && !publicRoutes.contains(location)) {
         return AppRoutes.signIn;
@@ -112,6 +119,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // Google tarafından zaten doğrulanmış sayılır).
       if (isAuthenticated &&
           needsEmailVerification &&
+          !isLegalRoute &&
           location != AppRoutes.verification) {
         return AppRoutes.verification;
       }
@@ -125,6 +133,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (isAuthenticated &&
           !needsEmailVerification &&
           needsProfileCompletion &&
+          !isLegalRoute &&
           location != AppRoutes.completeProfile) {
         return AppRoutes.completeProfile;
       }

@@ -36,6 +36,15 @@ final completeProfileAgeControllerProvider =
 final completeProfileAdultProvider =
     StateProvider.autoDispose<bool>((ref) => false);
 
+/// Kullanım koşulları onayı — Google/Apple ile ilk girişte kayıt ekranı
+/// hiç görülmediği için EULA burada alınır (App Store 1.2).
+final completeProfileEulaProvider =
+    StateProvider.autoDispose<bool>((ref) => false);
+
+/// Gizlilik Politikası onayı — Kullanım Koşulları'ndan ayrı kutu.
+final completeProfilePrivacyProvider =
+    StateProvider.autoDispose<bool>((ref) => false);
+
 final completeProfileGenderProvider =
     StateProvider.autoDispose<String?>((ref) => null);
 

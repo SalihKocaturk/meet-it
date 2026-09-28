@@ -11,6 +11,7 @@ import 'package:meetit/core/widgets/app_text_field.dart';
 import 'package:meetit/core/widgets/langauge_switcher.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/auth/providers/sign_up_form_provider.dart';
+import 'package:meetit/features/auth/widgets/eula_checkbox.dart';
 import 'package:meetit/features/auth/widgets/gender_dropdown.dart';
 import 'package:meetit/features/auth/widgets/sign_up_email_field.dart';
 import 'package:meetit/features/auth/widgets/sign_up_location_field.dart';
@@ -21,13 +22,14 @@ class SignUpPage extends ConsumerWidget {
   Future<void> _onSignUp(BuildContext context, WidgetRef ref) async {
     // EULA onayı kontrolü
     final eulaAccepted = ref.read(_eulaAcceptedProvider);
-    if (!eulaAccepted) {
+    final privacyAccepted = ref.read(_privacyAcceptedProvider);
+    if (!eulaAccepted || !privacyAccepted) {
       showAppAlert(
         context: context,
         type: AppAlertType.warning,
-        title: 'Kullanım Koşulları',
-        text: 'Devam etmek için kullanım koşullarını kabul etmelisiniz.',
-        confirmBtnText: 'Tamam',
+        title: 'auth.eula_required_title'.tr(),
+        text: 'auth.eula_required_text'.tr(),
+        confirmBtnText: 'common.ok'.tr(),
         confirmBtnColor: context.colors.primary,
         onConfirmBtnTap: () => Navigator.of(context).pop(),
       );
@@ -226,7 +228,16 @@ class SignUpPage extends ConsumerWidget {
               const _AdultCheckbox(),
 
               // EULA / Kullanım Koşulları onayı — Apple App Store şartı
-              _EulaCheckbox(),
+              LegalConsentCheckbox.terms(
+                value: ref.watch(_eulaAcceptedProvider),
+                onChanged: (v) =>
+                    ref.read(_eulaAcceptedProvider.notifier).state = v,
+              ),
+              LegalConsentCheckbox.privacy(
+                value: ref.watch(_privacyAcceptedProvider),
+                onChanged: (v) =>
+                    ref.read(_privacyAcceptedProvider.notifier).state = v,
+              ),
 
               const SizedBox(height: 16),
 
@@ -333,74 +344,4 @@ class _AdultCheckbox extends ConsumerWidget {
 // ── EULA Checkbox ─────────────────────────────────────────────────────────────
 
 final _eulaAcceptedProvider = StateProvider<bool>((ref) => false);
-
-class _EulaCheckbox extends ConsumerWidget {
-  const _EulaCheckbox();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final accepted = ref.watch(_eulaAcceptedProvider);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Checkbox(
-          value: accepted,
-          activeColor: context.colors.primary,
-          onChanged: (v) =>
-              ref.read(_eulaAcceptedProvider.notifier).state = v ?? false,
-        ),
-        Expanded(
-          child: GestureDetector(
-            onTap: () =>
-                ref.read(_eulaAcceptedProvider.notifier).state = !accepted,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: RichText(
-                text: TextSpan(
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: context.colors.textSecondary,
-                  ),
-                  children: [
-                    const TextSpan(text: 'Kayıt olarak '),
-                    WidgetSpan(
-                      child: GestureDetector(
-                        onTap: () => context.push(AppRoutes.terms),
-                        child: Text(
-                          'Kullanım Koşullarını',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: context.colors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const TextSpan(text: ' ve '),
-                    WidgetSpan(
-                      child: GestureDetector(
-                        onTap: () => context.push(AppRoutes.privacyPolicy),
-                        child: Text(
-                          'Gizlilik Politikasını',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: context.colors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const TextSpan(
-                      text:
-                          ' kabul ettiğinizi onaylıyorsunuz. MeetIt, uygunsuz içeriğe ve taciz eden kullanıcılara karşı sıfır tolerans uygular: bu tür içerikler kaldırılır ve hesaplar kapatılır.',
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
+final _privacyAcceptedProvider = StateProvider<bool>((ref) => false);
