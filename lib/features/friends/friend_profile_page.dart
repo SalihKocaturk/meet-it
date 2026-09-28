@@ -6,7 +6,9 @@ import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
+import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/models/user_friend_model.dart';
+import 'package:meetit/features/friends/widgets/block_dialogs.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
@@ -83,25 +85,25 @@ class FriendProfilePage extends ConsumerWidget {
                         }
                       },
                       itemBuilder: (_) => [
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'report',
                           child: Row(
                             children: [
-                              Icon(Icons.flag_outlined, size: 18),
-                              SizedBox(width: 8),
-                              Text('Şikâyet Et'),
+                              const Icon(Icons.flag_outlined, size: 18),
+                              const SizedBox(width: 8),
+                              Text('safety.report'.tr()),
                             ],
                           ),
                         ),
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'block',
                           child: Row(
                             children: [
-                              Icon(Icons.block, size: 18, color: Colors.red),
-                              SizedBox(width: 8),
+                              const Icon(Icons.block, size: 18, color: Colors.red),
+                              const SizedBox(width: 8),
                               Text(
-                                'Engelle',
-                                style: TextStyle(color: Colors.red),
+                                'safety.block'.tr(),
+                                style: const TextStyle(color: Colors.red),
                               ),
                             ],
                           ),
@@ -217,13 +219,13 @@ class FriendProfilePage extends ConsumerWidget {
   /// Şikâyet akışı — App Store Guideline 1.2 gereği kullanıcıların
   /// uygunsuz içerik/davranış bildirebilmesi zorunlu.
   void _openReportSheet(BuildContext context, WidgetRef ref) {
-    const reasons = <String>[
-      'Uygunsuz veya müstehcen içerik',
-      'Taciz, hakaret veya nefret söylemi',
-      'Sahte profil veya kimlik taklidi',
-      'Spam veya dolandırıcılık',
-      'Şiddet veya tehdit',
-      'Diğer',
+    final reasons = <String>[
+      'safety.reason_inappropriate'.tr(),
+      'safety.reason_harassment'.tr(),
+      'safety.reason_fake'.tr(),
+      'safety.reason_spam'.tr(),
+      'safety.reason_violence'.tr(),
+      'safety.reason_other'.tr(),
     ];
 
     showModalBottomSheet<void>(
@@ -246,7 +248,7 @@ class FriendProfilePage extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${friend.name} kullanıcısını şikâyet et',
+                'safety.report_user_title'.tr(namedArgs: {'name': friend.name}),
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
@@ -255,8 +257,7 @@ class FriendProfilePage extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Şikâyetler 24 saat içinde incelenir. Uygunsuz içerik '
-                'kaldırılır ve ihlal eden hesap kapatılır.',
+                'safety.report_desc'.tr(),
                 style: TextStyle(
                   fontSize: 12,
                   color: context.colors.textSecondary,
@@ -291,21 +292,26 @@ class FriendProfilePage extends ConsumerWidget {
                         'status': 'open',
                         'createdAt': FieldValue.serverTimestamp(),
                       });
-                      messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Şikâyetin alındı. 24 saat içinde incelenecek.',
-                          ),
-                        ),
-                      );
                     } catch (e) {
                       messenger.showSnackBar(
                         SnackBar(
-                          content: Text('Şikâyet gönderilemedi: $e'),
+                          content: Text('safety.report_failed'.tr()),
                           backgroundColor: Colors.red,
                         ),
                       );
+                      return;
                     }
+                    // Şikâyetten sonra engelleme teklif et.
+                    if (!context.mounted) return;
+                    final navigator = Navigator.of(context);
+                    final blocked = await showBlockUserDialog(
+                      context,
+                      ref,
+                      uid: friend.uid,
+                      name: friend.name,
+                      afterReport: true,
+                    );
+                    if (blocked) navigator.pop(); // profil sayfasını kapat
                   },
                 ),
             ],
@@ -315,50 +321,15 @@ class FriendProfilePage extends ConsumerWidget {
     );
   }
 
-  void _confirmBlock(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Kullanıcıyı Engelle'),
-        content: Text(
-          '${friend.name} adlı kullanıcıyı engellemek istediğinize emin misiniz? '
-          'Bu kişi size bir daha arkadaşlık isteği gönderemez ve sizi listelerde göremez.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('İptal'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              final navigator = Navigator.of(context);
-              Navigator.pop(context);
-              final ok = await ref
-                  .read(friendsProvider.notifier)
-                  .blockUser(friend.uid);
-              if (ok) {
-                navigator.pop(); // profil sayfasını kapat
-                messenger.showSnackBar(
-                  SnackBar(content: Text('${friend.name} engellendi.')),
-                );
-              } else {
-                messenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('Engelleme başarısız, tekrar dene.'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            child: const Text(
-              'Engelle',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
+  Future<void> _confirmBlock(BuildContext context, WidgetRef ref) async {
+    final navigator = Navigator.of(context);
+    final blocked = await showBlockUserDialog(
+      context,
+      ref,
+      uid: friend.uid,
+      name: friend.name,
     );
+    if (blocked) navigator.pop(); // profil sayfasını kapat
   }
 
   String _formatDate(DateTime date) {

@@ -8,6 +8,11 @@ final friendsProvider = NotifierProvider<FriendsNotifier, FriendsState>(
   FriendsNotifier.new,
 );
 
+// Engellenen / engelleyen kullanıcılar — yorum listelerinde de gizlenir.
+final blockedUidsProvider = Provider<Set<String>>((ref) {
+  return ref.watch(friendsProvider.select((s) => s.blockedUids));
+});
+
 // Arama sorgusuna göre filtrelenmiş öneriler
 final filteredSuggestionsProvider = Provider<List<UserFriendModel>>((ref) {
   return ref.watch(friendsProvider).filteredSuggestions;

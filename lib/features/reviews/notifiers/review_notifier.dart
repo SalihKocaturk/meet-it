@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_config.dart';
 import 'package:meetit/core/utils/geo_utils.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
+import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/services/places_service.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
@@ -411,6 +412,9 @@ final topReviewsProvider = FutureProvider<List<VenueReviewModel>>((ref) async {
     var reviews = snap.docs
         .map((d) => VenueReviewModel.fromMap(d.id, d.data()))
         .toList();
+
+    final blocked = ref.watch(blockedUidsProvider);
+    reviews = reviews.where((r) => !blocked.contains(r.authorUid)).toList();
 
     final me = ref.watch(currentUserProvider);
     final myLat = me?.lat;

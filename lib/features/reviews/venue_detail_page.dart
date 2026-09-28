@@ -12,6 +12,8 @@ import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/widgets/app_alert.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
+import 'package:meetit/features/friends/providers/friends_provider.dart';
+import 'package:meetit/features/friends/widgets/block_dialogs.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/providers/saved_venues_provider.dart';
 import 'package:meetit/features/match/services/places_service.dart';
@@ -126,7 +128,11 @@ class VenueDetailPage extends ConsumerWidget {
     // yorumlarına eklediği fotoğraflar — tek statik foto yerine galeri
     // olarak gösterilir, tek foto amatör kaçtığı için birden fazlaysa
     // dönen bir carousel'e dönüştürüldü.
-    final reviews = reviewsAsync.value ?? const <VenueReviewModel>[];
+    // Engellenen / engelleyen kullanıcıların yorumları gösterilmez.
+    final blockedUids = ref.watch(blockedUidsProvider);
+    final reviews = (reviewsAsync.value ?? const <VenueReviewModel>[])
+        .where((r) => !blockedUids.contains(r.authorUid))
+        .toList();
     final galleryPhotos = <String>{
       ...fetchedPhotos,
       if (venuePhotoUrls.isNotEmpty)
@@ -759,11 +765,11 @@ class _ReviewTileState extends ConsumerState<_ReviewTile>
 
   void _showReportSheet(BuildContext context, WidgetRef ref, String reporterUid) {
     final reasons = [
-      (icon: Iconsax.slash, label: 'Uygunsuz içerik'),
-      (icon: Iconsax.information, label: 'Spam veya yanıltıcı bilgi'),
-      (icon: Iconsax.danger, label: 'Nefret söylemi'),
-      (icon: Iconsax.user_remove, label: 'Taciz veya zorbalık'),
-      (icon: Iconsax.more_circle, label: 'Diğer'),
+      (icon: Iconsax.slash, label: 'safety.reason_inappropriate'.tr()),
+      (icon: Iconsax.information, label: 'safety.reason_spam_review'.tr()),
+      (icon: Iconsax.danger, label: 'safety.reason_hate'.tr()),
+      (icon: Iconsax.user_remove, label: 'safety.reason_bullying'.tr()),
+      (icon: Iconsax.more_circle, label: 'safety.reason_other'.tr()),
     ];
     showModalBottomSheet(
       context: context,
@@ -812,7 +818,7 @@ class _ReviewTileState extends ConsumerState<_ReviewTile>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Yorumu Şikayet Et',
+                          'safety.report_review_title'.tr(),
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 16,
@@ -820,7 +826,7 @@ class _ReviewTileState extends ConsumerState<_ReviewTile>
                           ),
                         ),
                         Text(
-                          'Şikayet nedeninizi seçin',
+                          'safety.report_choose_reason'.tr(),
                           style: TextStyle(
                             fontSize: 12,
                             color: context.colors.textSecondary,
@@ -843,27 +849,14 @@ class _ReviewTileState extends ConsumerState<_ReviewTile>
                       reporterUid: reporterUid,
                       reason: r.label,
                     );
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          backgroundColor: context.colors.card,
-                          content: Row(
-                            children: [
-                              Icon(Iconsax.tick_circle,
-                                  color: context.colors.primary, size: 18),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Şikayetiniz iletildi. Teşekkürler.',
-                                style: TextStyle(
-                                    color: context.colors.textPrimary),
-                              ),
-                            ],
-                          ),
-                        ),
+                    // Şikâyetten sonra yorum sahibini engellemeyi teklif et.
+                    if (context.mounted && review.authorUid != reporterUid) {
+                      await showBlockUserDialog(
+                        context,
+                        ref,
+                        uid: review.authorUid,
+                        name: review.authorName,
+                        afterReport: true,
                       );
                     }
                   },

@@ -9,6 +9,7 @@ import 'package:meetit/features/friends/friend_code_page.dart';
 import 'package:meetit/features/friends/friend_profile_page.dart';
 import 'package:meetit/features/friends/models/user_friend_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
+import 'package:meetit/features/friends/widgets/block_dialogs.dart';
 import 'package:meetit/features/main/main_page.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
@@ -573,7 +574,7 @@ class _InvitationTile extends ConsumerWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Engelle',
+            tooltip: 'safety.block'.tr(),
             icon: Icon(
               Icons.block,
               size: 20,
@@ -607,43 +608,7 @@ class _InvitationTile extends ConsumerWidget {
 
 extension on _InvitationTile {
   void _confirmBlock(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Kullanıcıyı Engelle'),
-        content: Text(
-          '${friend.name} adlı kullanıcıyı engellemek istediğinize emin misiniz? '
-          'Bu kişi size bir daha arkadaşlık isteği gönderemez ve sizi listelerde göremez.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('İptal'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              Navigator.pop(dialogContext);
-              final ok = await ref
-                  .read(friendsProvider.notifier)
-                  .blockUser(friend.uid);
-              messenger.showSnackBar(
-                SnackBar(
-                  content: Text(ok
-                      ? '${friend.name} engellendi.'
-                      : 'Engelleme başarısız, tekrar dene.'),
-                  backgroundColor: ok ? null : Colors.red,
-                ),
-              );
-            },
-            child: const Text(
-              'Engelle',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
-    );
+    showBlockUserDialog(context, ref, uid: friend.uid, name: friend.name);
   }
 }
 

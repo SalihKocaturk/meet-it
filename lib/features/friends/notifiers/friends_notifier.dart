@@ -20,6 +20,8 @@ class FriendsState {
   final bool isLoading;
   final String? errorMessage;
   final String searchQuery;
+  /// Benim engellediklerim + beni engelleyenler (iki yönlü gizleme).
+  final Set<String> blockedUids;
 
   const FriendsState({
     this.suggestions = const [],
@@ -29,6 +31,7 @@ class FriendsState {
     this.isLoading = false,
     this.errorMessage,
     this.searchQuery = '',
+    this.blockedUids = const {},
   });
 
   List<UserFriendModel> get filteredSuggestions {
@@ -47,6 +50,7 @@ class FriendsState {
     String? errorMessage,
     bool clearError = false,
     String? searchQuery,
+    Set<String>? blockedUids,
   }) {
     return FriendsState(
       suggestions: suggestions ?? this.suggestions,
@@ -56,6 +60,7 @@ class FriendsState {
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       searchQuery: searchQuery ?? this.searchQuery,
+      blockedUids: blockedUids ?? this.blockedUids,
     );
   }
 }
@@ -185,35 +190,107 @@ class FriendsNotifier extends Notifier<FriendsState> {
   /// Benim engellediklerim + beni engelleyenler. İki yönde de kişi
   /// listelerde görünmez; Firestore kuralı (isBlockedPair) aralarında
   /// arkadaşlık isteği oluşturulmasını da sunucu tarafında engeller.
-  Set<String> _blockedUids = {};
+  Set<String> get _blockedUids => state.blockedUids;
 
   bool isBlocked(String uid) => _blockedUids.contains(uid);
 
   Future<void> _loadBlocks(String currentUid) async {
+    final uids = <String>{};
     try {
-      final results = await Future.wait([
-        _db
-            .collection('blocks')
-            .where('blockerUid', isEqualTo: currentUid)
-            .get(),
-        _db
-            .collection('blocks')
-            .where('blockedUid', isEqualTo: currentUid)
-            .get(),
-      ]);
-      final uids = <String>{};
-      for (final d in results[0].docs) {
+      final mine = await _db
+          .collection('blocks')
+          .where('blockerUid', isEqualTo: currentUid)
+          .get();
+      for (final d in mine.docs) {
         final other = d.data()['blockedUid'];
-        if (other is String) uids.add(other);
+        if (other is! String) continue;
+        uids.add(other);
+        // Eski sürümlerin rastgele ID ile yazdığı kayıtları deterministik
+        // ID'ye taşı — Firestore kuralı (isBlockedPair) sadece onu görür.
+        final expectedId = '${currentUid}_$other';
+        if (d.id != expectedId) {
+          try {
+            await _db.collection('blocks').doc(expectedId).set({
+              'blockerUid': currentUid,
+              'blockedUid': other,
+              'createdAt':
+                  d.data()['createdAt'] ?? FieldValue.serverTimestamp(),
+            });
+            await d.reference.delete();
+          } catch (_) {}
+        }
       }
-      for (final d in results[1].docs) {
+    } catch (e) {
+      debugPrint('[FriendsNotifier] _loadBlocks (mine) hatası: $e');
+    }
+    try {
+      final theirs = await _db
+          .collection('blocks')
+          .where('blockedUid', isEqualTo: currentUid)
+          .get();
+      for (final d in theirs.docs) {
         final other = d.data()['blockerUid'];
         if (other is String) uids.add(other);
       }
-      _blockedUids = uids;
     } catch (e) {
-      debugPrint('[FriendsNotifier] _loadBlocks hatası: $e');
+      debugPrint('[FriendsNotifier] _loadBlocks (theirs) hatası: $e');
     }
+    state = state.copyWith(blockedUids: uids);
+  }
+
+  /// Ayarlar > Engellenenler için: benim engellediğim kullanıcılar.
+  Future<List<BlockedUser>> fetchMyBlockedUsers() async {
+    final currentUid = ref.read(authProvider).user?.uid;
+    if (currentUid == null) return const [];
+    final snap = await _db
+        .collection('blocks')
+        .where('blockerUid', isEqualTo: currentUid)
+        .get();
+    final uids = <String>{
+      for (final d in snap.docs)
+        if (d.data()['blockedUid'] is String) d.data()['blockedUid'] as String,
+    };
+    final users = await Future.wait(uids.map((uid) async {
+      try {
+        final doc = await _db.collection('users').doc(uid).get();
+        final data = doc.data();
+        return BlockedUser(
+          uid: uid,
+          name: (data?['name'] as String?) ?? '',
+          photoUrl: data?['photoUrl'] as String?,
+        );
+      } catch (_) {
+        return BlockedUser(uid: uid, name: '');
+      }
+    }));
+    users.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    return users;
+  }
+
+  /// Engeli kaldır — benim bu kişi için yazdığım tüm engel kayıtları silinir,
+  /// sonra listeler yeniden kurulur (karşı taraf da beni engellediyse
+  /// gizlenmeye devam eder).
+  Future<bool> unblockUser(String targetUid) async {
+    final currentUid = ref.read(authProvider).user?.uid;
+    if (currentUid == null) return false;
+    try {
+      final snap = await _db
+          .collection('blocks')
+          .where('blockerUid', isEqualTo: currentUid)
+          .where('blockedUid', isEqualTo: targetUid)
+          .get();
+      for (final d in snap.docs) {
+        await d.reference.delete();
+      }
+    } catch (e) {
+      debugPrint('[FriendsNotifier] unblockUser hatası: $e');
+      return false;
+    }
+    state = state.copyWith(
+      blockedUids: {..._blockedUids}..remove(targetUid),
+    );
+    unawaited(_listenFriendships(currentUid));
+    return true;
   }
 
   /// Kullanıcıyı engelle: blocks/{benimUid}_{hedefUid} yazılır, varsa
@@ -233,7 +310,7 @@ class FriendsNotifier extends Notifier<FriendsState> {
       return false;
     }
 
-    _blockedUids = {..._blockedUids, targetUid};
+    state = state.copyWith(blockedUids: {..._blockedUids, targetUid});
 
     try {
       await _db
@@ -521,4 +598,12 @@ class FriendsNotifier extends Notifier<FriendsState> {
       // asıl işlemi (buluşma akışına geçiş) bundan etkilenmemeli.
     }
   }
+}
+
+class BlockedUser {
+  final String uid;
+  final String name;
+  final String? photoUrl;
+
+  const BlockedUser({required this.uid, required this.name, this.photoUrl});
 }
