@@ -78,6 +78,9 @@ class FriendsNotifier extends Notifier<FriendsState> {
 
   Future<void> _listenFriendships(String currentUid) async {
     try {
+    // Engellenen / engelleyen kullanıcıları yükle — listelerde hiç görünmesinler.
+    await _loadBlocks(currentUid);
+
     // Önce tüm kullanıcıları bir kere çek
     final usersSnap = await _db.collection('users').get();
     final allUsers = usersSnap.docs
@@ -131,6 +134,7 @@ class FriendsNotifier extends Notifier<FriendsState> {
       final sentRequests = <UserFriendModel>[];
 
       for (final u in allUsers) {
+        if (_blockedUids.contains(u.uid)) continue;
         final friend = UserFriendModel(
           uid: u.uid,
           name: u.name,
@@ -176,6 +180,80 @@ class FriendsNotifier extends Notifier<FriendsState> {
   Future<void> loadAll(String currentUid) async =>
       _listenFriendships(currentUid);
 
+  // ── Engelleme ─────────────────────────────────────────────────────────────
+
+  /// Benim engellediklerim + beni engelleyenler. İki yönde de kişi
+  /// listelerde görünmez; Firestore kuralı (isBlockedPair) aralarında
+  /// arkadaşlık isteği oluşturulmasını da sunucu tarafında engeller.
+  Set<String> _blockedUids = {};
+
+  bool isBlocked(String uid) => _blockedUids.contains(uid);
+
+  Future<void> _loadBlocks(String currentUid) async {
+    try {
+      final results = await Future.wait([
+        _db
+            .collection('blocks')
+            .where('blockerUid', isEqualTo: currentUid)
+            .get(),
+        _db
+            .collection('blocks')
+            .where('blockedUid', isEqualTo: currentUid)
+            .get(),
+      ]);
+      final uids = <String>{};
+      for (final d in results[0].docs) {
+        final other = d.data()['blockedUid'];
+        if (other is String) uids.add(other);
+      }
+      for (final d in results[1].docs) {
+        final other = d.data()['blockerUid'];
+        if (other is String) uids.add(other);
+      }
+      _blockedUids = uids;
+    } catch (e) {
+      debugPrint('[FriendsNotifier] _loadBlocks hatası: $e');
+    }
+  }
+
+  /// Kullanıcıyı engelle: blocks/{benimUid}_{hedefUid} yazılır, varsa
+  /// aradaki arkadaşlık / istek silinir ve kişi tüm listelerden çıkar.
+  Future<bool> blockUser(String targetUid) async {
+    final currentUid = ref.read(authProvider).user?.uid;
+    if (currentUid == null) return false;
+
+    try {
+      await _db.collection('blocks').doc('${currentUid}_$targetUid').set({
+        'blockerUid': currentUid,
+        'blockedUid': targetUid,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('[FriendsNotifier] blockUser hatası: $e');
+      return false;
+    }
+
+    _blockedUids = {..._blockedUids, targetUid};
+
+    try {
+      await _db
+          .collection('friendships')
+          .doc(FriendshipModel.docId(currentUid, targetUid))
+          .delete();
+    } catch (_) {
+      // Arkadaşlık dokümanı yoksa sorun değil.
+    }
+
+    bool keep(UserFriendModel f) => f.uid != targetUid;
+    state = state.copyWith(
+      suggestions: state.suggestions.where(keep).toList(),
+      connections: state.connections.where(keep).toList(),
+      pendingInvitations: state.pendingInvitations.where(keep).toList(),
+      sentRequests: state.sentRequests.where(keep).toList(),
+    );
+    return true;
+  }
+
   // ── Actions ───────────────────────────────────────────────────────────────
 
   /// Arkadaşlık isteği gönder
@@ -198,6 +276,7 @@ class FriendsNotifier extends Notifier<FriendsState> {
   Future<void> sendFriendRequest(String targetUid) async {
     final currentUid = ref.read(authProvider).user?.uid;
     if (currentUid == null) return;
+    if (_blockedUids.contains(targetUid)) return;
 
     final docId = FriendshipModel.docId(currentUid, targetUid);
     final docRef = _db.collection('friendships').doc(docId);

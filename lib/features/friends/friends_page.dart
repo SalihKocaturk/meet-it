@@ -573,6 +573,15 @@ class _InvitationTile extends ConsumerWidget {
             ),
           ),
           IconButton(
+            tooltip: 'Engelle',
+            icon: Icon(
+              Icons.block,
+              size: 20,
+              color: context.colors.textSecondary,
+            ),
+            onPressed: () => _confirmBlock(context, ref),
+          ),
+          IconButton(
             icon: Icon(
               Iconsax.close_circle,
               size: 22,
@@ -589,6 +598,48 @@ class _InvitationTile extends ConsumerWidget {
             ),
             onPressed: () =>
                 ref.read(friendsProvider.notifier).acceptInvitation(friend.uid),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+extension on _InvitationTile {
+  void _confirmBlock(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Kullanıcıyı Engelle'),
+        content: Text(
+          '${friend.name} adlı kullanıcıyı engellemek istediğinize emin misiniz? '
+          'Bu kişi size bir daha arkadaşlık isteği gönderemez ve sizi listelerde göremez.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('İptal'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              Navigator.pop(dialogContext);
+              final ok = await ref
+                  .read(friendsProvider.notifier)
+                  .blockUser(friend.uid);
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(ok
+                      ? '${friend.name} engellendi.'
+                      : 'Engelleme başarısız, tekrar dene.'),
+                  backgroundColor: ok ? null : Colors.red,
+                ),
+              );
+            },
+            child: const Text(
+              'Engelle',
+              style: TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),

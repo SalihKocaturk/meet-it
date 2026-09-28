@@ -70,6 +70,11 @@ class _FriendCodePageState extends ConsumerState<FriendCodePage> {
           final myUid = ref.read(authProvider).user?.uid;
           if (found.uid == myUid) {
             _errorText = 'friend_code.own_code'.tr();
+          } else if (ref
+              .read(friendsProvider.notifier)
+              .isBlocked(found.uid)) {
+            // Engellenen / engelleyen kullanıcı bulunamamış gibi görünür.
+            _errorText = 'friend_code.user_not_found'.tr();
           } else {
             _foundUser = found;
           }

@@ -7,6 +7,13 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // İki kullanıcıdan biri diğerini engellediyse true. Engelleme kayıtları
+    // deterministik ID ile tutulur: blocks/{engelleyen}_{engellenen}.
+    function isBlockedPair(a, b) {
+      return exists(/databases/$(database)/documents/blocks/$(a + '_' + b)) ||
+             exists(/databases/$(database)/documents/blocks/$(b + '_' + a));
+    }
+
     match /users/{uid} {
       allow read: if isSignedIn();
       allow create, update, delete: if isSignedIn() && request.auth.uid == uid;
@@ -23,13 +30,16 @@ service cloud.firestore {
     match /friendships/{docId} {
       allow read: if isSignedIn();
 
+      // Engellenmiş iki kişi arasında istek oluşturulamaz / güncellenemez
+      // (yeniden istek, kabul). Silme serbest — engellerken arkadaşlık silinir.
       allow create: if isSignedIn() &&
-        request.resource.data.fromUid == request.auth.uid;
+        request.resource.data.fromUid == request.auth.uid &&
+        !isBlockedPair(request.resource.data.fromUid, request.resource.data.toUid);
 
       allow update: if isSignedIn() && (
         resource.data.fromUid == request.auth.uid ||
         resource.data.toUid == request.auth.uid
-      );
+      ) && !isBlockedPair(resource.data.fromUid, resource.data.toUid);
 
       allow delete: if isSignedIn() && (
         resource.data.fromUid == request.auth.uid ||
@@ -116,11 +126,16 @@ service cloud.firestore {
     // Engelleme kayıtları — App Store Guideline 1.2 gereği.
     // Kullanıcı yalnızca kendi engellemelerini oluşturur/okur/siler.
     match /blocks/{blockId} {
-      allow read: if isSignedIn() &&
-        resource.data.blockerUid == request.auth.uid;
+      // Engellenen taraf da okuyabilir ki uygulama iki yönde de
+      // birbirlerini listelerden gizleyebilsin.
+      allow read: if isSignedIn() && (
+        resource.data.blockerUid == request.auth.uid ||
+        resource.data.blockedUid == request.auth.uid
+      );
 
-      allow create: if isSignedIn() &&
-        request.resource.data.blockerUid == request.auth.uid;
+      allow create, update: if isSignedIn() &&
+        request.resource.data.blockerUid == request.auth.uid &&
+        blockId == request.auth.uid + '_' + request.resource.data.blockedUid;
 
       allow delete: if isSignedIn() &&
         resource.data.blockerUid == request.auth.uid;

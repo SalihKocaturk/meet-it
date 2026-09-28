@@ -6,7 +6,6 @@ import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
-import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/models/user_friend_model.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
@@ -323,7 +322,7 @@ class FriendProfilePage extends ConsumerWidget {
         title: const Text('Kullanıcıyı Engelle'),
         content: Text(
           '${friend.name} adlı kullanıcıyı engellemek istediğinize emin misiniz? '
-          'Bu kişi sizi bir daha bulamaz.',
+          'Bu kişi size bir daha arkadaşlık isteği gönderemez ve sizi listelerde göremez.',
         ),
         actions: [
           TextButton(
@@ -335,28 +334,18 @@ class FriendProfilePage extends ConsumerWidget {
               final messenger = ScaffoldMessenger.of(context);
               final navigator = Navigator.of(context);
               Navigator.pop(context);
-              final currentUid = ref.read(authProvider).user?.uid;
-              if (currentUid == null) return;
-              try {
-                await FirebaseFirestore.instance.collection('blocks').add({
-                  'blockerUid': currentUid,
-                  'blockedUid': friend.uid,
-                  'createdAt': FieldValue.serverTimestamp(),
-                });
-                // Engellenen kişi artık arkadaş listesinde durmasın.
-                try {
-                  await ref
-                      .read(friendsProvider.notifier)
-                      .removeFriend(friend.uid);
-                } catch (_) {}
+              final ok = await ref
+                  .read(friendsProvider.notifier)
+                  .blockUser(friend.uid);
+              if (ok) {
                 navigator.pop(); // profil sayfasını kapat
                 messenger.showSnackBar(
                   SnackBar(content: Text('${friend.name} engellendi.')),
                 );
-              } catch (e) {
+              } else {
                 messenger.showSnackBar(
-                  SnackBar(
-                    content: Text('Engelleme başarısız: $e'),
+                  const SnackBar(
+                    content: Text('Engelleme başarısız, tekrar dene.'),
                     backgroundColor: Colors.red,
                   ),
                 );
