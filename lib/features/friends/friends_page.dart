@@ -576,8 +576,8 @@ class _InvitationTile extends ConsumerWidget {
           IconButton(
             tooltip: 'safety.block'.tr(),
             icon: Icon(
-              Icons.block,
-              size: 20,
+              Iconsax.slash,
+              size: 22,
               color: context.colors.textSecondary,
             ),
             onPressed: () => _confirmBlock(context, ref),
@@ -593,7 +593,7 @@ class _InvitationTile extends ConsumerWidget {
           ),
           IconButton(
             icon: Icon(
-              Iconsax.check,
+              Iconsax.tick_circle,
               size: 22,
               color: context.colors.primary,
             ),
