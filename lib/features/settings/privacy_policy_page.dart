@@ -31,14 +31,12 @@ class PrivacyPolicyPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSection(context, 'legal.privacy_s1_title'.tr(), 'legal.privacy_s1_body'.tr()),
-            _buildSection(context, 'legal.privacy_s2_title'.tr(), 'legal.privacy_s2_body'.tr()),
-            _buildSection(context, 'legal.privacy_s3_title'.tr(), 'legal.privacy_s3_body'.tr()),
-            _buildSection(context, 'legal.privacy_s4_title'.tr(), 'legal.privacy_s4_body'.tr()),
-            _buildSection(context, 'legal.privacy_s5_title'.tr(), 'legal.privacy_s5_body'.tr()),
-            _buildSection(context, 'legal.privacy_s6_title'.tr(), 'legal.privacy_s6_body'.tr()),
-            _buildSection(context, 'legal.privacy_s7_title'.tr(), 'legal.privacy_s7_body'.tr()),
-            _buildSection(context, 'legal.privacy_s8_title'.tr(), 'legal.privacy_s8_body'.tr()),
+            for (var i = 1; i <= 13; i++)
+              _buildSection(
+                context,
+                'legal.privacy_s${i}_title'.tr(),
+                'legal.privacy_s${i}_body'.tr(),
+              ),
             const SizedBox(height: 32),
             Text(
               'legal.privacy_last_updated'.tr(),

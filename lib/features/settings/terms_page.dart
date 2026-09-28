@@ -31,12 +31,12 @@ class TermsPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSection(context, 'legal.terms_s1_title'.tr(), 'legal.terms_s1_body'.tr()),
-            _buildSection(context, 'legal.terms_s2_title'.tr(), 'legal.terms_s2_body'.tr()),
-            _buildSection(context, 'legal.terms_s3_title'.tr(), 'legal.terms_s3_body'.tr()),
-            _buildSection(context, 'legal.terms_s4_title'.tr(), 'legal.terms_s4_body'.tr()),
-            _buildSection(context, 'legal.terms_s5_title'.tr(), 'legal.terms_s5_body'.tr()),
-            _buildSection(context, 'legal.terms_s6_title'.tr(), 'legal.terms_s6_body'.tr()),
+            for (var i = 1; i <= 14; i++)
+              _buildSection(
+                context,
+                'legal.terms_s${i}_title'.tr(),
+                'legal.terms_s${i}_body'.tr(),
+              ),
             const SizedBox(height: 32),
             Text(
               'legal.terms_last_updated'.tr(),
