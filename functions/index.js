@@ -125,3 +125,92 @@ exports.sendPushNotification = onDocumentCreated(
     }
   }
 );
+
+// ─────────────────────────────────────────────────────────────────────────
+// Hesap silindiğinde kullanıcıya ait verileri temizle.
+//
+// Tetikleyici: Firebase Auth kullanıcısı silindiğinde (uygulamadaki
+// Ayarlar > Hesabı Sil → fbUser.delete()). App Store 5.1.1(v) ve KVKK:
+// hesap silme, ilişkili verileri de silmeli. İstemci yalnızca users/{uid}
+// dokümanını siliyordu; alt koleksiyonlar, arkadaşlıklar, yorumlar,
+// fotoğraflar vb. kalıyordu.
+//
+// ÖNEMLİ: Gizlilik Politikası'ndaki "Saklama Süresi ve Hesap Silme" bölümü
+// bu fonksiyonun yaptıklarını anlatır — biri değişirse diğeri de güncellensin.
+//
+// Şikâyet kayıtları (reports) BİLEREK silinmez: moderasyon ve olası hukuki
+// talepler için saklanır (politikada en fazla 2 yıl).
+// ─────────────────────────────────────────────────────────────────────────
+const functionsV1 = require("firebase-functions/v1");
+const { logger } = require("firebase-functions");
+
+/** Sorgunun döndürdüğü tüm dokümanları 450'lik batch'lerle siler. */
+async function deleteQuery(query) {
+  const snap = await query.get();
+  let batch = db.batch();
+  let pending = 0;
+  for (const doc of snap.docs) {
+    batch.delete(doc.ref);
+    if (++pending === 450) {
+      await batch.commit();
+      batch = db.batch();
+      pending = 0;
+    }
+  }
+  if (pending) await batch.commit();
+  return snap.size;
+}
+
+exports.cleanupDeletedUser = functionsV1.auth.user().onDelete(async (user) => {
+  const uid = user.uid;
+  const FieldValue = admin.firestore.FieldValue;
+  const bucket = admin.storage().bucket();
+  const stats = { uid };
+
+  const step = async (name, fn) => {
+    try {
+      stats[name] = await fn();
+    } catch (e) {
+      // Bir adım patlasa bile diğerleri çalışmaya devam etsin.
+      stats[name] = `HATA: ${e.message}`;
+      logger.error(`[cleanupDeletedUser] ${name}`, e);
+    }
+  };
+
+  // Profil + alt koleksiyonlar (saved_venues, navigated_venues)
+  await step("user", () => db.recursiveDelete(db.collection("users").doc(uid)));
+  // Bildirim kuyruğu + FCM token
+  await step("notifications", () =>
+    db.recursiveDelete(db.collection("notifications").doc(uid)));
+  await step("fcmToken", () => db.collection("fcmTokens").doc(uid).delete());
+  // Arkadaşlıklar (iki yön)
+  await step("friendships", async () =>
+    (await deleteQuery(db.collection("friendships").where("fromUid", "==", uid))) +
+    (await deleteQuery(db.collection("friendships").where("toUid", "==", uid))));
+  // Kullanıcının yorumları
+  await step("reviews", () =>
+    deleteQuery(db.collection("venue_reviews").where("authorUid", "==", uid)));
+  // Başkalarının yorumlarındaki beğenileri
+  await step("likes", async () => {
+    const snap = await db.collection("venue_reviews")
+        .where("likedBy", "array-contains", uid).get();
+    await Promise.all(snap.docs.map((d) =>
+      d.ref.update({ likedBy: FieldValue.arrayRemove(uid) })));
+    return snap.size;
+  });
+  // Buluşma geçmişi (kullanıcının katıldığı kayıtlar)
+  await step("meetingHistory", () =>
+    deleteQuery(db.collection("meetingHistory")
+        .where("participantUids", "array-contains", uid)));
+  // Engellemeler (iki yön)
+  await step("blocks", async () =>
+    (await deleteQuery(db.collection("blocks").where("blockerUid", "==", uid))) +
+    (await deleteQuery(db.collection("blocks").where("blockedUid", "==", uid))));
+  // Storage: profil fotoğrafı + yorum fotoğrafları
+  await step("profilePhoto", () =>
+    bucket.file(`profile_photos/${uid}.jpg`).delete({ ignoreNotFound: true }));
+  await step("reviewPhotos", () =>
+    bucket.deleteFiles({ prefix: `review_photos/${uid}/` }));
+
+  logger.info("[cleanupDeletedUser] tamamlandı", stats);
+});
