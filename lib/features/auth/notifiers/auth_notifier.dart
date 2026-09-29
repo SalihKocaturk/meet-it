@@ -939,42 +939,115 @@ class AuthNotifier extends Notifier<AuthState> {
 
   /// Hesabı kalıcı olarak siler.
   ///
-  /// Sırayla: FCM token temizle → Firestore dokümanını sil → Firebase Auth
-  /// hesabını sil → session temizle → state sıfırla.
+  /// 🐛 BUG FIX: Eskiden önce Firestore dokümanı siliniyor, sonra
+  /// `fbUser.delete()` çağrılıyordu. Son girişin üzerinden zaman geçtiyse
+  /// Firebase `requires-recent-login` fırlatıyor, Auth hesabı silinmiyor ama
+  /// profil dokümanı çoktan silinmiş oluyordu — kullanıcı tekrar giriş
+  /// yapınca sıfırdan kayıt ekranına düşüyordu.
   ///
-  /// Başarılıysa `null` döner. Hata varsa çeviri anahtarı döner.
-  /// Firebase Auth bazen son girişin üzerinden uzun süre geçmişse
-  /// `requires-recent-login` hatası fırlatır — bu durumda kullanıcıya
-  /// tekrar giriş yapması gerektiği söylenir.
-  Future<String?> deleteAccount() async {
+  /// Şimdi sıra: kimliği yeniden doğrula (Apple / Google / şifre) → Apple
+  /// token'ını iptal et (App Store kuralı) → Firestore dokümanını sil →
+  /// Auth hesabını sil. Kalan veriler `cleanupDeletedUser` Cloud Function'ı
+  /// tarafından silinir.
+  ///
+  /// Başarılıysa `null`, kullanıcı doğrulamayı iptal ettiyse `'cancelled'`,
+  /// aksi halde çeviri anahtarı döner. E-posta/şifre kullanıcıları için
+  /// [password] gereklidir.
+  Future<String?> deleteAccount({String? password}) async {
     try {
       final uid = state.user?.uid;
-      if (uid == null) return 'auth.error_generic';
-
-      // FCM token'ı önce temizle
-      NotificationService.clearFcmToken(uid).ignore();
-
-      // Firestore'daki kullanıcı dokümanını sil
-      await FirebaseFirestore.instance.collection('users').doc(uid).delete();
-
-      // Firebase Auth hesabını sil
       final fbUser = _auth.currentUser;
-      if (fbUser == null) return 'auth.error_generic';
+      if (uid == null || fbUser == null) return 'auth.error_generic';
+
+      final providers = fbUser.providerData.map((p) => p.providerId).toSet();
+
+      // 1) Yeniden doğrulama — delete() artık requires-recent-login vermez.
+      if (providers.contains('apple.com')) {
+        final rawNonce = _generateNonce();
+        final AuthorizationCredentialAppleID apple;
+        try {
+          apple = await SignInWithApple.getAppleIDCredential(
+            scopes: const [],
+            nonce: _sha256ofString(rawNonce),
+          );
+        } on SignInWithAppleAuthorizationException catch (e) {
+          if (e.code == AuthorizationErrorCode.canceled) return 'cancelled';
+          return 'settings.delete_account_error';
+        }
+        final idToken = apple.identityToken;
+        if (idToken == null) return 'settings.delete_account_error';
+        await fbUser.reauthenticateWithCredential(
+          AppleAuthProvider.credentialWithIDToken(
+            idToken,
+            rawNonce,
+            AppleFullPersonName(),
+          ),
+        );
+        // Apple kuralı: Sign in with Apple hesabı silinirken token iptal
+        // edilmeli. Firebase Console'da Apple "OAuth code flow" ayarı
+        // yapılmamışsa hata verir — silmeyi engellemesin.
+        try {
+          await _auth.revokeTokenWithAuthorizationCode(apple.authorizationCode);
+        } catch (e) {
+          debugPrint('[deleteAccount] Apple token revoke hatası: $e');
+        }
+      } else if (providers.contains('google.com')) {
+        final googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) return 'cancelled';
+        final googleAuth = await googleUser.authentication;
+        await fbUser.reauthenticateWithCredential(
+          GoogleAuthProvider.credential(
+            accessToken: googleAuth.accessToken,
+            idToken: googleAuth.idToken,
+          ),
+        );
+      } else if (providers.contains('password')) {
+        final email = fbUser.email;
+        if (password == null || password.isEmpty || email == null) {
+          return 'auth.error_wrong_password';
+        }
+        await fbUser.reauthenticateWithCredential(
+          EmailAuthProvider.credential(email: email, password: password),
+        );
+      }
+
+      // 2) FCM token + Firestore profil dokümanı
+      NotificationService.clearFcmToken(uid).ignore();
+      try {
+        await _firestore.collection('users').doc(uid).delete();
+      } catch (e) {
+        // Cloud Function (cleanupDeletedUser) zaten silecek.
+        debugPrint('[deleteAccount] users doc silinemedi: $e');
+      }
+
+      // 3) Firebase Auth hesabı
       await fbUser.delete();
 
-      // Yerel session + state temizle
-      await _googleSignIn.signOut();
+      // 4) Yerel session + state temizle
+      try {
+        await _googleSignIn.signOut();
+      } catch (_) {}
       await _clearSession();
       ref.invalidate(quizProvider);
       state = const AuthState();
       return null; // başarı
     } on FirebaseAuthException catch (e) {
-      if (e.code == 'requires-recent-login') {
-        return 'settings.delete_account_relogin';
+      debugPrint('[deleteAccount] FirebaseAuthException: ${e.code} | ${e.message}');
+      switch (e.code) {
+        case 'wrong-password':
+        case 'invalid-credential':
+          return 'auth.error_wrong_password';
+        case 'requires-recent-login':
+        case 'user-mismatch':
+          return 'settings.delete_account_relogin';
+        case 'network-request-failed':
+          return 'auth.error_no_network';
+        default:
+          return 'settings.delete_account_error';
       }
-      return 'auth.error_generic';
-    } catch (_) {
-      return 'auth.error_generic';
+    } catch (e) {
+      debugPrint('[deleteAccount] unexpected error: $e');
+      return 'settings.delete_account_error';
     }
   }
 

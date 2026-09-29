@@ -1,4 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -27,11 +28,24 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
     final confirmed = await _showConfirmDialog();
     if (!confirmed || !mounted) return;
 
+    // E-posta/şifre kullanıcıları silmeden önce şifrelerini tekrar girer
+    // (Apple / Google kullanıcıları sistem penceresiyle doğrulanır).
+    String? password;
+    final isPasswordUser = FirebaseAuth.instance.currentUser?.providerData
+            .any((p) => p.providerId == 'password') ??
+        false;
+    if (isPasswordUser) {
+      password = await _askPassword();
+      if (password == null || password.isEmpty || !mounted) return;
+    }
+
     setState(() => _isLoading = true);
-    final error = await ref.read(authProvider.notifier).deleteAccount();
+    final error =
+        await ref.read(authProvider.notifier).deleteAccount(password: password);
     if (!mounted) return;
     setState(() => _isLoading = false);
 
+    if (error == 'cancelled') return;
     if (error != null) {
       showAppAlert(
         context: context,
@@ -45,6 +59,48 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
     }
 
     context.go(AppRoutes.signIn);
+  }
+
+  Future<String?> _askPassword() async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('settings.delete_account_password_title'.tr()),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('settings.delete_account_password_desc'.tr()),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              obscureText: true,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'settings.delete_account_password_hint'.tr(),
+              ),
+              onSubmitted: (v) => Navigator.pop(dialogContext, v),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text('common.cancel'.tr()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: Text(
+              'settings.delete_account_yes'.tr(),
+              style: const TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    return result;
   }
 
   Future<bool> _showConfirmDialog() async {
