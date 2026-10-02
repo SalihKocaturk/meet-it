@@ -12,6 +12,7 @@ import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/widgets/app_alert.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
+import 'package:meetit/features/friends/friend_profile_page.dart';
 import 'package:meetit/features/friends/providers/friends_provider.dart';
 import 'package:meetit/features/friends/widgets/block_dialogs.dart';
 import 'package:meetit/features/match/models/place_result.dart';
@@ -914,6 +915,22 @@ class _ReviewTileState extends ConsumerState<_ReviewTile>
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final isOwn = user != null && user.uid == review.authorUid;
+    // Yorumu bir arkadaşın yazdıysa avatarına/adına dokununca onun
+    // profiline gidilir. Arkadaş olmayanlar ve kendi yorumun için
+    // dokunma bir şey yapmaz.
+    final friend = isOwn
+        ? null
+        : ref
+              .watch(connectionsProvider)
+              .where((f) => f.uid == review.authorUid)
+              .firstOrNull;
+    void openFriendProfile() {
+      final f = friend;
+      if (f == null) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => FriendProfilePage(friend: f)),
+      );
+    }
 
     // Yorumun her yerine (yıldız/sil ikonu hariç) çift dokununca beğen —
     // tek dokunmadaki kalp ikonu zaten ayrı bir GestureDetector ile toggle
@@ -937,22 +954,28 @@ class _ReviewTileState extends ConsumerState<_ReviewTile>
               children: [
                 Row(
                   children: [
-                    CircularAvatar(
-                      name: review.authorName,
-                      photoUrl: review.authorPhotoUrl,
-                      radius: 18,
+                    GestureDetector(
+                      onTap: friend != null ? openFriendProfile : null,
+                      child: CircularAvatar(
+                        name: review.authorName,
+                        photoUrl: review.authorPhotoUrl,
+                        radius: 18,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            review.authorName,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: context.colors.textPrimary,
+                          GestureDetector(
+                            onTap: friend != null ? openFriendProfile : null,
+                            child: Text(
+                              review.authorName,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: context.colors.textPrimary,
+                              ),
                             ),
                           ),
                           Text(
