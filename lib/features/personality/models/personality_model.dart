@@ -414,22 +414,22 @@ class QuizOption {
 const List<QuizQuestion> kQuizQuestions = [
   // ── Soru 1 ── (sosyal | sakin | macer | entel)
   QuizQuestion(
-    question: 'Telefonu bir kenara bıraktığın bir Pazar sabahı — ilk içgüdün ne?',
+    question: 'Telefonu bir kenara bıraktığın bir pazar sabahı. İlk ne yaparsın?',
     options: [
       QuizOption(
-        text: 'Arkadaşlarımı mesajlaşmaya çeker, öğleden sonra için plan yaparım',
+        text: 'Arkadaşlarıma mesaj atar, öğleden sonraya plan yaparım',
         type: PersonalityType.sosyalKelebek,
       ),
       QuizOption(
-        text: 'Kahvemi alır, acelesiz bir şekilde sadece var olurum',
+        text: 'Kahvemi alır, hiç acele etmeden günün tadını çıkarırım',
         type: PersonalityType.sakinRuh,
       ),
       QuizOption(
-        text: 'Yürüyüş botlarımı giyer, kendiliğinden bir rotaya çıkarım',
+        text: 'Yürüyüş botlarımı giyer, aklıma esen bir rotaya çıkarım',
         type: PersonalityType.maceraperest,
       ),
       QuizOption(
-        text: 'Birikmiş bir belgesele ya da merak ettiğim bir konuya dalarım',
+        text: 'Sırada bekleyen bir belgesele ya da merak ettiğim bir konuya dalarım',
         type: PersonalityType.entelektuel,
       ),
     ],
@@ -440,7 +440,7 @@ const List<QuizQuestion> kQuizQuestions = [
     question: 'Bir arkadaşın "bu hafta sonu buluşalım" diyor. İlk aklına gelen plan ne?',
     options: [
       QuizOption(
-        text: 'Büyük bir grup toplayalım, ne kadar çok insan o kadar iyi',
+        text: 'Kalabalık bir grup toplayalım, ne kadar çok kişi o kadar iyi',
         type: PersonalityType.sosyalKelebek,
       ),
       QuizOption(
@@ -448,7 +448,7 @@ const List<QuizQuestion> kQuizQuestions = [
         type: PersonalityType.sakinRuh,
       ),
       QuizOption(
-        text: 'Yürüyüş, bisiklet ya da outdoor bir şey yapalım',
+        text: 'Yürüyüş, bisiklet ya da açık havada bir şey yapalım',
         type: PersonalityType.maceraperest,
       ),
       QuizOption(
@@ -463,19 +463,19 @@ const List<QuizQuestion> kQuizQuestions = [
     question: 'Hiç gitmediğin bir şehre ilk kez geliyorsun. Neyle başlarsın?',
     options: [
       QuizOption(
-        text: 'Yerel meydanları, barları dolaşır, yolda insanlarla tanışmaya çalışırım',
+        text: 'Meydanları, barları dolaşır, yolda yeni insanlarla tanışırım',
         type: PersonalityType.sosyalKelebek,
       ),
       QuizOption(
-        text: 'Şehrin tarihini öğrenir, müze ve kültürel mekânları gezerim',
+        text: 'Şehrin tarihini öğrenir, müzeleri ve kültürel mekanları gezerim',
         type: PersonalityType.entelektuel,
       ),
       QuizOption(
-        text: 'Haritayı bir kenara bırakır, sezgiyle rastgele keşfederim',
+        text: 'Haritayı bir kenara bırakır, sokak sokak rastgele keşfederim',
         type: PersonalityType.maceraperest,
       ),
       QuizOption(
-        text: 'Yerel spesiyalleri araştırır, en iyi sokak yemeğini bulmadan duramam',
+        text: 'Yöresel lezzetleri araştırır, en iyi sokak yemeğini bulmadan rahat etmem',
         type: PersonalityType.gurme,
       ),
     ],
@@ -486,7 +486,7 @@ const List<QuizQuestion> kQuizQuestions = [
     question: 'Yeni bir mahalleye taşındın. Bir ay sonra "benim yerim" dediğin mekan ne olur?',
     options: [
       QuizOption(
-        text: 'Barmenin yüzümü tanıdığı, herkesin sohbet ettiği canlı bir mekan',
+        text: 'Barmenin beni tanıdığı, herkesin sohbet ettiği canlı bir mekan',
         type: PersonalityType.sosyalKelebek,
       ),
       QuizOption(
@@ -494,11 +494,11 @@ const List<QuizQuestion> kQuizQuestions = [
         type: PersonalityType.sakinRuh,
       ),
       QuizOption(
-        text: 'Sergi, etkinlik ya da iyi sohbet kültürü olan entelektüel bir mekan',
+        text: 'Sergilerin, etkinliklerin ve güzel sohbetlerin olduğu bir mekan',
         type: PersonalityType.entelektuel,
       ),
       QuizOption(
-        text: 'Menüsü ilginç, kaliteli malzeme kullanan bir lokanta ya da kafe',
+        text: 'Menüsü ilginç, malzemesi kaliteli bir lokanta ya da kafe',
         type: PersonalityType.gurme,
       ),
     ],
@@ -506,22 +506,22 @@ const List<QuizQuestion> kQuizQuestions = [
 
   // ── Soru 5 ── (sakin | entel | macer | gurme)
   QuizQuestion(
-    question: 'Planlanmamış boş bir akşam önünde. Kendini nasıl bulursun?',
+    question: 'Hiçbir planın olmayan boş bir akşam. Ne yaparsın?',
     options: [
       QuizOption(
-        text: 'Köşedeki küçük kafede oturup kitabıma ya da sessiz düşüncelerime dalarım',
+        text: 'Köşedeki küçük kafede oturup kitabıma ya da düşüncelerime dalarım',
         type: PersonalityType.sakinRuh,
       ),
       QuizOption(
-        text: 'Kafamı kurcalayan bir konuya girer, saatlerce araştırma yaparım',
+        text: 'Kafamı kurcalayan bir konuya dalar, saatlerce araştırırım',
         type: PersonalityType.entelektuel,
       ),
       QuizOption(
-        text: 'Hiç gitmediğim bir yere ya da deneyime kendimi atarım, bakarız',
+        text: 'Hiç gitmediğim bir yere gider, yeni bir şey denerim',
         type: PersonalityType.maceraperest,
       ),
       QuizOption(
-        text: 'Mutfağa girer yeni bir tarif denerim ya da iyi bir yemek yeri keşfederim',
+        text: 'Mutfağa girip yeni bir tarif denerim ya da iyi bir yemek yeri keşfederim',
         type: PersonalityType.gurme,
       ),
     ],
@@ -529,22 +529,22 @@ const List<QuizQuestion> kQuizQuestions = [
 
   // ── Soru 6 ── (sosyal | sakin | macer | entel)
   QuizQuestion(
-    question: 'Zor bir haftanın ardından seni gerçekten şarj eden ne?',
+    question: 'Zor bir haftanın ardından seni en çok ne toparlar?',
     options: [
       QuizOption(
-        text: 'Arkadaşlarla dışarı çıkmak, gülmek ve gürültülü bir ortam',
+        text: 'Arkadaşlarla dışarı çıkıp kalabalık bir ortamda gülüp eğlenmek',
         type: PersonalityType.sosyalKelebek,
       ),
       QuizOption(
-        text: 'Hiç kimsenin olmadığı sessiz bir ortamda sadece kendimle kalmak',
+        text: 'Sessiz bir yerde kendimle baş başa kalmak',
         type: PersonalityType.sakinRuh,
       ),
       QuizOption(
-        text: 'Beden yorgunluğu — spor, koşu ya da hareket etmek',
+        text: 'Spor yapmak, koşmak, kısacası hareket etmek',
         type: PersonalityType.maceraperest,
       ),
       QuizOption(
-        text: 'Merak ettiğim bir şeye dalmak, öğrenmek ve keşfetmek',
+        text: 'Merak ettiğim bir konuya dalıp yeni şeyler öğrenmek',
         type: PersonalityType.entelektuel,
       ),
     ],
@@ -559,11 +559,11 @@ const List<QuizQuestion> kQuizQuestions = [
         type: PersonalityType.sosyalKelebek,
       ),
       QuizOption(
-        text: 'İlgimi çeken bir konuda kitap ya da özenle seçilmiş bir şey',
+        text: 'İlgimi çeken bir konuda kitap ya da özenle seçilmiş bir hediye',
         type: PersonalityType.entelektuel,
       ),
       QuizOption(
-        text: 'Daha önce yapmadığım bir deneyim — kurs, aktivite, macera',
+        text: 'Daha önce yapmadığım bir şey: kurs, aktivite ya da macera',
         type: PersonalityType.maceraperest,
       ),
       QuizOption(
@@ -578,19 +578,19 @@ const List<QuizQuestion> kQuizQuestions = [
     question: 'Film veya dizi seçme sırası sende. Ne açarsın?',
     options: [
       QuizOption(
-        text: 'Birlikte izlenecek, güldürecek ve konuşmaya açacak bir şey',
+        text: 'Birlikte izleyip güleceğimiz, sonra üzerine konuşacağımız bir şey',
         type: PersonalityType.sosyalKelebek,
       ),
       QuizOption(
-        text: 'Yavaş tempolu, duygusal ama içe dönük bir yapım',
+        text: 'Yavaş tempolu, duygusal ve sakin bir yapım',
         type: PersonalityType.sakinRuh,
       ),
       QuizOption(
-        text: 'Belgesel, gerçek olaydan uyarlama ya da düşündürücü bilim kurgu',
+        text: 'Belgesel, gerçek hikaye ya da düşündürücü bir bilim kurgu',
         type: PersonalityType.entelektuel,
       ),
       QuizOption(
-        text: 'Yemek ya da seyahat belgeseli — ya da asıl önemli olan atıştırmalıklar',
+        text: 'Yemek ya da gezi belgeseli; zaten asıl önemli olan atıştırmalıklar',
         type: PersonalityType.gurme,
       ),
     ],
@@ -601,19 +601,19 @@ const List<QuizQuestion> kQuizQuestions = [
     question: 'Önemli bir randevudan önce bir saatin var. Nasıl değerlendirirsin?',
     options: [
       QuizOption(
-        text: 'Yakında sessiz bir yere çekilir, müzik dinler ya da kitap okurum',
+        text: 'Yakınlarda sessiz bir yere geçer, müzik dinler ya da kitap okurum',
         type: PersonalityType.sakinRuh,
       ),
       QuizOption(
-        text: 'O bölgeyi ya da randevumla ilgili bir şeyleri araştırır, bilgi edinirim',
+        text: 'Bölgeyi ya da görüşeceğim konuyu önceden araştırırım',
         type: PersonalityType.entelektuel,
       ),
       QuizOption(
-        text: 'Çevreyi yürüyerek keşfeder, hareket ederek enerjimi toplarım',
+        text: 'Çevreyi yürüyerek keşfeder, hareket edip enerjimi toplarım',
         type: PersonalityType.maceraperest,
       ),
       QuizOption(
-        text: 'İyi bir kahve ya da hafif bir şeyler yiyebileceğim yer ararım',
+        text: 'İyi bir kahve içip hafif bir şeyler atıştırabileceğim bir yer ararım',
         type: PersonalityType.gurme,
       ),
     ],
@@ -621,18 +621,18 @@ const List<QuizQuestion> kQuizQuestions = [
 
   // ── Soru 10 ── (sosyal | sakin | macer | gurme)
   QuizQuestion(
-    question: 'Birisi senin için hafta sonu planı yapıyor. Tek bir isteğin ne?',
+    question: 'Biri senin için hafta sonu planı yapıyor. Tek isteğin ne olur?',
     options: [
       QuizOption(
-        text: 'Mümkün olduğu kadar çok kişi toplansın, kalabalık olsun',
+        text: 'Olabildiğince çok kişi toplansın, kalabalık olsun',
         type: PersonalityType.sosyalKelebek,
       ),
       QuizOption(
-        text: 'Temposu düşük, acele ettirmeyen, sakin bir şey olsun',
+        text: 'Acele etmeyeceğimiz, sakin bir şey olsun',
         type: PersonalityType.sakinRuh,
       ),
       QuizOption(
-        text: 'Daha önce hiç yapmadığımız ya da bilmediğimiz bir şey olsun',
+        text: 'Daha önce hiç denemediğimiz bir şey olsun',
         type: PersonalityType.maceraperest,
       ),
       QuizOption(
