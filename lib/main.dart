@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -82,6 +83,11 @@ class MyApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
     final themeMode = ref.watch(themeModeProvider);
+
+    // Firebase'in gönderdiği doğrulama / şifre sıfırlama maillerinin dili
+    // uygulamanın seçili diliyle aynı olsun (aksi halde İngilizce gidiyor).
+    // Dil değişince EasyLocalization bu widget'ı yeniden kurar.
+    FirebaseAuth.instance.setLanguageCode(context.locale.languageCode);
 
     return MaterialApp.router(
       title: 'MeetIt',
