@@ -186,7 +186,7 @@ class _QuizPageState extends ConsumerState<QuizPage>
                       children: [
                         // Soru metni
                         Text(
-                          question.question,
+                          question.question.tr(),
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
@@ -308,7 +308,7 @@ class _OptionTile extends StatelessWidget {
               SizedBox(width: 14),
               Expanded(
                 child: Text(
-                  option.text,
+                  option.text.tr(),
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,

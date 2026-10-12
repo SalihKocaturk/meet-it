@@ -678,5 +678,77 @@
     "spa": "Spa",
     "tourist_attraction": "Attraction",
     "other": "Other"
+  },
+  "quiz_questions": {
+    "q1": {
+      "question": "It's a Sunday morning and your phone is put away. What do you do first?",
+      "a": "I text my friends and make plans for the afternoon",
+      "b": "I grab my coffee and enjoy the day without rushing",
+      "c": "I put on my hiking boots and head off wherever I feel like",
+      "d": "I dive into a documentary on my list or a topic I'm curious about"
+    },
+    "q2": {
+      "question": "A friend says, \"Let's meet up this weekend.\" What's the first plan that comes to mind?",
+      "a": "Let's get a big group together, the more the merrier",
+      "b": "Just the two of us somewhere quiet, chatting for hours",
+      "c": "Let's go hiking, cycling or do something outdoors",
+      "d": "Let's discover a dish I've never tried but always wanted to"
+    },
+    "q3": {
+      "question": "You're arriving in a city you've never been to. Where do you start?",
+      "a": "I wander the squares and bars and meet new people along the way",
+      "b": "I learn the city's history and visit museums and cultural spots",
+      "c": "I put the map away and explore street by street",
+      "d": "I look up the local specialties and can't rest until I find the best street food"
+    },
+    "q4": {
+      "question": "You've moved to a new neighborhood. A month later, which place do you call \"my spot\"?",
+      "a": "A lively place where the bartender knows me and everyone chats",
+      "b": "A peaceful café away from the crowds where I can retreat to my corner table",
+      "c": "A place with exhibitions, events and great conversations",
+      "d": "A restaurant or café with an interesting menu and quality ingredients"
+    },
+    "q5": {
+      "question": "You have a free evening with no plans at all. What do you do?",
+      "a": "I sit in the little café around the corner, lost in my book or my thoughts",
+      "b": "I dig into a topic that's on my mind and research it for hours",
+      "c": "I go somewhere I've never been and try something new",
+      "d": "I head to the kitchen to try a new recipe or discover a good place to eat"
+    },
+    "q6": {
+      "question": "After a tough week, what recharges you the most?",
+      "a": "Going out with friends and laughing in a lively crowd",
+      "b": "Being alone with myself somewhere quiet",
+      "c": "Working out, running, basically moving",
+      "d": "Diving into a topic I'm curious about and learning new things"
+    },
+    "q7": {
+      "question": "A friend says, \"I'm going to get you a gift that's totally you.\" What do you suggest?",
+      "a": "Let's do something together, make it an experience",
+      "b": "A book on a topic I love, or a thoughtfully chosen gift",
+      "c": "Something I've never done before: a class, an activity or an adventure",
+      "d": "A reservation at a great restaurant or a gourmet treat"
+    },
+    "q8": {
+      "question": "It's your turn to pick a movie or show. What do you put on?",
+      "a": "Something we can laugh at together and talk about afterwards",
+      "b": "Something slow-paced, emotional and calm",
+      "c": "A documentary, a true story or thought-provoking sci-fi",
+      "d": "A food or travel documentary; the snacks are what really matter anyway"
+    },
+    "q9": {
+      "question": "You have an hour before an important meeting. How do you spend it?",
+      "a": "I find a quiet spot nearby and listen to music or read",
+      "b": "I research the area or the topic of the meeting beforehand",
+      "c": "I explore the area on foot and build up my energy",
+      "d": "I look for a place with good coffee and a light snack"
+    },
+    "q10": {
+      "question": "Someone is planning your weekend. What's your one wish?",
+      "a": "Get as many people together as possible, the bigger the crowd the better",
+      "b": "Something calm where we don't have to rush",
+      "c": "Something we've never tried before",
+      "d": "Whatever we do, the food has to be good"
+    }
   }
 }

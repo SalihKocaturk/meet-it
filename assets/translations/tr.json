@@ -678,5 +678,77 @@
     "spa": "Spa",
     "tourist_attraction": "Turistik",
     "other": "Diğer"
+  },
+  "quiz_questions": {
+    "q1": {
+      "question": "Telefonu bir kenara bıraktığın bir pazar sabahı. İlk ne yaparsın?",
+      "a": "Arkadaşlarıma mesaj atar, öğleden sonraya plan yaparım",
+      "b": "Kahvemi alır, hiç acele etmeden günün tadını çıkarırım",
+      "c": "Yürüyüş botlarımı giyer, aklıma esen bir rotaya çıkarım",
+      "d": "Sırada bekleyen bir belgesele ya da merak ettiğim bir konuya dalarım"
+    },
+    "q2": {
+      "question": "Bir arkadaşın \"bu hafta sonu buluşalım\" diyor. İlk aklına gelen plan ne?",
+      "a": "Kalabalık bir grup toplayalım, ne kadar çok kişi o kadar iyi",
+      "b": "İkimiz sakin bir yerde oturalım, uzun uzun sohbet edelim",
+      "c": "Yürüyüş, bisiklet ya da açık havada bir şey yapalım",
+      "d": "Hiç denemediğim ama merak ettiğim bir yemeği birlikte keşfedelim"
+    },
+    "q3": {
+      "question": "Hiç gitmediğin bir şehre ilk kez geliyorsun. Neyle başlarsın?",
+      "a": "Meydanları, barları dolaşır, yolda yeni insanlarla tanışırım",
+      "b": "Şehrin tarihini öğrenir, müzeleri ve kültürel mekanları gezerim",
+      "c": "Haritayı bir kenara bırakır, sokak sokak rastgele keşfederim",
+      "d": "Yöresel lezzetleri araştırır, en iyi sokak yemeğini bulmadan rahat etmem"
+    },
+    "q4": {
+      "question": "Yeni bir mahalleye taşındın. Bir ay sonra \"benim yerim\" dediğin mekan ne olur?",
+      "a": "Barmenin beni tanıdığı, herkesin sohbet ettiği canlı bir mekan",
+      "b": "Kalabalıktan uzak, köşe masama çekilebileceğim huzurlu bir kafe",
+      "c": "Sergilerin, etkinliklerin ve güzel sohbetlerin olduğu bir mekan",
+      "d": "Menüsü ilginç, malzemesi kaliteli bir lokanta ya da kafe"
+    },
+    "q5": {
+      "question": "Hiçbir planın olmayan boş bir akşam. Ne yaparsın?",
+      "a": "Köşedeki küçük kafede oturup kitabıma ya da düşüncelerime dalarım",
+      "b": "Kafamı kurcalayan bir konuya dalar, saatlerce araştırırım",
+      "c": "Hiç gitmediğim bir yere gider, yeni bir şey denerim",
+      "d": "Mutfağa girip yeni bir tarif denerim ya da iyi bir yemek yeri keşfederim"
+    },
+    "q6": {
+      "question": "Zor bir haftanın ardından seni en çok ne toparlar?",
+      "a": "Arkadaşlarla dışarı çıkıp kalabalık bir ortamda gülüp eğlenmek",
+      "b": "Sessiz bir yerde kendimle baş başa kalmak",
+      "c": "Spor yapmak, koşmak, kısacası hareket etmek",
+      "d": "Merak ettiğim bir konuya dalıp yeni şeyler öğrenmek"
+    },
+    "q7": {
+      "question": "Bir arkadaşın \"seni anlatan bir hediye alacağım\" diyor. Ne önerirsin?",
+      "a": "Birlikte bir şeyler yapalım, deneyim hediyesi olsun",
+      "b": "İlgimi çeken bir konuda kitap ya da özenle seçilmiş bir hediye",
+      "c": "Daha önce yapmadığım bir şey: kurs, aktivite ya da macera",
+      "d": "İyi seçilmiş bir restoran rezervasyonu ya da gurme bir ürün"
+    },
+    "q8": {
+      "question": "Film veya dizi seçme sırası sende. Ne açarsın?",
+      "a": "Birlikte izleyip güleceğimiz, sonra üzerine konuşacağımız bir şey",
+      "b": "Yavaş tempolu, duygusal ve sakin bir yapım",
+      "c": "Belgesel, gerçek hikaye ya da düşündürücü bir bilim kurgu",
+      "d": "Yemek ya da gezi belgeseli; zaten asıl önemli olan atıştırmalıklar"
+    },
+    "q9": {
+      "question": "Önemli bir randevudan önce bir saatin var. Nasıl değerlendirirsin?",
+      "a": "Yakınlarda sessiz bir yere geçer, müzik dinler ya da kitap okurum",
+      "b": "Bölgeyi ya da görüşeceğim konuyu önceden araştırırım",
+      "c": "Çevreyi yürüyerek keşfeder, hareket edip enerjimi toplarım",
+      "d": "İyi bir kahve içip hafif bir şeyler atıştırabileceğim bir yer ararım"
+    },
+    "q10": {
+      "question": "Biri senin için hafta sonu planı yapıyor. Tek isteğin ne olur?",
+      "a": "Olabildiğince çok kişi toplansın, kalabalık olsun",
+      "b": "Acele etmeyeceğimiz, sakin bir şey olsun",
+      "c": "Daha önce hiç denemediğimiz bir şey olsun",
+      "d": "Ne yaparsak yapalım, yemek iyi olsun"
+    }
   }
 }
