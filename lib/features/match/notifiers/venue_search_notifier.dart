@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:meetit/core/constants/app_config.dart';
 import 'package:meetit/core/services/distance_matrix_service.dart';
 import 'package:meetit/core/services/notification_service.dart';
+import 'package:meetit/core/utils/istanbul_side.dart';
 import 'package:meetit/core/utils/travel_time_estimator.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/history/models/meeting_record.dart';
@@ -163,6 +164,10 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
   // yeniden aramak anlamsız — çıkacak sonuç zaten aynı olur. Batch en az
   // %50 farklıysa "farklı" sayılır.
   Set<String> _lastResultIds = {};
+
+  /// Aktif aramada mekanların kalması gereken Boğaz yakası (İstanbul'da,
+  /// aramadaki herkes aynı yakadaysa). null → yaka filtresi yok.
+  IstanbulSide? _stayOnSide;
   // ── Kısa süreli "az önce gösterilen mekan" hafızası ────────────────────────
   //
   // Kullanıcı şikayeti: aynı arkadaşla peş peşe 3 kez arama yapınca 1.
@@ -394,6 +399,18 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
       }
     }
 
+    // ── Boğaz: aynı yakada kal ───────────────────────────────────────────
+    // Tek başına aramada kullanıcının yakası; arkadaşla aramada ikisi de
+    // aynı yakadaysa o yaka. Farklı yakalardaysa biri zaten karşıya
+    // geçecek — filtre uygulanmaz.
+    final mySide = IstanbulSides.of(myLat, myLng);
+    if (usingMidpoint && friendLat != null && friendLng != null) {
+      final friendSide = IstanbulSides.of(friendLat, friendLng);
+      _stayOnSide = (mySide != null && mySide == friendSide) ? mySide : null;
+    } else {
+      _stayOnSide = mySide;
+    }
+
     state = state.copyWith(
       searchLat: searchLat,
       searchLng: searchLng,
@@ -450,6 +467,7 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
         minRating: usingMidpoint ? AppConfig.midpointMinRating : null,
         excludePlaceIds: excludeIds,
         behavioralTypeBoosts: behavioralBoosts,
+        stayOnSide: _stayOnSide,
         // Fotolar burada ÇÖZÜMLENMEZ — aşağıdaki rota mesafesi filtresi
         // bazı mekanları eleyebiliyor; gösterilmeyecek mekan için Photo API
         // kotası harcamamak adına çözümleme, gösterilecek liste
@@ -506,6 +524,7 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
           minRating: AppConfig.midpointMinRating,
           excludePlaceIds: excludeIds,
           behavioralTypeBoosts: behavioralBoosts,
+          stayOnSide: _stayOnSide,
           resolvePhotos: false,
           strictRadius: true,
         );
@@ -540,6 +559,7 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
           excludePlaceIds: {},   // geçmiş hariç tutma yok
           fallback: true,        // kişilik tiplerini sallayıp generic ara
           behavioralTypeBoosts: behavioralBoosts,
+          stayOnSide: _stayOnSide,
           resolvePhotos: false,  // fotolar gösterim listesi kesinleşince
           strictRadius: maxVenueDistanceKm != null,
         );
@@ -729,6 +749,7 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
         minRating: 4.0, // kalite eşiği yükselt
         excludePlaceIds: excludeIds,
         behavioralTypeBoosts: behavioralBoosts,
+        stayOnSide: _stayOnSide,
         resolvePhotos: false,
         strictRadius: maxVenueDistanceKm != null,
       );

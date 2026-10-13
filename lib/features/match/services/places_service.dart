@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:http/http.dart' as http;
 import 'package:meetit/core/constants/app_config.dart';
 import 'package:meetit/core/utils/geo_utils.dart';
+import 'package:meetit/core/utils/istanbul_side.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/services/api_usage_service.dart';
 import 'package:meetit/features/match/services/places_api_version_service.dart';
@@ -439,6 +440,18 @@ class PlacesService {
   // birden eliyordu ("1 km seçtim, 1 mekan çıkıyor" şikayetinin kök
   // sebeplerinden biri). Sınır dışı adaylara örnekleme hakkı harcamaktansa
   // az ama geçerli adayla devam etmek doğru.
+  static List<PlaceResult> _filterBySide(
+    List<PlaceResult> places,
+    IstanbulSide? side,
+  ) {
+    if (side == null) return places;
+    final filtered = places.where((p) {
+      final s = IstanbulSides.of(p.lat, p.lng);
+      return s == null || s == side;
+    }).toList();
+    return filtered.isEmpty ? places : filtered;
+  }
+
   static List<PlaceResult> _filterByDistance(
     List<PlaceResult> places, {
     required double searchLat,
@@ -1059,6 +1072,10 @@ class PlacesService {
     /// Kullanıcı açıkça mesafe filtresi seçtiğinde kullanılır (bkz.
     /// _filterByDistance içindeki açıklama).
     bool strictRadius = false,
+
+    /// İstanbul'da verilirse yalnızca Boğaz'ın bu yakasındaki mekanlar
+    /// önerilir (bkz. [IstanbulSides]). null → yaka filtresi yok.
+    IstanbulSide? stayOnSide,
   }) async {
     final typeGroups = _resolveTypeGroups(
       userProfile: userProfile,
@@ -1152,6 +1169,12 @@ class PlacesService {
       strict: strictRadius,
     );
 
+    // ── Adım -0.5: Boğaz / aynı yaka filtresi ─────────────────────────────
+    // Aynı yakadaki kişilere karşı yakadan mekan önerme (Beşiktaş'ta arayana
+    // Üsküdar çıkmasın). Bu yakada hiç aday kalmazsa boş ekran göstermemek
+    // için filtre uygulanmaz.
+    final sideFiltered = _filterBySide(distanceFiltered, stayOnSide);
+
     // ── Adım 0: Fiyat filtresi (kümülatif) ────────────────────────────────
     // Cache'ten gelen ham havuz fiyata göre filtresiz olduğundan burada
     // uyguluyoruz. Kümülatif mantık: seçilen seviye "en fazla bu kadar
@@ -1164,7 +1187,7 @@ class PlacesService {
     // priceLevel null olan mekanlar her zaman dahil edilir çünkü Google'ın
     // bu bilgiyi döndürmemesi o mekanın pahalı olduğu anlamına gelmez
     // (parklar, müzeler, bazı kafeler genelde fiyat seviyesi taşımaz).
-    var priceFiltered = _filterByPrice(distanceFiltered, priceLevel);
+    var priceFiltered = _filterByPrice(sideFiltered, priceLevel);
 
     // Fiyat filtresi havuzu çok küçülttüyse kısıtı kaldır.
     // Örn. Kadıköy'de ₺ mekan sayısı 5'ten azsa, daha pahalı mekanları da
@@ -1172,7 +1195,7 @@ class PlacesService {
     if (priceLevel != null && priceFiltered.length < _minPoolAfterPriceFilter) {
       // ignore: avoid_print
       '(${priceFiltered.length} < $_minPoolAfterPriceFilter) — ';
-      priceFiltered = distanceFiltered;
+      priceFiltered = sideFiltered;
     }
 
     // ── Adım 1: Kesinlikle istemediğimiz type'ları çıkar ─────────────────
