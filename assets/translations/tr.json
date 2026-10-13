@@ -654,11 +654,18 @@
     "review_liked": "{name}, \"{venue}\" yorumunu beğendi.",
     "friend_request": "{name} sana arkadaşlık isteği gönderdi.",
     "friend_accepted": "{name} arkadaşlık isteğini kabul etti!",
-    "meetup_invite": "{name} seninle buluşma yeri önerisi aldı!",
+    "meetup_invite": "{name} seninle buluşmak için mekan buldu! Hemen bak.",
     "venue_found": "{name} ile buluşma için mekan önerisi hazır!",
     "just_now": "Az önce",
     "minutes_ago": "{n} dakika önce",
-    "hours_ago": "{n} saat önce"
+    "hours_ago": "{n} saat önce",
+    "titles": {
+      "meetup_invite": "Buluşma daveti 📍",
+      "venue_found": "Mekan bulundu 🗺️",
+      "friend_request": "Arkadaşlık isteği 👋",
+      "friend_accepted": "İstek kabul edildi 🎉",
+      "review_liked": "Yorumun beğenildi ❤️"
+    }
   },
   "venue_types": {
     "cafe": "Kafe",

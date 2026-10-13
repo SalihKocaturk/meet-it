@@ -14,6 +14,7 @@ import 'package:meetit/core/services/firestore_seed_service.dart';
 import 'package:meetit/core/services/ad_service.dart';
 import 'package:meetit/core/services/network_service.dart';
 import 'package:meetit/core/services/notification_service.dart';
+import 'package:meetit/features/notifications/widgets/in_app_notification_host.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -99,6 +100,10 @@ class MyApp extends ConsumerWidget {
       localizationsDelegates: context.localizationDelegates,
       supportedLocales: context.supportedLocales,
       locale: context.locale,
+      // Uygulama içi bildirim: yeni bildirim gelince tüm sayfaların üstünden
+      // kayarak açılan kart (bkz. InAppNotificationHost).
+      builder: (context, child) =>
+          InAppNotificationHost(child: child ?? const SizedBox.shrink()),
     );
   }
 }

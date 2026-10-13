@@ -208,8 +208,17 @@ class NotificationService {
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
-  /// Uygulama ön plandayken FCM mesajı geldi → yerel bildirim göster.
+  /// Uygulama ön plandayken FCM mesajı geldi.
+  ///
+  /// Ön planda sistem bildirimi GÖSTERİLMİYOR: aynı bildirim Firestore'dan
+  /// okunup uygulama içi üstten açılan kartla (InAppNotificationHost)
+  /// gösteriliyor — ikisi birden çıkarsa kullanıcı aynı şeyi iki kez görür.
+  /// Aşağıdaki yerel bildirim kodu [showForegroundSystemNotification] true
+  /// yapılırsa yeniden devreye girer.
+  static const bool showForegroundSystemNotification = false;
+
   static void _onForegroundMessage(RemoteMessage message) {
+    if (!showForegroundSystemNotification) return;
     final notification = message.notification;
     if (notification == null) return;
 

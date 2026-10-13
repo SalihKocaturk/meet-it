@@ -863,15 +863,17 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
         participantUids: participantUids,
       );
 
-      await MeetingHistoryService.save(record);
+      final meetingId = await MeetingHistoryService.save(record);
 
-      // Arkadaşa bildirim gönder
+      // Arkadaşa bildirim gönder — meetingId sayesinde bildirime dokununca
+      // doğrudan bu buluşmanın mekanları açılır.
       if (friendUid != null) {
         NotificationService.sendNotification(
           toUid: friendUid,
           type: 'meetup_invite',
           fromName: me.name,
           fromUid: myUid,
+          extra: {'meetingId': meetingId},
         ).ignore();
       }
     } catch (_) {

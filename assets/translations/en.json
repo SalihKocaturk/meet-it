@@ -654,11 +654,18 @@
     "review_liked": "{name} liked your \"{venue}\" review.",
     "friend_request": "{name} sent you a friend request.",
     "friend_accepted": "{name} accepted your friend request!",
-    "meetup_invite": "{name} received a venue suggestion to meet with you!",
+    "meetup_invite": "{name} found a place to meet you! Take a look.",
     "venue_found": "A venue to meet {name} is ready!",
     "just_now": "Just now",
     "minutes_ago": "{n}m ago",
-    "hours_ago": "{n}h ago"
+    "hours_ago": "{n}h ago",
+    "titles": {
+      "meetup_invite": "Meetup invite 📍",
+      "venue_found": "Venue found 🗺️",
+      "friend_request": "Friend request 👋",
+      "friend_accepted": "Request accepted 🎉",
+      "review_liked": "Your review got a like ❤️"
+    }
   },
   "venue_types": {
     "cafe": "Cafe",

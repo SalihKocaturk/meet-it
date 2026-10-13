@@ -6,7 +6,9 @@ import 'package:iconsax/iconsax.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friends_page.dart';
+import 'package:meetit/features/history/meeting_history_detail_page.dart';
 import 'package:meetit/features/history/meeting_history_page.dart';
+import 'package:meetit/features/history/models/meeting_record.dart';
 import 'package:meetit/features/main/main_page.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
@@ -49,7 +51,9 @@ class NotificationItem {
 
 // ── Providers ────────────────────────────────────────────────────────────────
 
-final _notificationsStreamProvider =
+/// Kullanıcının son 50 bildirimi (en yeni başta). Bildirimler sayfası ve
+/// uygulama içi üstten açılan bildirim (InAppNotificationHost) kullanır.
+final notificationsStreamProvider =
     StreamProvider.autoDispose<List<NotificationItem>>((ref) {
   final uid = ref.watch(authProvider).user?.uid;
   if (uid == null) return const Stream.empty();
@@ -104,7 +108,7 @@ final notifLastOpenedProvider =
 final unreadNotifCountProvider = Provider.autoDispose<int>((ref) {
   final lastOpened = ref.watch(notifLastOpenedProvider);
   return ref
-          .watch(_notificationsStreamProvider)
+          .watch(notificationsStreamProvider)
           .whenData((items) => items.where((n) {
                 if (n.read) return false;
                 if (lastOpened == null) return true;
@@ -115,6 +119,155 @@ final unreadNotifCountProvider = Provider.autoDispose<int>((ref) {
           .value ??
       0;
 });
+
+// ── Ortak yardımcılar (liste + uygulama içi bildirim) ───────────────────────
+
+IconData notificationIcon(String type) {
+  switch (type) {
+    case 'review_liked':
+      return Iconsax.heart5;
+    case 'friend_request':
+      return Iconsax.profile_add;
+    case 'friend_accepted':
+      return Iconsax.profile_tick;
+    case 'meetup_invite':
+    case 'venue_found':
+      return Iconsax.location;
+    default:
+      return Iconsax.notification;
+  }
+}
+
+Color notificationColor(BuildContext context, String type) {
+  switch (type) {
+    case 'review_liked':
+      return const Color(0xFFE53935);
+    case 'friend_request':
+    case 'friend_accepted':
+      return context.colors.primary;
+    case 'meetup_invite':
+    case 'venue_found':
+      return const Color(0xFF43A047);
+    default:
+      return context.colors.textSecondary;
+  }
+}
+
+/// Uygulama içi bildirimin kalın başlığı (örn. "Buluşma daveti 📍").
+String notificationTitle(String type) {
+  switch (type) {
+    case 'review_liked':
+    case 'friend_request':
+    case 'friend_accepted':
+    case 'meetup_invite':
+    case 'venue_found':
+      return 'notifications.titles.$type'.tr();
+    default:
+      return 'MeetIt';
+  }
+}
+
+String notificationText(NotificationItem item) {
+  switch (item.type) {
+    case 'review_liked':
+      final venue = item.extra['venueName'] as String? ?? '';
+      return 'notifications.review_liked'
+          .tr(namedArgs: {'name': item.fromName, 'venue': venue});
+    case 'friend_request':
+      return 'notifications.friend_request'
+          .tr(namedArgs: {'name': item.fromName});
+    case 'friend_accepted':
+      return 'notifications.friend_accepted'
+          .tr(namedArgs: {'name': item.fromName});
+    case 'meetup_invite':
+      return 'notifications.meetup_invite'
+          .tr(namedArgs: {'name': item.fromName});
+    case 'venue_found':
+      return 'notifications.venue_found'
+          .tr(namedArgs: {'name': item.fromName});
+    default:
+      return item.fromName;
+  }
+}
+
+/// Bildirimin ilgili ekranını açar. [nav] kök navigator olmalı.
+Future<void> openNotificationTarget(
+  NavigatorState nav,
+  WidgetRef ref,
+  NotificationItem item,
+) async {
+  switch (item.type) {
+    case 'friend_request':
+      nav.popUntil((route) => route.isFirst);
+      ref.read(mainTabIndexProvider.notifier).state = 2;
+      ref.read(friendsTabIndexProvider.notifier).state = 1;
+      break;
+
+    case 'friend_accepted':
+      nav.popUntil((route) => route.isFirst);
+      ref.read(mainTabIndexProvider.notifier).state = 2;
+      ref.read(friendsTabIndexProvider.notifier).state = 2; // Bağlantılarım
+      break;
+
+    case 'meetup_invite':
+    case 'venue_found':
+      // Davet, hangi buluşma kaydına ait olduğunu taşıyorsa doğrudan o
+      // buluşmanın mekanlarını aç; yoksa (eski bildirimler) geçmiş listesi.
+      final meetingId = item.extra['meetingId'] as String? ?? '';
+      if (meetingId.isNotEmpty) {
+        try {
+          final doc = await FirebaseFirestore.instance
+              .collection('meetingHistory')
+              .doc(meetingId)
+              .get();
+          if (doc.exists) {
+            nav.push(MaterialPageRoute(
+              builder: (_) => MeetingHistoryDetailPage(
+                record: MeetingRecord.fromDoc(doc),
+                myUid: ref.read(authProvider).user?.uid,
+              ),
+            ));
+            return;
+          }
+        } catch (_) {}
+      }
+      nav.push(MaterialPageRoute(builder: (_) => const MeetingHistoryPage()));
+      break;
+
+    case 'review_liked':
+      final reviewId = item.extra['reviewId'] as String? ?? '';
+      if (reviewId.isEmpty) return;
+      final doc = await FirebaseFirestore.instance
+          .collection('venue_reviews')
+          .doc(reviewId)
+          .get();
+      if (!doc.exists) return;
+      final review = VenueReviewModel.fromMap(reviewId, doc.data()!);
+      nav.push(MaterialPageRoute(
+        builder: (_) => VenueDetailPage(
+          placeId: review.placeId,
+          venueName: review.venueName,
+          venueAddress: review.venueAddress,
+          venuePhotoUrl: review.venuePhotoUrl,
+        ),
+      ));
+      break;
+  }
+}
+
+/// Bildirimi Firestore'da okundu işaretler (sessizce).
+Future<void> markNotificationRead(WidgetRef ref, NotificationItem item) async {
+  final uid = ref.read(authProvider).user?.uid;
+  if (uid == null) return;
+  try {
+    await FirebaseFirestore.instance
+        .collection('notifications')
+        .doc(uid)
+        .collection('items')
+        .doc(item.id)
+        .update({'read': true});
+  } catch (_) {}
+}
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -158,7 +311,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final stream = ref.watch(_notificationsStreamProvider);
+    final stream = ref.watch(notificationsStreamProvider);
 
     return Scaffold(
       backgroundColor: context.colors.scaffold,
@@ -239,107 +392,9 @@ class _NotifCard extends ConsumerWidget {
   const _NotifCard({required this.item});
 
   Future<void> _handleTap(BuildContext context, WidgetRef ref) async {
-    switch (item.type) {
-      case 'friend_request':
-        Navigator.of(context).popUntil((route) => route.isFirst);
-        ref.read(mainTabIndexProvider.notifier).state = 2;
-        ref.read(friendsTabIndexProvider.notifier).state = 1;
-        break;
-
-      case 'friend_accepted':
-        Navigator.of(context).popUntil((route) => route.isFirst);
-        ref.read(mainTabIndexProvider.notifier).state = 2;
-        ref.read(friendsTabIndexProvider.notifier).state = 2; // Bağlantılarım
-        break;
-
-      case 'meetup_invite':
-      case 'venue_found':
-        final nav = Navigator.of(context);
-        nav.pop();
-        nav.push(MaterialPageRoute(
-          builder: (_) => const MeetingHistoryPage(),
-        ));
-        break;
-
-      case 'review_liked':
-        final reviewId = item.extra['reviewId'] as String? ?? '';
-        if (reviewId.isEmpty) return;
-        final doc = await FirebaseFirestore.instance
-            .collection('venue_reviews')
-            .doc(reviewId)
-            .get();
-        if (!doc.exists || !context.mounted) return;
-        final review = VenueReviewModel.fromMap(reviewId, doc.data()!);
-        if (!context.mounted) return;
-        final nav = Navigator.of(context);
-        nav.pop();
-        nav.push(MaterialPageRoute(
-          builder: (_) => VenueDetailPage(
-            placeId: review.placeId,
-            venueName: review.venueName,
-            venueAddress: review.venueAddress,
-            venuePhotoUrl: review.venuePhotoUrl,
-          ),
-        ));
-        break;
-
-      default:
-        Navigator.of(context).pop();
-    }
-  }
-
-  IconData get _icon {
-    switch (item.type) {
-      case 'review_liked':
-        return Iconsax.heart5;
-      case 'friend_request':
-        return Iconsax.profile_add;
-      case 'friend_accepted':
-        return Iconsax.profile_tick;
-      case 'meetup_invite':
-      case 'venue_found':
-        return Iconsax.location;
-      default:
-        return Iconsax.notification;
-    }
-  }
-
-  Color _iconColor(BuildContext context) {
-    switch (item.type) {
-      case 'review_liked':
-        return const Color(0xFFE53935);
-      case 'friend_request':
-      case 'friend_accepted':
-        return context.colors.primary;
-      case 'meetup_invite':
-      case 'venue_found':
-        return const Color(0xFF43A047);
-      default:
-        return context.colors.textSecondary;
-    }
-  }
-
-  String _body(BuildContext context) {
-    switch (item.type) {
-      case 'review_liked':
-        final venue = item.extra['venueName'] as String? ?? '';
-        return 'notifications.review_liked'
-            .tr(namedArgs: {'name': item.fromName, 'venue': venue});
-      case 'friend_request':
-        return 'notifications.friend_request'
-            .tr(namedArgs: {'name': item.fromName});
-      case 'friend_accepted':
-        return 'notifications.friend_accepted'
-            .tr(namedArgs: {'name': item.fromName});
-      case 'meetup_invite':
-        return 'notifications.meetup_invite'
-            .tr(namedArgs: {'name': item.fromName});
-      case 'venue_found':
-        return 'notifications.venue_found'
-            .tr(namedArgs: {'name': item.fromName});
-      default:
-        return item.fromName;
-    }
+    final nav = Navigator.of(context);
+    nav.pop();
+    await openNotificationTarget(nav, ref, item);
   }
 
   String _timeAgo(BuildContext context) {
@@ -387,10 +442,10 @@ class _NotifCard extends ConsumerWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: _iconColor(context).withOpacity(0.12),
+                color: notificationColor(context, item.type).withOpacity(0.12),
                 shape: BoxShape.circle,
               ),
-              child: Icon(_icon, size: 18, color: _iconColor(context)),
+              child: Icon(notificationIcon(item.type), size: 18, color: notificationColor(context, item.type)),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -398,7 +453,7 @@ class _NotifCard extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _body(context),
+                    notificationText(item),
                     style: TextStyle(
                       fontSize: 13,
                       color: context.colors.textPrimary,
