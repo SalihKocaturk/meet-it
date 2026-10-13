@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MeetIt'i İndir</title>
+<meta name="description" content="Nerede buluşsak? Kişiliğinize uyan, ikinize de yakın mekanı saniyeler içinde bulan uygulama.">
+<meta property="og:title" content="MeetIt'i İndir">
+<meta property="og:description" content="Kişiliğinize uyan, ikinize de yakın mekanı saniyeler içinde bulan uygulama.">
+<meta property="og:image" content="logo.png">
+<link rel="icon" href="logo.png">
+<style>
+  :root { --bg:#E4F3EA; --ink:#10251C; --muted:#3C5A4C; --green:#2F7A57; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+         background:var(--bg); color:var(--ink);
+         font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding:24px 16px; }
+  main { width:100%; max-width:380px; text-align:center; }
+  .logo { width:88px; height:88px; border-radius:22px; }
+  h1 { margin:20px 0 8px; font-size:30px; line-height:1.1; letter-spacing:-.5px; }
+  h1 span { color:var(--green); }
+  p { margin:0 0 28px; color:var(--muted); font-size:16px; line-height:1.5; }
+  .stores { display:flex; flex-direction:column; align-items:center; gap:12px; }
+  .stores a { display:block; width:240px; }
+  .stores img { display:block; width:100%; height:auto; }
+  .note { margin-top:22px; font-size:13px; color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="logo.png" alt="MeetIt">
+  <h1>Nerede buluşsak?<br><span>Artık cevabı var.</span></h1>
+  <p>Kişiliğinize uyan, ikinize de yakın mekanı saniyeler içinde bulan uygulama.</p>
+  <div class="stores">
+    <a id="ios" href="https://apps.apple.com/tr/app/meetit/id6800778351"><img src="app-store.png" alt="App Store'dan İndirin"></a>
+    <a id="android" href="https://play.google.com/store/apps/details?id=com.kocaturksalih.meetit"><img src="google-play.png" alt="Google Play'den İndirin"></a>
+  </div>
+  <div class="note">Ücretsiz · iOS &amp; Android</div>
+</main>
+<script>
+  // Telefona göre doğru mağazayı öne al ve otomatik yönlendir.
+  (function () {
+    var ua = navigator.userAgent || '';
+    var ios = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    var android = /Android/i.test(ua);
+    var playWeb = 'https://play.google.com/store/apps/details?id=com.kocaturksalih.meetit';
+    if (android) {
+      // Instagram vb. uygulama içi tarayıcılarda Play Store'u doğrudan açar;
+      // açamazsa Play'in web sayfasına düşer.
+      var intent = 'intent://details?id=com.kocaturksalih.meetit#Intent;scheme=market;package=com.android.vending;S.browser_fallback_url=' + encodeURIComponent(playWeb) + ';end';
+      document.getElementById('android').href = intent;
+      document.getElementById('ios').style.display = 'none';
+      setTimeout(function () { location.href = intent; }, 300);
+    } else if (ios) {
+      document.getElementById('android').style.display = 'none';
+      setTimeout(function () { location.href = document.getElementById('ios').href; }, 300);
+    }
+  })();
+</script>
+</body>
+</html>
