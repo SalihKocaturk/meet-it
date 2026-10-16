@@ -197,13 +197,13 @@ class _QuizPageState extends ConsumerState<QuizPage>
                         const SizedBox(height: 28),
 
                         // Seçenekler
-                        ...question.options.map(
-                          (option) => _OptionTile(
-                            option: option,
-                            isSelected: selectedAnswer == option.type,
+                        ...question.options.asMap().entries.map(
+                          (entry) => _OptionTile(
+                            option: entry.value,
+                            isSelected: selectedAnswer == entry.key,
                             onTap: () => ref
                                 .read(quizProvider.notifier)
-                                .selectAnswer(option.type),
+                                .selectAnswer(entry.key),
                           ),
                         ),
                       ],

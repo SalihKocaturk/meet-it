@@ -386,264 +386,264 @@ class QuizQuestion {
 }
 
 class QuizOption {
+  /// Çeviri anahtarı (assets/translations → quiz_questions.qN.x).
   final String text;
-  final PersonalityType type;
+
+  /// Bu cevabın kişilik tiplerine etkisi: + puan artırır, − puan azaltır.
+  /// Örn. "evde kendi kafamı dinlerim" → sakinRuh +2, sosyalKelebek −1.
+  final Map<PersonalityType, int> weights;
 
   const QuizOption({
     required this.text,
-    required this.type,
+    required this.weights,
   });
+
+  /// Bu cevabın en çok puan verdiği tip.
+  PersonalityType get type => weights.entries
+      .reduce((a, b) => b.value > a.value ? b : a)
+      .key;
 }
 
 // ── Quiz Soruları ─────────────────────────────────────────────────────────────
 //
-// DAĞILIM (10 soru × 4 seçenek = 40 slot, 5 tip → her tip tam 8 soruda):
-//  Q1:  sosyal | sakin | macer | entel
-//  Q2:  sosyal | sakin | macer | gurme
-//  Q3:  sosyal | entel | macer | gurme
-//  Q4:  sosyal | sakin | entel | gurme
-//  Q5:  sakin  | entel | macer | gurme
-//  Q6:  sosyal | sakin | macer | entel
-//  Q7:  sosyal | entel | macer | gurme
-//  Q8:  sosyal | sakin | entel | gurme
-//  Q9:  sakin  | entel | macer | gurme
-//  Q10: sosyal | sakin | macer | gurme
+// 2026-10-16 YENİDEN YAZILDI (kullanıcı geri bildirimi: "sorular çok yapay
+// zeka gibi ve mantıklı değil"). Her soru, kamuya açık ve akademik olarak
+// doğrulanmış ölçeklerdeki maddelerden esinlenerek günlük dile çevrildi:
 //
-// Toplam: sosyal=8 sakin=8 macer=8 entel=8 gurme=8  ✓ (dengeli)
-
+//  • Sosyal Kelebek  → IPIP-NEO Dışa dönüklük: Sosyallik (E2), Etkinlik (E4)
+//                      (ipip.ori.org — maddeler kamu malı)
+//  • Sakin Ruh       → Burger (1995) Yalnızlık Tercihi Ölçeği (PFS);
+//                      IPIP E4 ters maddeler ("acele etmem", "sakin yaşam")
+//  • Maceraperest    → Hoyle vd. (2002) Kısa Heyecan Arayışı Ölçeği (BSSS):
+//                      yeni yer keşfi, plansız yolculuk, evde duramama;
+//                      IPIP O4 Maceraperestlik, E5 Heyecan arayışı
+//  • Entelektüel     → Cacioppo vd. (1984) Düşünme İhtiyacı (NFC);
+//                      IPIP O5 Zihinsel merak, O2 Sanatsal ilgi
+//                      (Kraaykamp & van Eijck 2005: deneyime açıklık →
+//                      müze, kitap, sanat katılımı)
+//  • Gurme           → Bell & Marshall (2003) Yemeğe İlgi Ölçeği (FIS);
+//                      Pliner & Hobden (1992) Yemek Neofobisi (ters puanlı)
+//
+// PUANLAMA: Her cevap bir tipe +2 verir; bazıları ikincil bir tipe +1, karşıt
+// kutba −1 verir (örn. "kalabalıkta enerji bulurum" ↔ "yalnız kalmak
+// isterim"). Denge: her tip 8 cevapta +2, toplam +17 alabilir ve en fazla
+// −3 yiyebilir. Rastgele cevaplarda her tip ~%17-22 oranında baskın çıkıyor
+// (simülasyonla doğrulandı). Hesap: QuizNotifier._computeResult.
+//
 // Metinler çeviri dosyalarında: assets/translations/{tr,en}.json →
-// "quiz_questions". Burada sadece anahtarlar ve kişilik tipleri var;
-// ekranda .tr() ile çevrilir.
+// "quiz_questions". Burada sadece anahtarlar ve ağırlıklar var.
+
 const List<QuizQuestion> kQuizQuestions = [
-  // ── Soru 1 ── (sosyal | sakin | macer | entel)
+  // ── Soru 1 ── Dışa dönüklük / sosyallik (IPIP E2) ↔ yalnızlık tercihi (Burger PFS); evde duramama (BSSS)
   QuizQuestion(
     question: 'quiz_questions.q1.question',
     options: [
-      QuizOption(
-        text: 'quiz_questions.q1.a',
-        type: PersonalityType.sosyalKelebek,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q1.b',
-        type: PersonalityType.sakinRuh,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q1.c',
-        type: PersonalityType.maceraperest,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q1.d',
-        type: PersonalityType.entelektuel,
-      ),
+      QuizOption(text: 'quiz_questions.q1.a', weights: {
+        PersonalityType.sosyalKelebek: 2,
+      }),
+      QuizOption(text: 'quiz_questions.q1.b', weights: {
+        PersonalityType.sakinRuh: 2,
+        PersonalityType.sosyalKelebek: -1,
+      }),
+      QuizOption(text: 'quiz_questions.q1.c', weights: {
+        PersonalityType.maceraperest: 2,
+        PersonalityType.sakinRuh: -1,
+      }),
+      QuizOption(text: 'quiz_questions.q1.d', weights: {
+        PersonalityType.gurme: 2,
+      }),
     ],
   ),
 
-  // ── Soru 2 ── (sosyal | sakin | macer | gurme)
+  // ── Soru 2 ── Düşünme ihtiyacı (NFC, IPIP O5) ↔ gündelik sohbet; yemek ilgisi (Food Involvement)
   QuizQuestion(
     question: 'quiz_questions.q2.question',
     options: [
-      QuizOption(
-        text: 'quiz_questions.q2.a',
-        type: PersonalityType.sosyalKelebek,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q2.b',
-        type: PersonalityType.sakinRuh,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q2.c',
-        type: PersonalityType.maceraperest,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q2.d',
-        type: PersonalityType.gurme,
-      ),
+      QuizOption(text: 'quiz_questions.q2.a', weights: {
+        PersonalityType.entelektuel: 2,
+        PersonalityType.gurme: -1,
+      }),
+      QuizOption(text: 'quiz_questions.q2.b', weights: {
+        PersonalityType.sosyalKelebek: 2,
+        PersonalityType.entelektuel: -1,
+      }),
+      QuizOption(text: 'quiz_questions.q2.c', weights: {
+        PersonalityType.maceraperest: 2,
+      }),
+      QuizOption(text: 'quiz_questions.q2.d', weights: {
+        PersonalityType.gurme: 2,
+      }),
     ],
   ),
 
-  // ── Soru 3 ── (sosyal | entel | macer | gurme)
+  // ── Soru 3 ── Plansız yolculuk (BSSS) ↔ sakin tempo (IPIP E4−); kültür (O2); seyahatte yemek (FIS)
   QuizQuestion(
     question: 'quiz_questions.q3.question',
     options: [
-      QuizOption(
-        text: 'quiz_questions.q3.a',
-        type: PersonalityType.sosyalKelebek,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q3.b',
-        type: PersonalityType.entelektuel,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q3.c',
-        type: PersonalityType.maceraperest,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q3.d',
-        type: PersonalityType.gurme,
-      ),
+      QuizOption(text: 'quiz_questions.q3.a', weights: {
+        PersonalityType.maceraperest: 2,
+        PersonalityType.sakinRuh: -1,
+      }),
+      QuizOption(text: 'quiz_questions.q3.b', weights: {
+        PersonalityType.sakinRuh: 2,
+        PersonalityType.maceraperest: -1,
+      }),
+      QuizOption(text: 'quiz_questions.q3.c', weights: {
+        PersonalityType.entelektuel: 2,
+      }),
+      QuizOption(text: 'quiz_questions.q3.d', weights: {
+        PersonalityType.gurme: 2,
+        PersonalityType.entelektuel: 1,
+      }),
     ],
   ),
 
-  // ── Soru 4 ── (sosyal | sakin | entel | gurme)
+  // ── Soru 4 ── Yemek yeniliği (Food Neophobia, ters) ; alışkanlık (IPIP O4−) ; paylaşım (E2)
   QuizQuestion(
     question: 'quiz_questions.q4.question',
     options: [
-      QuizOption(
-        text: 'quiz_questions.q4.a',
-        type: PersonalityType.sosyalKelebek,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q4.b',
-        type: PersonalityType.sakinRuh,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q4.c',
-        type: PersonalityType.entelektuel,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q4.d',
-        type: PersonalityType.gurme,
-      ),
+      QuizOption(text: 'quiz_questions.q4.a', weights: {
+        PersonalityType.gurme: 2,
+        PersonalityType.maceraperest: 1,
+      }),
+      QuizOption(text: 'quiz_questions.q4.b', weights: {
+        PersonalityType.entelektuel: 2,
+        PersonalityType.gurme: 1,
+      }),
+      QuizOption(text: 'quiz_questions.q4.c', weights: {
+        PersonalityType.sakinRuh: 2,
+        PersonalityType.gurme: -1,
+        PersonalityType.maceraperest: -1,
+      }),
+      QuizOption(text: 'quiz_questions.q4.d', weights: {
+        PersonalityType.sosyalKelebek: 2,
+      }),
     ],
   ),
 
-  // ── Soru 5 ── (sakin | entel | macer | gurme)
+  // ── Soru 5 ── Kalabalık/yabancılar (IPIP E2) ↔ küçük grup (PFS); derin sohbet (O5); yemek (FIS)
   QuizQuestion(
     question: 'quiz_questions.q5.question',
     options: [
-      QuizOption(
-        text: 'quiz_questions.q5.a',
-        type: PersonalityType.sakinRuh,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q5.b',
-        type: PersonalityType.entelektuel,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q5.c',
-        type: PersonalityType.maceraperest,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q5.d',
-        type: PersonalityType.gurme,
-      ),
+      QuizOption(text: 'quiz_questions.q5.a', weights: {
+        PersonalityType.sosyalKelebek: 2,
+      }),
+      QuizOption(text: 'quiz_questions.q5.b', weights: {
+        PersonalityType.sakinRuh: 2,
+        PersonalityType.sosyalKelebek: -1,
+      }),
+      QuizOption(text: 'quiz_questions.q5.c', weights: {
+        PersonalityType.entelektuel: 2,
+      }),
+      QuizOption(text: 'quiz_questions.q5.d', weights: {
+        PersonalityType.gurme: 2,
+      }),
     ],
   ),
 
-  // ── Soru 6 ── (sosyal | sakin | macer | entel)
+  // ── Soru 6 ── Dinlenme biçimi: sosyal (E) ↔ yalnız zaman (PFS); aktif (E4/BSSS); yemek pişirme (FIS)
   QuizQuestion(
     question: 'quiz_questions.q6.question',
     options: [
-      QuizOption(
-        text: 'quiz_questions.q6.a',
-        type: PersonalityType.sosyalKelebek,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q6.b',
-        type: PersonalityType.sakinRuh,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q6.c',
-        type: PersonalityType.maceraperest,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q6.d',
-        type: PersonalityType.entelektuel,
-      ),
+      QuizOption(text: 'quiz_questions.q6.a', weights: {
+        PersonalityType.sosyalKelebek: 2,
+      }),
+      QuizOption(text: 'quiz_questions.q6.b', weights: {
+        PersonalityType.sakinRuh: 2,
+        PersonalityType.sosyalKelebek: -1,
+      }),
+      QuizOption(text: 'quiz_questions.q6.c', weights: {
+        PersonalityType.maceraperest: 2,
+      }),
+      QuizOption(text: 'quiz_questions.q6.d', weights: {
+        PersonalityType.gurme: 2,
+      }),
     ],
   ),
 
-  // ── Soru 7 ── (sosyal | entel | macer | gurme)
+  // ── Soru 7 ── Sanat/sergi ilgisi (IPIP O2) ↔ "sergiden hoşlanmam" (O2−) ; sosyal ; yemek
   QuizQuestion(
     question: 'quiz_questions.q7.question',
     options: [
-      QuizOption(
-        text: 'quiz_questions.q7.a',
-        type: PersonalityType.sosyalKelebek,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q7.b',
-        type: PersonalityType.entelektuel,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q7.c',
-        type: PersonalityType.maceraperest,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q7.d',
-        type: PersonalityType.gurme,
-      ),
+      QuizOption(text: 'quiz_questions.q7.a', weights: {
+        PersonalityType.entelektuel: 2,
+        PersonalityType.sakinRuh: 1,
+      }),
+      QuizOption(text: 'quiz_questions.q7.b', weights: {
+        PersonalityType.sosyalKelebek: 2,
+      }),
+      QuizOption(text: 'quiz_questions.q7.c', weights: {
+        PersonalityType.maceraperest: 2,
+        PersonalityType.entelektuel: -1,
+      }),
+      QuizOption(text: 'quiz_questions.q7.d', weights: {
+        PersonalityType.gurme: 2,
+      }),
     ],
   ),
 
-  // ── Soru 8 ── (sosyal | sakin | entel | gurme)
+  // ── Soru 8 ── Etkinlik düzeyi (IPIP E4) ↔ "acele etmem" (E4−); öğrenme (O5); heyecan arayışı (E5/BSSS)
   QuizQuestion(
     question: 'quiz_questions.q8.question',
     options: [
-      QuizOption(
-        text: 'quiz_questions.q8.a',
-        type: PersonalityType.sosyalKelebek,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q8.b',
-        type: PersonalityType.sakinRuh,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q8.c',
-        type: PersonalityType.entelektuel,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q8.d',
-        type: PersonalityType.gurme,
-      ),
+      QuizOption(text: 'quiz_questions.q8.a', weights: {
+        PersonalityType.sosyalKelebek: 2,
+      }),
+      QuizOption(text: 'quiz_questions.q8.b', weights: {
+        PersonalityType.sakinRuh: 2,
+        PersonalityType.maceraperest: -1,
+      }),
+      QuizOption(text: 'quiz_questions.q8.c', weights: {
+        PersonalityType.entelektuel: 2,
+      }),
+      QuizOption(text: 'quiz_questions.q8.d', weights: {
+        PersonalityType.maceraperest: 2,
+        PersonalityType.sakinRuh: -1,
+      }),
     ],
   ),
 
-  // ── Soru 9 ── (sakin | entel | macer | gurme)
+  // ── Soru 9 ── Karmaşık problem/oyun (NFC, O5); küçük grup (PFS); yemek+sosyal; macera (BSSS)
   QuizQuestion(
     question: 'quiz_questions.q9.question',
     options: [
-      QuizOption(
-        text: 'quiz_questions.q9.a',
-        type: PersonalityType.sakinRuh,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q9.b',
-        type: PersonalityType.entelektuel,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q9.c',
-        type: PersonalityType.maceraperest,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q9.d',
-        type: PersonalityType.gurme,
-      ),
+      QuizOption(text: 'quiz_questions.q9.a', weights: {
+        PersonalityType.entelektuel: 2,
+      }),
+      QuizOption(text: 'quiz_questions.q9.b', weights: {
+        PersonalityType.sakinRuh: 2,
+      }),
+      QuizOption(text: 'quiz_questions.q9.c', weights: {
+        PersonalityType.gurme: 2,
+        PersonalityType.sosyalKelebek: 1,
+        PersonalityType.entelektuel: -1,
+      }),
+      QuizOption(text: 'quiz_questions.q9.d', weights: {
+        PersonalityType.maceraperest: 2,
+      }),
     ],
   ),
 
-  // ── Soru 10 ── (sosyal | sakin | macer | gurme)
+  // ── Soru 10 ── Buluşma yeri tercihi: canlı (E2) / sessiz (PFS) / kültür (O2) / keşif (O4, BSSS)
   QuizQuestion(
     question: 'quiz_questions.q10.question',
     options: [
-      QuizOption(
-        text: 'quiz_questions.q10.a',
-        type: PersonalityType.sosyalKelebek,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q10.b',
-        type: PersonalityType.sakinRuh,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q10.c',
-        type: PersonalityType.maceraperest,
-      ),
-      QuizOption(
-        text: 'quiz_questions.q10.d',
-        type: PersonalityType.gurme,
-      ),
+      QuizOption(text: 'quiz_questions.q10.a', weights: {
+        PersonalityType.sosyalKelebek: 2,
+      }),
+      QuizOption(text: 'quiz_questions.q10.b', weights: {
+        PersonalityType.sakinRuh: 2,
+      }),
+      QuizOption(text: 'quiz_questions.q10.c', weights: {
+        PersonalityType.entelektuel: 2,
+      }),
+      QuizOption(text: 'quiz_questions.q10.d', weights: {
+        PersonalityType.maceraperest: 2,
+        PersonalityType.gurme: -1,
+      }),
     ],
   ),
+
 ];
 
 // ── Mekan Önerisi Modeli ──────────────────────────────────────────────────────

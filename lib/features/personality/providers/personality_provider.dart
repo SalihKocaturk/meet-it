@@ -28,6 +28,6 @@ final quizResultProvider = Provider<PersonalityProfile?>((ref) {
 });
 
 // Mevcut soru için seçili cevap
-final selectedAnswerProvider = Provider<PersonalityType?>((ref) {
+final selectedAnswerProvider = Provider<int?>((ref) {
   return ref.watch(quizProvider).selectedAnswerForCurrent;
 });

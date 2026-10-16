@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 
@@ -5,7 +6,7 @@ import 'package:meetit/features/personality/models/personality_model.dart';
 
 class QuizState {
   final int currentQuestionIndex;
-  final Map<int, PersonalityType> answers; // soru index → seçilen tip
+  final Map<int, int> answers; // soru index → seçilen cevap index'i
   final bool isCompleted;
 
   /// Quiz tamamlandığında hesaplanan kişilik profili (skor tabanlı)
@@ -28,12 +29,11 @@ class QuizState {
 
   bool hasAnswered(int questionIndex) => answers.containsKey(questionIndex);
 
-  PersonalityType? get selectedAnswerForCurrent =>
-      answers[currentQuestionIndex];
+  int? get selectedAnswerForCurrent => answers[currentQuestionIndex];
 
   QuizState copyWith({
     int? currentQuestionIndex,
-    Map<int, PersonalityType>? answers,
+    Map<int, int>? answers,
     bool? isCompleted,
     PersonalityProfile? result,
     bool clearResult = false,
@@ -54,10 +54,10 @@ class QuizNotifier extends Notifier<QuizState> {
   @override
   QuizState build() => const QuizState();
 
-  /// Mevcut soruya cevap seç
-  void selectAnswer(PersonalityType type) {
-    final updatedAnswers = Map<int, PersonalityType>.from(state.answers);
-    updatedAnswers[state.currentQuestionIndex] = type;
+  /// Mevcut soruya cevap seç ([optionIndex] = seçenek sırası).
+  void selectAnswer(int optionIndex) {
+    final updatedAnswers = Map<int, int>.from(state.answers);
+    updatedAnswers[state.currentQuestionIndex] = optionIndex;
     state = state.copyWith(answers: updatedAnswers);
   }
 
@@ -89,25 +89,42 @@ class QuizNotifier extends Notifier<QuizState> {
 
   /// Cevaplara göre kişilik profili hesapla.
   ///
-  /// Her soru için seçilen tip sayılır, toplam soru sayısına bölünerek
-  /// normalize edilir → her tipin 0.0–1.0 arası skoru oluşur.
+  /// Her cevap tiplere + / − ağırlık verir (bkz. kQuizQuestions). Her tipin
+  /// ham toplamı, o tipin bu testte alabileceği en düşük/en yüksek puana göre
+  /// 0–1 aralığına çekilir — böylece bir tipin daha çok soruda geçmesi ona
+  /// avantaj sağlamaz. Sonra kareleri alınıp toplamı 1 olacak şekilde
+  /// normalize edilir: kare alma baskın tipi belirginleştirir (eski
+  /// sayım-yüzde sistemine benzer bir dağılım çıkar, uygulamanın geri kalanı
+  /// — ikincil tip eşiği, uyum hesabı — aynı şekilde çalışır).
   void _computeResult() {
-    final total = state.answers.length;
-    if (total == 0) return;
+    if (state.answers.isEmpty) return;
 
-    // Her tip için cevap sayısını say
-    final counts = <PersonalityType, int>{};
-    for (final type in PersonalityType.values) {
-      counts[type] = 0;
-    }
-    for (final type in state.answers.values) {
-      counts[type] = (counts[type] ?? 0) + 1;
+    final raw = {for (final t in PersonalityType.values) t: 0};
+    final minPossible = {for (final t in PersonalityType.values) t: 0};
+    final maxPossible = {for (final t in PersonalityType.values) t: 0};
+
+    for (var q = 0; q < kQuizQuestions.length; q++) {
+      final options = kQuizQuestions[q].options;
+      for (final t in PersonalityType.values) {
+        final values = options.map((o) => o.weights[t] ?? 0);
+        minPossible[t] = minPossible[t]! + values.reduce(min);
+        maxPossible[t] = maxPossible[t]! + values.reduce(max);
+      }
+      final chosen = state.answers[q];
+      if (chosen == null || chosen < 0 || chosen >= options.length) continue;
+      options[chosen].weights.forEach((t, w) => raw[t] = raw[t]! + w);
     }
 
-    // Normalize et (0.0 – 1.0)
-    final scores = counts.map(
-      (type, count) => MapEntry(type, count / total),
-    );
+    final sharpened = <PersonalityType, double>{};
+    for (final t in PersonalityType.values) {
+      final span = maxPossible[t]! - minPossible[t]!;
+      final n = span <= 0 ? 0.0 : (raw[t]! - minPossible[t]!) / span;
+      sharpened[t] = n * n;
+    }
+    final sum = sharpened.values.fold<double>(0, (a, b) => a + b);
+    final scores = sum <= 0
+        ? {for (final t in PersonalityType.values) t: 1 / PersonalityType.values.length}
+        : sharpened.map((t, v) => MapEntry(t, v / sum));
 
     final profile = PersonalityProfile(
       scores: Map.unmodifiable(scores),
