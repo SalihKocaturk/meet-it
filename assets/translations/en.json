@@ -709,14 +709,14 @@
       "d": "I've already researched the local dishes"
     },
     "q4": {
-      "question": "There's a dish on the menu you've never heard of.",
+      "question": "There's a dish on the menu you've never heard of. What do you do?",
       "a": "I order it right away, I want to know how it tastes",
       "b": "I ask the waiter first, I want to know where it comes from",
       "c": "I go for something I already know and like",
       "d": "We order it to share so everyone at the table can try it"
     },
     "q5": {
-      "question": "You're at a birthday party full of people you don't know.",
+      "question": "You're at a birthday party full of people you don't know. What do you do?",
       "a": "Great, I'll meet everyone",
       "b": "I hang out with the one or two people I know in a quiet corner",
       "c": "I end up in a deep conversation with someone interesting",
@@ -730,7 +730,7 @@
       "d": "A great meal, I'll even cook it myself"
     },
     "q7": {
-      "question": "A new exhibition just opened in town.",
+      "question": "A new exhibition just opened in town. What do you do?",
       "a": "I go as soon as I can and take my time seeing every corner",
       "b": "If friends are going, I'm in, it's more fun together",
       "c": "I'd rather do something more active than an exhibition",

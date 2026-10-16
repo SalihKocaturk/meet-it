@@ -709,14 +709,14 @@
       "d": "Gideceğim yerin yöresel yemeklerini çoktan araştırdım"
     },
     "q4": {
-      "question": "Menüde adını ilk kez duyduğun bir yemek var.",
+      "question": "Menüde adını ilk kez duyduğun bir yemek var. Ne yaparsın?",
       "a": "Hemen onu söylerim, tadını merak ettim",
       "b": "Önce garsona sorarım, nereden geldiğini öğrenmek isterim",
       "c": "Bildiğim, sevdiğim bir şeyi söylerim",
       "d": "Ortaya söyleriz, masadaki herkes tadına bakar"
     },
     "q5": {
-      "question": "Bir doğum günü partisindesin, tanımadığın bir sürü insan var.",
+      "question": "Bir doğum günü partisindesin ve tanımadığın bir sürü insan var. Ne yaparsın?",
       "a": "Harika, herkesle tanışırım",
       "b": "Tanıdığım bir iki kişiyle sakin bir köşede takılırım",
       "c": "İlginç biriyle derin bir sohbete dalarım",
@@ -730,7 +730,7 @@
       "d": "Güzel bir yemek, gerekirse kendim pişiririm"
     },
     "q7": {
-      "question": "Şehirde yeni bir sergi açılmış.",
+      "question": "Şehirde yeni bir sergi açılmış. Ne yaparsın?",
       "a": "İlk fırsatta giderim, acele etmeden her köşesini gezerim",
       "b": "Arkadaşlar gidiyorsa ben de gelirim, beraber güzel olur",
       "c": "Sergi yerine daha hareketli bir şey yapmayı tercih ederim",
