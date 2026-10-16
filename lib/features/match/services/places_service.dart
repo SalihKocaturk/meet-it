@@ -876,6 +876,82 @@ class PlacesService {
   // skorlu mekanlar yine çok daha sık öne çıkar (rastgele değil, ağırlıklı),
   // ama %100 deterministik olmadığından arama tekrarında çeşitlilik sağlar.
   // Aynı zamanda çeşitlilik grubu kısıtını da burada uyguluyoruz.
+  /// Aktivite seçilmeden yapılan aramalarda havuza her zaman eklenen
+  /// yemek/içecek grubu (bkz. `_resolveTypeGroups`).
+  static const List<String> _mealAnchorTypes = ['restaurant', 'cafe'];
+
+  /// Mekanın kaba türü — aynı aramada 3 müze ya da 2 park çıkmasın diye.
+  static String _venueCategory(PlaceResult place) {
+    final t = place.types;
+    if (t.contains('cafe') || t.contains('bakery')) return 'cafe';
+    if (t.contains('restaurant') ||
+        t.contains('meal_takeaway') ||
+        t.contains('food')) {
+      return 'restaurant';
+    }
+    if (t.contains('bar') || t.contains('night_club')) return 'night';
+    if (t.contains('park')) return 'park';
+    if (t.contains('museum') ||
+        t.contains('art_gallery') ||
+        t.contains('library') ||
+        t.contains('tourist_attraction')) {
+      return 'culture';
+    }
+    if (t.contains('movie_theater') ||
+        t.contains('bowling_alley') ||
+        t.contains('amusement_park')) {
+      return 'fun';
+    }
+    return 'other';
+  }
+
+  /// Aktivite seçilmemiş aramalar için karma seçim:
+  ///  1. En az bir restoran ya da kafe (buluşmaların çoğu oturup yemek/kahve).
+  ///  2. Kalan yerler kişiliğe göre, ama her biri FARKLI türden
+  ///     (müze + park + restoran gibi; 3 müze ya da 2 park değil).
+  /// Sıralama [_weightedDiverseSample] ile aynı ağırlıklı rastgelelikle
+  /// yapılır — yüksek skorlu (kişiliğe uygun, kaliteli) mekanlar öncelikli
+  /// ama her aramada biraz farklı. Havuz yetmezse kısıtlar gevşetilir.
+  static List<PlaceResult> _mixedSample(
+    List<(PlaceResult, double)> scoredPlaces,
+    int count,
+  ) {
+    // Tüm havuzu ağırlıklı-rastgele sırala (isim çeşitliliği dahil).
+    final ordered = _weightedDiverseSample(scoredPlaces, scoredPlaces.length);
+    if (ordered.length <= count) return ordered;
+
+    final result = <PlaceResult>[];
+    final usedCategories = <String>{};
+
+    // 1) Yemek/kahve çapası
+    for (final place in ordered) {
+      final c = _venueCategory(place);
+      if (c == 'restaurant' || c == 'cafe') {
+        result.add(place);
+        usedCategories.add(c);
+        break;
+      }
+    }
+
+    // 2) Kalan yerler: her biri farklı türden
+    for (final place in ordered) {
+      if (result.length >= count) break;
+      if (result.contains(place)) continue;
+      final c = _venueCategory(place);
+      if (c != 'other' && usedCategories.contains(c)) continue;
+      result.add(place);
+      usedCategories.add(c);
+    }
+
+    // 3) Havuz çeşitlilik için yetmediyse sırayla tamamla
+    for (final place in ordered) {
+      if (result.length >= count) break;
+      if (!result.contains(place)) result.add(place);
+    }
+
+    return result;
+  }
+
   static List<PlaceResult> _weightedDiverseSample(
     List<(PlaceResult, double)> scoredPlaces,
     int count,
@@ -1313,7 +1389,12 @@ class PlacesService {
     // Ağırlıklı rastgele seçim + çeşitlilik kısıtı uygulayarak nihai
     // listeyi oluştur. Kalite havuzu (nameFiltered + skor) sabit kalsa da,
     // her aramada öne çıkan mekanlar biraz farklılaşır.
-    final finalList = _weightedDiverseSample(scored, _maxResultCount);
+    // Aktivite seçilmediyse: 1 yemek/kahve yeri + kişiliğe göre farklı
+    // türlerden mekanlar (bkz. [_mixedSample]). Aktivite seçildiyse kullanıcı
+    // ne istediğini söylemiş demektir — eski davranış.
+    final finalList = selectedActivities.isEmpty
+        ? _mixedSample(scored, _maxResultCount)
+        : _weightedDiverseSample(scored, _maxResultCount);
 
     // 💸 MALİYET DÜŞÜRME (2026-06-28): Kart önizlemesi (İLK foto) VE bu
     // mekan ileride "Kaydet"/"Tarif Al" ile kalıcı listelere eklenirse
@@ -2007,6 +2088,23 @@ class PlacesService {
 
     addProfileGroup(userProfile);
     addProfileGroup(friendProfile);
+
+    // 🍽️ YEMEK/İÇECEK ÇAPASI (2026-10-16, kullanıcı geri bildirimi):
+    // Aktivite seçilmeden yapılan aramada sadece kişilik tipleri aranınca
+    // örn. entelektüel + maceraperest çifti için sonuçlar müze/park'tan
+    // ibaret kalıyordu ("hep park buluyor", "entelektüelim diye sadece müze").
+    // Oysa buluşmaların çoğu bir yerde oturup yemek/kahve içmek. Bu yüzden
+    // havuza her zaman restoran + kafe grubu da ekleniyor; nihai seçimde
+    // ([_mixedSample]) 3 sonuçtan en az biri bu gruptan geliyor. Grup da
+    // kalıcı önbelleğe girdiği için bölge başına tek seferlik maliyet.
+    if (groups2.isNotEmpty) {
+      final hasRestaurant = groups2.any((g) => g.contains('restaurant'));
+      final hasCafe = groups2.any((g) => g.contains('cafe'));
+      if (!(hasRestaurant && hasCafe)) {
+        final key = ([..._mealAnchorTypes]..sort()).join(',');
+        if (addedKeys2.add(key)) groups2.add(_mealAnchorTypes);
+      }
+    }
 
     if (groups2.isNotEmpty) return groups2;
 
