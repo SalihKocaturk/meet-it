@@ -7,12 +7,16 @@ class CircularAvatar extends StatelessWidget {
   final ImageProvider? image;
   final double radius;
 
+  /// Koyu fotoğraflar koyu arka planda kaybolmasın diye 1 px ince çerçeve.
+  final bool outline;
+
   const CircularAvatar({
     super.key,
     this.name,
     this.photoUrl,
     this.image,
     this.radius = 22,
+    this.outline = true,
   });
 
   static const _colors = [
@@ -51,6 +55,25 @@ class CircularAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final avatar = _buildAvatar();
+    if (!outline) return avatar;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return DecoratedBox(
+      position: DecorationPosition.foreground,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.15)
+              : Colors.black.withOpacity(0.08),
+          width: 1,
+        ),
+      ),
+      child: avatar,
+    );
+  }
+
+  Widget _buildAvatar() {
     // 1) URL varsa CachedNetworkImage göster — hata durumunda harfli avatara düş
     if (photoUrl != null && photoUrl!.isNotEmpty) {
       return CachedNetworkImage(

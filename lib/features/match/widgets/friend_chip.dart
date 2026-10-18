@@ -1,6 +1,9 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/constants/emerald_palette.dart';
+import 'package:meetit/core/utils/text_utils.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/friends/models/user_friend_model.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
@@ -34,7 +37,7 @@ class FriendChip extends ConsumerWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: isSelected
-                  ? Border.all(color: context.colors.primary, width: 2.5)
+                  ? Border.all(color: Emerald.base, width: 2.5)
                   : null,
             ),
             child: CircularAvatar(
@@ -45,11 +48,14 @@ class FriendChip extends ConsumerWidget {
           ),
           SizedBox(height: 4),
           Text(
-            friend.name.split(' ').first,
+            titleCaseName(
+              friend.name.split(' ').first,
+              turkish: context.locale.languageCode == 'tr',
+            ),
             style: TextStyle(
               fontSize: 11,
               color: isSelected
-                  ? context.colors.primary
+                  ? context.accentStrong
                   : context.colors.textSecondary,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
             ),
@@ -58,9 +64,12 @@ class FriendChip extends ConsumerWidget {
             Icon(
               friend.personalityProfile!.dominantType.iconsaxIcon,
               size: 13,
+              // Koyu temada eski "hint" grisi neredeyse görünmüyordu
               color: isSelected
-                  ? context.colors.primary
-                  : context.colors.hint,
+                  ? context.accentStrong
+                  : context.isDarkTheme
+                      ? Colors.white54
+                      : context.colors.textSecondary,
             ),
         ],
       ),

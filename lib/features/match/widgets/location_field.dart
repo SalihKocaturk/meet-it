@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/constants/emerald_palette.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/match/pages/map_location_picker_page.dart';
@@ -112,7 +113,7 @@ class LocationField extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: context.colors.primary,
+                    color: context.accentStrong,
                   ),
                 ),
               ),

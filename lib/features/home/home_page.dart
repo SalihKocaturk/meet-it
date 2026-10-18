@@ -22,6 +22,7 @@ import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
 import 'package:meetit/core/utils/geo_utils.dart';
+import 'package:meetit/core/utils/text_utils.dart';
 import 'package:meetit/core/widgets/network_status_banner.dart';
 
 // ── Hibrit mekan öğeleri (Firestore yorumu + API önerisi) ─────────────────────
@@ -207,7 +208,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                   Text(
                                     'home.greeting'.tr(
                                       namedArgs: {
-                                        'name': _titleCase(
+                                        'name': titleCaseName(
                                           currentUser?.name.split(' ').first ??
                                               '',
                                           turkish:
@@ -529,7 +530,7 @@ class _FriendCompatActionCard extends ConsumerWidget {
         }
       }
       if (bestFriend != null) {
-        final firstName = _titleCase(
+        final firstName = titleCaseName(
           bestFriend.name.split(' ').first,
           turkish: context.locale.languageCode == 'tr',
         );
@@ -811,25 +812,6 @@ String? _distanceLabel(WidgetRef ref, double? lat, double? lng) {
   return km < 1 ? '${(km * 1000).round()} m' : '${km.toStringAsFixed(1)} km';
 }
 
-/// "salih kocaturk" → "Salih Kocaturk". Yalnızca kelimelerin ilk harfi
-/// büyütülür (geri kalanı olduğu gibi kalır); Türkçede i → İ.
-String _titleCase(String input, {required bool turkish}) {
-  return input
-      .trim()
-      .split(RegExp(r'\s+'))
-      .where((w) => w.isNotEmpty)
-      .map((w) {
-        final f = w[0];
-        final upper = turkish && f == 'i'
-            ? 'İ'
-            : turkish && f == 'ı'
-                ? 'I'
-                : f.toUpperCase();
-        return upper + w.substring(1);
-      })
-      .join(' ');
-}
-
 class _ReviewCarouselCard extends ConsumerWidget {
   final VenueReviewModel review;
   const _ReviewCarouselCard({required this.review});
@@ -852,7 +834,7 @@ class _ReviewCarouselCard extends ConsumerWidget {
     final googleRating = review.googleRating ?? fallbackRating?.rating;
     final googleRatingCount =
         review.googleRatingCount ?? fallbackRating?.count;
-    final author = _titleCase(
+    final author = titleCaseName(
       review.authorName,
       turkish: context.locale.languageCode == 'tr',
     );

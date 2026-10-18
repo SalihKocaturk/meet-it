@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/constants/emerald_palette.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friend_code_page.dart';
@@ -69,14 +70,14 @@ class FriendsPage extends ConsumerWidget {
                               Icon(
                                 Iconsax.profile_add,
                                 size: 12,
-                                color: context.colors.primary,
+                                color: context.accentStrong,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 'friends.invite_friends'.tr(),
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: context.colors.primary,
+                                  color: context.accentStrong,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -96,20 +97,14 @@ class FriendsPage extends ConsumerWidget {
                         horizontal: 12,
                         vertical: 7,
                       ),
-                      decoration: BoxDecoration(
-                        color: context.colors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: context.colors.primary.withOpacity(0.3),
-                        ),
-                      ),
+                      decoration: Emerald.tint(radius: 20),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             Iconsax.hashtag,
                             size: 14,
-                            color: context.colors.primary,
+                            color: context.accentOnTint,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -117,7 +112,7 @@ class FriendsPage extends ConsumerWidget {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: context.colors.primary,
+                              color: context.accentOnTint,
                             ),
                           ),
                         ],
@@ -273,7 +268,7 @@ class _TabButton extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           margin: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: isSelected ? context.colors.primary : Colors.transparent,
+            color: isSelected ? Emerald.base : Colors.transparent,
             borderRadius: BorderRadius.circular(9),
           ),
           alignment: Alignment.center,
@@ -501,6 +496,8 @@ class _SuggestionTile extends ConsumerWidget {
               children: [
                 Text(
                   friend.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -515,6 +512,8 @@ class _SuggestionTile extends ConsumerWidget {
                         ? 'friends.mutual_count'
                             .tr(namedArgs: {'count': '$mutual'})
                         : '@${friend.name.toLowerCase().replaceAll(' ', '')}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 12,
                       color: context.colors.textSecondary,
@@ -531,17 +530,22 @@ class _SuggestionTile extends ConsumerWidget {
             icon: Icon(
               Iconsax.profile_add,
               size: 14,
-              color: context.colors.primary,
+              color: context.accentOnTint,
             ),
             label: Text(
               'friends.add'.tr(),
-              style: TextStyle(fontSize: 12, color: context.colors.primary),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: context.accentOnTint,
+              ),
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
             ),
             style: OutlinedButton.styleFrom(
+              backgroundColor: Emerald.base.withOpacity(0.15),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              side: BorderSide(color: context.colors.primary),
+              side: BorderSide(color: Emerald.base.withOpacity(0.45)),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/constants/emerald_palette.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 
 // ── Aktivite Grid (Çoklu Seçim) ───────────────────────────────────────────────
@@ -46,12 +47,10 @@ class ActivityGrid extends ConsumerWidget {
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: isSelected ? context.colors.primary : context.colors.card,
+              color: isSelected ? Emerald.base : context.colors.card,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: isSelected
-                    ? context.colors.primary
-                    : context.colors.border,
+                color: isSelected ? Emerald.base : context.colors.border,
               ),
             ),
             child: Row(

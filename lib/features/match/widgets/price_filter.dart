@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/constants/emerald_palette.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 
 // ── Fiyat Filtresi ────────────────────────────────────────────────────────────
@@ -39,14 +40,10 @@ class PriceFilter extends ConsumerWidget {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? context.colors.primary
-                      : context.colors.card,
+                  color: isSelected ? Emerald.base : context.colors.card,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isSelected
-                        ? context.colors.primary
-                        : context.colors.border,
+                    color: isSelected ? Emerald.base : context.colors.border,
                   ),
                 ),
                 child: Row(
@@ -60,7 +57,7 @@ class PriceFilter extends ConsumerWidget {
                           fontWeight: FontWeight.w600,
                           color: isSelected
                               ? Colors.white
-                              : const Color(0xFF4CAF50),
+                              : context.accentStrong,
                         ),
                       ),
                       SizedBox(width: 4),

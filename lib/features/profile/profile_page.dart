@@ -5,6 +5,7 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/constants/emerald_palette.dart';
 import 'package:meetit/core/router/app_routes.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/models/user_model.dart';
@@ -239,7 +240,7 @@ class _ProfileHeader extends ConsumerWidget {
                         width: 24,
                         height: 24,
                         decoration: BoxDecoration(
-                          color: context.colors.primary,
+                          color: Emerald.base,
                           shape: BoxShape.circle,
                           border: Border.all(color: context.colors.card, width: 2),
                         ),
@@ -408,7 +409,7 @@ class _Tab extends StatelessWidget {
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
-                color: isSelected ? context.colors.primary : Colors.transparent,
+                color: isSelected ? context.accentStrong : Colors.transparent,
                 width: 2,
               ),
             ),
@@ -416,7 +417,7 @@ class _Tab extends StatelessWidget {
           child: Icon(
             icon,
             size: 22,
-            color: isSelected ? context.colors.primary : context.colors.hint,
+            color: isSelected ? context.accentStrong : context.colors.hint,
           ),
         ),
       ),
@@ -554,18 +555,29 @@ class _ReviewPlaceholderTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDarkTheme;
     return Container(
-      color: context.colors.primary.withOpacity(0.08),
+      decoration: BoxDecoration(
+        color: Emerald.base.withOpacity(0.08),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.black.withOpacity(0.06),
+        ),
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Iconsax.location, color: context.colors.primary, size: 22),
-          SizedBox(height: 4),
+          Icon(Iconsax.location, color: context.accentStrong, size: 22),
+          const SizedBox(height: 6),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 6),
             child: Text(
               review.venueName,
-              style: TextStyle(fontSize: 9, color: context.colors.primary),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                // Sönük yeşil yerine okunaklı metin
+                color: isDark ? Colors.white : context.colors.textPrimary,
+              ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/constants/emerald_palette.dart';
 import 'package:meetit/core/utils/important_action_guard.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
@@ -193,8 +194,20 @@ class _FindVenueButtonBarState extends ConsumerState<FindVenueButtonBar>
     // her zaman aktif.
     const isEnabled = true;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+    // Arkadaki kayan içerik (chip'ler vb.) butonun altından görünmesin diye
+    // şeffaftan sayfa arka planına geçen bir degrade zemin.
+    final scaffold = context.colors.scaffold;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [scaffold.withOpacity(0), scaffold],
+          stops: const [0.0, 0.45],
+        ),
+      ),
+      child: Padding(
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
       child: SafeArea(
         top: false,
         child: SizedBox(
@@ -312,10 +325,8 @@ class _FindVenueButtonBarState extends ConsumerState<FindVenueButtonBar>
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: context.colors.primary,
-                    disabledBackgroundColor: context.colors.primary.withOpacity(
-                      0.35,
-                    ),
+                    backgroundColor: Emerald.base,
+                    disabledBackgroundColor: Emerald.base.withOpacity(0.35),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -338,7 +349,7 @@ class _FindVenueButtonBarState extends ConsumerState<FindVenueButtonBar>
                           painter: _LoadingBorderPainter(
                             progress: _borderController.value,
                             radius: 14,
-                            color: const Color(0xFF00E676),
+                            color: Emerald.pale,
                           ),
                         );
                       },
@@ -348,6 +359,7 @@ class _FindVenueButtonBarState extends ConsumerState<FindVenueButtonBar>
             ],
           ),
         ),
+      ),
       ),
     );
   }

@@ -329,7 +329,7 @@ class MatchPage extends ConsumerWidget {
                             // boşluk ekleniyor (bkz. FindVenueButtonBar — Stack
                             // içinde Positioned(bottom: 0) ile sabitlendi).
                             const SliverToBoxAdapter(
-                              child: SizedBox(height: 110),
+                              child: SizedBox(height: 128),
                             ),
                           ],
                         ),

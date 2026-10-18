@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/constants/emerald_palette.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 
 // ── Mesafe Filtresi ───────────────────────────────────────────────────────────
@@ -50,14 +51,10 @@ class DistanceFilter extends ConsumerWidget {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? context.colors.primary
-                      : context.colors.card,
+                  color: isSelected ? Emerald.base : context.colors.card,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isSelected
-                        ? context.colors.primary
-                        : context.colors.border,
+                    color: isSelected ? Emerald.base : context.colors.border,
                   ),
                 ),
                 child: Text(

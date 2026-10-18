@@ -37,7 +37,9 @@ class AppColors extends ThemeExtension<AppColors> {
   );
 
   static const dark = AppColors(
-    primary: Color.fromARGB(255, 61, 116, 90),
+    // Canlı zümrüt (#10B981) — ana sayfa vurgu paletiyle aynı. Eski mat
+    // yeşil (61,116,90) ekranlar arasında renk uyumsuzluğu yaratıyordu.
+    primary: Color(0xFF10B981),
     scaffold: Color(0xFF0D1117),
     textPrimary: Color(0xFFF0F6FC),
     textSecondary: Color(0xFF8B949E),
