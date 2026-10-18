@@ -65,9 +65,13 @@ class _VenueSocialProof {
   final bool friendRecommended;
   final bool isUserFavorite;
 
+  /// Mekana iyi yorum yapan (ilk) arkadaş — kartta mini avatar olarak.
+  final UserFriendModel? recommender;
+
   const _VenueSocialProof({
     this.friendRecommended = false,
     this.isUserFavorite = false,
+    this.recommender,
   });
 
   static _VenueSocialProof watch(
@@ -80,19 +84,21 @@ class _VenueSocialProof {
     final reviews = ref.watch(venueReviewsProvider(placeId)).valueOrNull ??
         (seed != null ? [seed] : const <VenueReviewModel>[]);
     final myUid = ref.watch(currentUserProvider)?.uid;
-    final friendUids = ref
-        .watch(connectionsProvider)
-        .map((f) => f.uid)
-        .where((uid) => uid != myUid)
-        .toSet();
+    final friends = {
+      for (final f in ref.watch(connectionsProvider))
+        if (f.uid != myUid) f.uid: f,
+    };
 
     final goodReviewers = <String>{
       for (final r in reviews)
         if (r.rating >= _kGoodReviewMinRating) r.authorUid,
     };
+    final recommenderUid =
+        goodReviewers.where(friends.containsKey).firstOrNull;
     return _VenueSocialProof(
-      friendRecommended: goodReviewers.any(friendUids.contains),
+      friendRecommended: recommenderUid != null,
       isUserFavorite: goodReviewers.length >= _kUserFavoriteMinReviewers,
+      recommender: recommenderUid != null ? friends[recommenderUid] : null,
     );
   }
 }
@@ -117,6 +123,14 @@ class _HomePageState extends ConsumerState<HomePage> {
   Timer? _resumeTimer;
   static const _scrollStep = 1.2;
   static const _tickDuration = Duration(milliseconds: 16);
+
+  // Hızlı kategori kapsülleri: (emoji, çeviri anahtarı, aktivite seçimi)
+  static const _quickActions = <(String, String, Set<String>)>[
+    ('🎲', 'home.quick_random', <String>{}),
+    ('☕', 'home.quick_cafe', {'Kafe'}),
+    ('🍔', 'home.quick_restaurant', {'Restoran'}),
+    ('🎭', 'home.quick_culture', {'Kültür/Müze'}),
+  ];
 
   // Yakınızdaki beğenilen mekanlar carousel'inde gösterilecek max öğe sayısı.
   // Eğer Firestore'dan N yorum gelirse, (kMax - N) kadar API önerisi eklenir.
@@ -170,6 +184,9 @@ class _HomePageState extends ConsumerState<HomePage> {
     final topReviewsAsync = ref.watch(topReviewsProvider);
     final personalizedAsync = ref.watch(personalizedVenuesProvider);
     final connections = ref.watch(connectionsProvider);
+    // autoDispose aktivite seçimini canlı tut: hızlı kapsülle yapılan seçim,
+    // Buluşma ekranı yeniden çizilene kadar düşmesin.
+    ref.listen(selectedActivitiesProvider, (_, _) {});
     final sortedConnections = [...connections]
       ..sort((a, b) => b.meetCount.compareTo(a.meetCount));
 
@@ -249,6 +266,43 @@ class _HomePageState extends ConsumerState<HomePage> {
                               ),
                             ),
                           ],
+                        ),
+                      ),
+                    ),
+
+                    // ── Hızlı kategori kapsülleri → Buluşma sekmesi ────────────
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 14),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Row(
+                            children: [
+                              for (final q in _quickActions) ...[
+                                _QuickChip(
+                                  emoji: q.$1,
+                                  label: q.$2.tr(),
+                                  onTap: () {
+                                    // Seçili aktivite Buluşma ekranına hazır
+                                    // gelir; "Rastgele" filtreyi temizler.
+                                    // Sonuç ekranı açıksa forma dönülür.
+                                    ref.read(showVenuesProvider.notifier).state =
+                                        false;
+                                    ref
+                                        .read(
+                                          selectedActivitiesProvider.notifier,
+                                        )
+                                        .state = q.$3;
+                                    ref
+                                        .read(mainTabIndexProvider.notifier)
+                                        .state = 1;
+                                  },
+                                ),
+                                const SizedBox(width: 8),
+                              ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -351,7 +405,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                           // Yorumlar hâlâ yükleniyorsa spinner göster.
                           if (topReviewsAsync.isLoading) {
                             return SizedBox(
-                              height: 192,
+                              height: 196,
                               child: Center(
                                 child: CircularProgressIndicator(
                                   color: context.colors.primary,
@@ -411,7 +465,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                               return false;
                             },
                             child: SizedBox(
-                              height: 192,
+                              height: 196,
                               child: ListView.separated(
                                 controller: _carouselController,
                                 scrollDirection: Axis.horizontal,
@@ -458,7 +512,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: SizedBox(
-                          height: 136,
+                          height: 138,
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -498,6 +552,61 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Hızlı kategori kapsülü ───────────────────────────────────────────────────
+
+class _QuickChip extends StatelessWidget {
+  final String emoji;
+  final String label;
+  final VoidCallback onTap;
+
+  const _QuickChip({
+    required this.emoji,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withOpacity(0.04)
+                : context.colors.card,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withOpacity(0.12)
+                  : context.colors.border,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 14)),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: context.colors.textPrimary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -612,7 +721,7 @@ class _PersonalityActionCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             Text(
               title,
               maxLines: 1,
@@ -847,11 +956,10 @@ class _HomeFriendCard extends ConsumerWidget {
 // ── Carousel Kartları ─────────────────────────────────────────────────────────
 //
 // Yorum kartı ve API öneri kartı aynı _VenueCarouselCard iskeletini kullanır:
-// sabit yükseklik, aynı iç hizalama — carousel'de hepsi birebir eşit görünür.
-//   • Fotoğraf (100 px) + gerekirse "Kullanıcı Favorisi" rozeti
-//   • Mekan adı
-//   • Tek satır: solda ★ 4.8 (1816), sağda 📍 1.9 km rozeti
-//   • En altta: "Arkadaşların tarafından öneriliyor" veya "♥ X beğendi"
+//   • Fotoğraf: sol üstte beğenen arkadaşın mini avatarı, sağ üstte mesafe
+//     rozeti, sol altta (varsa) "Kullanıcı Favorisi", alt kenarda kart
+//     rengine yumuşak geçiş.
+//   • Altında yalnızca: mekan adı + "★ 4.8 (1816)  •  Restoran" satırı.
 
 /// Kullanıcı konumundan mekana mesafe etiketi ("850 m" / "1.9 km").
 String? _distanceLabel(WidgetRef ref, double? lat, double? lng) {
@@ -885,12 +993,9 @@ class _ReviewCarouselCard extends ConsumerWidget {
     final googleRating = review.googleRating ?? fallbackRating?.rating;
     final googleRatingCount =
         review.googleRatingCount ?? fallbackRating?.count;
-    final isMine = review.authorUid == ref.watch(currentUserProvider)?.uid;
-    final author = titleCaseName(
-      review.authorName,
-      turkish: context.locale.languageCode == 'tr',
-    );
 
+    // Mini avatar: mekanı beğenen arkadaş; yoksa yorumu yazan kişi.
+    final liker = social.recommender;
     return _VenueCarouselCard(
       photoUrl: displayUrl,
       isUserFavorite: social.isUserFavorite,
@@ -898,16 +1003,9 @@ class _ReviewCarouselCard extends ConsumerWidget {
       rating: googleRating,
       ratingCount: googleRatingCount,
       distance: _distanceLabel(ref, review.lat, review.lng),
-      category: review.venueType != null ? review.typeLabel : null,
-      footer: social.friendRecommended
-          ? const _FriendRecommendedLabel()
-          : isMine
-              ? _LikedByLabel(text: 'home.liked_by_you'.tr())
-              : author.isEmpty
-                  ? null
-                  : _LikedByLabel(
-                      text: 'home.liked_by'.tr(namedArgs: {'name': author}),
-                    ),
+      category: review.venueType != null ? review.typeLabel : 'Mekan',
+      likerName: liker?.name ?? review.authorName,
+      likerPhotoUrl: liker != null ? liker.photoUrl : review.authorPhotoUrl,
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => VenueDetailPage(
@@ -939,6 +1037,15 @@ class _PlaceCarouselCard extends ConsumerWidget {
             : venue.photoUrl;
     final social = _VenueSocialProof.watch(ref, venue.placeId);
 
+    // Kategori bilinmiyorsa fiyat seviyesi (₺₺), o da yoksa "Mekan".
+    final typeLabel = venue.primaryTypeLabel;
+    final level = venue.priceLevel;
+    final category = typeLabel != 'Mekan'
+        ? typeLabel
+        : (level != null && level > 0)
+            ? '₺' * level
+            : 'Mekan';
+
     return _VenueCarouselCard(
       photoUrl: photoUrl,
       isUserFavorite: social.isUserFavorite,
@@ -946,8 +1053,9 @@ class _PlaceCarouselCard extends ConsumerWidget {
       rating: venue.rating,
       ratingCount: venue.userRatingsTotal,
       distance: _distanceLabel(ref, venue.lat, venue.lng),
-      category: venue.primaryTypeLabel == 'Mekan' ? null : venue.primaryTypeLabel,
-      footer: social.friendRecommended ? const _FriendRecommendedLabel() : null,
+      category: category,
+      likerName: social.recommender?.name,
+      likerPhotoUrl: social.recommender?.photoUrl,
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => VenueDetailPage(
@@ -974,30 +1082,36 @@ class _VenueCarouselCard extends StatelessWidget {
   final double? rating;
   final int? ratingCount;
   final String? distance;
-  final String? category;
-  final Widget? footer;
+  final String category;
+  final String? likerName;
+  final String? likerPhotoUrl;
   final VoidCallback onTap;
 
+  static const double photoHeight = 128;
+
   const _VenueCarouselCard({
-    this.category,
     required this.photoUrl,
     required this.isUserFavorite,
     required this.name,
     required this.rating,
     required this.ratingCount,
     required this.distance,
-    required this.footer,
+    required this.category,
+    required this.likerName,
+    required this.likerPhotoUrl,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final card = context.colors.card;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 220,
         decoration: BoxDecoration(
-          color: context.colors.card,
+          color: card,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: context.colors.border),
         ),
@@ -1006,7 +1120,7 @@ class _VenueCarouselCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              height: 100,
+              height: photoHeight,
               width: double.infinity,
               child: Stack(
                 fit: StackFit.expand,
@@ -1020,81 +1134,124 @@ class _VenueCarouselCard extends StatelessWidget {
                           errorWidget: (_, _, _) => _VenueCardFallback(),
                         )
                       : _VenueCardFallback(),
-                  if (isUserFavorite)
-                    const Positioned(
-                      top: 8,
-                      left: 8,
-                      child: _UserFavoriteBadge(),
+                  // Fotoğrafın alt kenarı kart rengine yumuşakça erir
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: 44,
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [card.withOpacity(0), card],
+                          ),
+                        ),
+                      ),
                     ),
-                  // Mesafe rozeti fotoğrafın sağ üst köşesinde
+                  ),
+                  if (likerName != null)
+                    Positioned(
+                      top: 10,
+                      left: 10,
+                      child: _LikerAvatar(
+                        name: likerName!,
+                        photoUrl: likerPhotoUrl,
+                      ),
+                    ),
                   if (distance != null)
                     Positioned(
                       top: 10,
                       right: 10,
                       child: _DistanceBadge(label: distance!),
                     ),
+                  if (isUserFavorite)
+                    const Positioned(
+                      left: 10,
+                      bottom: 8,
+                      child: _UserFavoriteBadge(),
+                    ),
                 ],
               ),
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: context.colors.textPrimary,
-                      ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : context.colors.textPrimary,
                     ),
-                    const SizedBox(height: 6),
-                    // Puan + kategori ("★ 4.1 (186) • Restoran")
-                    SizedBox(
-                      height: 18,
-                      child: Row(
-                        children: [
-                          if (rating != null)
-                            _StarScore(value: rating!, count: ratingCount),
-                          if (category != null)
-                            Flexible(
-                              child: Padding(
-                                padding: EdgeInsets.only(
-                                  left: rating != null ? 6 : 0,
-                                ),
-                                child: Text(
-                                  rating != null ? '• $category' : category!,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? Colors.white54
-                                        : context.colors.textSecondary,
-                                  ),
-                                ),
-                              ),
-                            ),
+                  ),
+                  const SizedBox(height: 5),
+                  // "★ 4.8 (1816)  •  Restoran" — her kartta dolu
+                  SizedBox(
+                    height: 18,
+                    child: Row(
+                      children: [
+                        if (rating != null) ...[
+                          _StarScore(value: rating!, count: ratingCount),
+                          const SizedBox(width: 6),
                         ],
-                      ),
+                        Flexible(
+                          child: Text(
+                            rating != null ? '•  $category' : category,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: isDark
+                                  ? Colors.white54
+                                  : context.colors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 8),
-                    // Alt satır her kartta aynı yükseklikte yer tutar
-                    SizedBox(
-                      height: 15,
-                      child: footer ?? const SizedBox.shrink(),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Fotoğrafın sol üstünde, mekanı beğenen kişinin 26×26 mini avatarı.
+class _LikerAvatar extends StatelessWidget {
+  final String name;
+  final String? photoUrl;
+  const _LikerAvatar({required this.name, required this.photoUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: _kAccentGreen, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.35),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: CircularAvatar(
+        name: name,
+        photoUrl: photoUrl,
+        radius: 13,
+        outline: false,
       ),
     );
   }
@@ -1132,34 +1289,6 @@ class _DistanceBadge extends StatelessWidget {
   }
 }
 
-/// "♥ Salih Kocaturk beğendi" / "♥ Sen beğendin" satırı.
-class _LikedByLabel extends StatelessWidget {
-  final String text;
-  const _LikedByLabel({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Icon(Icons.favorite_rounded, size: 11, color: Color(0xFFF87171)),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: context.colors.textSecondary,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 /// Store tarzı puan: tek sarı yıldız + "4.8" (+ opsiyonel yorum sayısı).
 class _StarScore extends StatelessWidget {
   final double value;
@@ -1188,33 +1317,6 @@ class _StarScore extends StatelessWidget {
             style: TextStyle(fontSize: 11, color: context.colors.hint),
           ),
         ],
-      ],
-    );
-  }
-}
-
-/// "Arkadaşların tarafından öneriliyor" satırı.
-class _FriendRecommendedLabel extends StatelessWidget {
-  const _FriendRecommendedLabel();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(Iconsax.people, size: 12, color: context.colors.primary),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            'home.recommended_by_friends'.tr(),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: context.colors.primary,
-            ),
-          ),
-        ),
       ],
     );
   }
