@@ -181,7 +181,10 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     return Scaffold(
       backgroundColor: context.colors.scaffold,
+      // Alt kenarda SafeArea yok: içerik yüzen nav kapsülünün arkasından
+      // akar; son boşluk kapsül yüksekliği kadar (aşağıda).
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             const NetworkStatusBanner(),
@@ -498,7 +501,14 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                     ),
 
-                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                    // Yüzen nav kapsülü + sistem çubuğu kadar boşluk
+                    // (Scaffold extendBody bunu MediaQuery alt padding'ine
+                    // ekler) + 24 px nefes payı.
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: MediaQuery.paddingOf(context).bottom + 24,
+                      ),
+                    ),
                   ],
                 ),
               ),
