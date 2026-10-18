@@ -5,6 +5,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/services/ad_service.dart';
@@ -71,7 +72,10 @@ class _VenueSearchLoadingPageState
     with TickerProviderStateMixin {
   // ── Animasyonlar ─────────────────────────────────────────────────────────────
   late final AnimationController _slideCtrl;   // sahneye giriş (1.2 sn)
-  late final AnimationController _progressCtrl; // progress bar dolumu (5 sn)
+  late final AnimationController _progressCtrl; // ham ilerleme (zamanlayıcı + arama)
+  /// visualProgress: ekranda görünen, yumuşatılmış ilerleme. Karakter
+  /// yürüyüşü, aksesuar geçişi, faz metni, % göstergesi ve bar BUNU dinler.
+  late final AnimationController _visualCtrl;
   late final AnimationController _shimmerCtrl;  // progress bar shimmer
   late final AnimationController _pulseCtrl;    // merkez pin nabzı
   late final AnimationController _celebrateCtrl; // %100: beşlik + sevinç pozu
@@ -86,7 +90,19 @@ class _VenueSearchLoadingPageState
   bool _showSkipButton   = false; // %100 olunca gösterilir
   bool _showInterstitial = false; // bu aramada tam ekran reklam gösterilecek mi?
   bool _adDismissed      = true;  // reklam yok ya da kapandı → geçişe izin ver
-  bool _progressFull     = false; // ilerleme %100'e ulaştı mı
+  bool _progressFull     = false; // görsel ilerleme %100'e ulaştı mı
+  bool _rawDone          = false; // ham ilerleme 1.0'a ulaştı (arama bitti)
+  double _visualTarget   = 0.0;   // visualProgress'in son hedefi
+
+  /// Görsel ilerlemenin yumuşaklığı: kritik sönümlü yay, bir sıçramayı
+  /// ~2.2 sn'de easeInOut benzeri bir eğriyle kapatır. animateTo her karede
+  /// yeniden başlatılsaydı easeInOutCubic sürekli sıfır hızdan başlar ve
+  /// ilerleme takılırdı; yay mevcut hızı koruyarak yeni hedefe yönelir.
+  static final _visualSpring = SpringDescription.withDampingRatio(
+    mass: 1.0,
+    stiffness: 7.0, // ω≈2.65 → %98 yerleşme ≈ 2.2 sn
+    ratio: 1.0,
+  );
   late final DateTime _startTime;
   Timer? _simTimer;
 
@@ -138,6 +154,12 @@ class _VenueSearchLoadingPageState
             curve: Curves.linear);
       });
     });
+
+    // Ham ilerleme ne kadar ani değişirse değişsin, ekrandaki ilerleme ona
+    // yavaşça (≈2.2 sn) yetişir — karakterler hiçbir zaman sıçramaz.
+    _visualCtrl = AnimationController(vsync: this, value: 0);
+    _progressCtrl.addListener(_onRawProgress);
+    _visualCtrl.addListener(_onVisualProgress);
 
     // Shimmer şeridi
     _shimmerCtrl = AnimationController(
@@ -248,17 +270,40 @@ class _VenueSearchLoadingPageState
               curve: Curves.easeInOut)
           .then((_) {
         if (!mounted) return;
-        // %100 oldu → Animasyonu Atla butonunu göster
-        setState(() {
-          _showSkipButton = true;
-          _progressFull = true;
-        });
-        _maybeCelebrate();
-        // 3 sn sonra otomatik geç (kullanıcı atlamazsa)
-        Future.delayed(const Duration(milliseconds: 3000), () {
-          if (mounted && _showSkipButton) _doNavigate();
-        });
+        // Ham ilerleme %100 — atla butonu / kutlama, visualProgress de
+        // %100'e yetiştiğinde (_onVisualProgress) tetiklenir.
+        _rawDone = true;
+        _onRawProgress();
+        _onVisualProgress();
       });
+    });
+  }
+
+  /// Ham ilerleme değişti → visualProgress'i yeni hedefe yumuşakça yönelt.
+  void _onRawProgress() {
+    final target = _progressCtrl.value;
+    if (target < 1.0 && (target - _visualTarget).abs() < 0.002) return;
+    if (target == _visualTarget) return;
+    _visualTarget = target;
+    _visualCtrl.animateWith(SpringSimulation(
+      _visualSpring,
+      _visualCtrl.value,
+      target,
+      _visualCtrl.velocity,
+    ));
+  }
+
+  /// visualProgress %100'e vardığında: atla butonu, kutlama, oto-geçiş.
+  void _onVisualProgress() {
+    if (!_rawDone || _progressFull || _visualCtrl.value < 0.995) return;
+    // Bayrak ÖNCE set edilir: value ataması dinleyiciyi yeniden tetikler.
+    _progressFull = true;
+    _visualCtrl.value = 1.0;
+    setState(() => _showSkipButton = true);
+    _maybeCelebrate();
+    // 3 sn sonra otomatik geç (kullanıcı atlamazsa)
+    Future.delayed(const Duration(milliseconds: 3000), () {
+      if (mounted && _showSkipButton) _doNavigate();
     });
   }
 
@@ -289,7 +334,9 @@ class _VenueSearchLoadingPageState
   @override
   void dispose() {
     _slideCtrl.dispose();
+    _progressCtrl.removeListener(_onRawProgress);
     _progressCtrl.dispose();
+    _visualCtrl.dispose();
     _shimmerCtrl.dispose();
     _pulseCtrl.dispose();
     _celebrateCtrl.dispose();
@@ -366,7 +413,7 @@ class _VenueSearchLoadingPageState
 
               // ── Faz metni ─────────────────────────────────────────────────
               AnimatedBuilder(
-                animation: _progressCtrl,
+                animation: _visualCtrl,
                 builder: (context, _) => SizedBox(
                 height: 20,
                 // Eski metin önce tamamen söner, yeni metin sonra belirir —
@@ -381,8 +428,8 @@ class _VenueSearchLoadingPageState
                     child: child,
                   ),
                   child: Text(
-                    _phaseFor(_progressCtrl.value),
-                    key: ValueKey<String>(_phaseFor(_progressCtrl.value)),
+                    _phaseFor(_visualCtrl.value),
+                    key: ValueKey<String>(_phaseFor(_visualCtrl.value)),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
@@ -432,7 +479,7 @@ class _VenueSearchLoadingPageState
                   myType: myType,
                   friendType: friendType,
                   slideAnim: _slideAnim,
-                  progressCtrl: _progressCtrl,
+                  progressCtrl: _visualCtrl,
                   searchDone: _searchDone,
                   celebrateCtrl: _celebrateCtrl,
                   pulseCtrl: _pulseCtrl,
@@ -457,9 +504,9 @@ class _VenueSearchLoadingPageState
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     AnimatedBuilder(
-                      animation: _progressCtrl,
+                      animation: _visualCtrl,
                       builder: (_, __) {
-                        final pct = (_progressCtrl.value * 100).round();
+                        final pct = (_visualCtrl.value * 100).round();
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 10),
                           child: Row(
@@ -491,18 +538,18 @@ class _VenueSearchLoadingPageState
                       },
                     ),
                     AnimatedBuilder(
-                      animation: Listenable.merge([_progressCtrl, _shimmerCtrl]),
+                      animation: Listenable.merge([_visualCtrl, _shimmerCtrl]),
                       builder: (_, __) => _GradientProgressBar(
-                        progress: _progressCtrl.value,
+                        progress: _visualCtrl.value,
                         shimmer: _shimmerCtrl.value,
                         color: primary,
                       ),
                     ),
                     const SizedBox(height: 18),
                     AnimatedBuilder(
-                      animation: _progressCtrl,
+                      animation: _visualCtrl,
                       builder: (_, __) => _StepDots(
-                        progress: _progressCtrl.value,
+                        progress: _visualCtrl.value,
                         accentColor: primary,
                       ),
                     ),
@@ -566,32 +613,19 @@ class _VenueSearchLoadingPageState
 //     crossfade ile arama moduna geçer, elindeki aksesuarı bırakıp yerden
 //     büyüteci alır (pickup sekansı) ve yürüyüşe koyulur.
 //
-// Koreografi (tamamı ilerlemeye / progress'e bağlı):
+// Koreografi (tamamı yumuşatılmış visualProgress'e bağlı):
 //   1) %0–15 : karakterler köşelerde kişilik pozunda.
-//   2) %15–45: elindeki aksesuar eriyerek kaybolur (opacity + hafif küçülme),
-//      büyüteç belirir; karakter sadece hafifçe esner — yere eğilme yok.
-//   3) %45–96: adım atarak ortaya yürürler, yolda bir kez durup incelerler;
-//      dururken büyüteçle sağa-sola tararlar.
-//   4) %100  : ortanın ±38 px'inde, aynı zemin hizasında beşlik çakıp
-//      dış kollarını kaldırarak sevinirler.
+//   2) %15–40: elindeki aksesuar çok yavaşça solar (opacity 1→0), büyüteç
+//      easeInOut ile belirir. Karakter dimdik durur — sıfır dikey hareket.
+//   3) %20–92: dik gövdeyle, yavaş adımlarla tek seferde ortaya yürürler.
+//   4) %100  : ortanın ±38 px'inde, aynı zemin hizasında beşlik çakarlar.
+//      Parıltı / konfeti / partikül yok.
 
-/// Yürüyüş programındaki tek bir zaman dilimi.
-class _WalkSeg {
-  final double t0, t1;   // rawT aralığı
-  final double p0, p1;   // pozisyon aralığı (pause'da p0 == p1)
-  final bool pause;
-  const _WalkSeg(this.t0, this.t1, this.p0, this.p1, {this.pause = false});
-}
-
-/// Programın bir anlık örneği: konum + inceleme yoğunluğu (0..1) + adım
-/// yoğunluğu (0..1). [anchor] duraklamanın kimliğidir (durulan pozisyon) —
-/// durak başına sözde-rastgele varyasyon üretmek için tohum olarak kullanılır.
+/// Yaklaşmanın anlık örneği: konum (0..1) + adım yoğunluğu (0..1).
 class _WalkSample {
   final double pos;
-  final double inspect;
-  final double anchor;
   final double walk;
-  const _WalkSample(this.pos, this.inspect, [this.anchor = 0.0, this.walk = 0.0]);
+  const _WalkSample(this.pos, this.walk);
 }
 
 class _SearchStage extends StatelessWidget {
@@ -637,7 +671,6 @@ class _SearchStage extends StatelessWidget {
     required PersonalityType type,
     required String? gender,
     required bool flip,
-    required double inspect,
     required double pickupT,
     required double walk,
     required double celebrate,
@@ -649,7 +682,7 @@ class _SearchStage extends StatelessWidget {
               key: const ValueKey('search'),
               type: type, gender: gender,
               size: _charSize, searchMode: true, flipX: flip,
-              inspect: inspect, pickup: pickupT,
+              pickup: pickupT,
               walkAmount: walk, celebrate: celebrate, highFive: !isSolo)
           : PersonalityCharacterWidget(
               key: const ValueKey('intro'),
@@ -686,13 +719,10 @@ class _SearchStage extends StatelessWidget {
           final prog = progressCtrl.value;
           final celebrate = celebrateCtrl.value;
 
-          // Aksesuar → büyüteç geçişi %15–%45 aralığına yayılır
-          // (easeInOutSine): aksesuar elde eriyip kaybolur, büyüteç belirir,
-          // karakter sadece hafifçe esner. İlerleme hızlı atlasa bile geniş
-          // aralık sayesinde sert/ani hareket olmaz.
+          // Aksesuar → büyüteç geçişi %15–%40 aralığına yayılır (≈2 sn):
+          // aksesuar elde yavaşça solar, büyüteç belirir. Karakter dik durur.
           final inSearchMode = prog >= 0.15;
-          final pickupT =
-              Curves.easeInOutSine.transform(((prog - 0.15) / 0.30).clamp(0.0, 1.0));
+          final pickupT = ((prog - 0.15) / 0.25).clamp(0.0, 1.0);
 
           // Şehir silüeti en baştan sahnede; mekan pinleri arama başlarken,
           // büyüteci alma sekansının ilk %60'ında yavaşça belirir.
@@ -700,16 +730,16 @@ class _SearchStage extends StatelessWidget {
               ? 0.0
               : Curves.easeInOut.transform((pickupT / 0.6).clamp(0.0, 1.0));
 
-          // Yaklaşma programı ilerlemeye bağlı: büyüteç elde olunca (%45)
-          // başlar, %96'da ortaya varılır — kalan %4 kutlamaya geçiş.
-          final a = ((prog - 0.45) / 0.51).clamp(0.0, 1.0);
-          final su0 = _sample(a, isSolo ? _approachSolo : _approachUser);
-          final sf0 = _sample(a, _approachFriend);
+          // Yaklaşma %20'de başlar, %92'de ortaya varılır — yürüyüş geniş
+          // bir aralığa yayıldığı için adımlar yavaş ve sakin.
+          final a = ((prog - 0.20) / 0.72).clamp(0.0, 1.0);
+          final su0 = _sample(a);
+          final sf0 = _sample(a);
           // Arama sürerken ilerleme çok yavaşladığında (%90+) adımlar da
           // kısalır — yerinde sayar gibi görünmesin.
           final creep = (!searchDone && prog >= 0.90) ? 0.35 : 1.0;
-          final su = _WalkSample(su0.pos, su0.inspect, su0.anchor, su0.walk * creep);
-          final sf = _WalkSample(sf0.pos, sf0.inspect, sf0.anchor, sf0.walk * creep);
+          final suWalk = su0.walk * creep;
+          final sfWalk = sf0.walk * creep;
 
           // Karakter MERKEZLERİ: başlangıçta köşeler, sonunda ortanın ±38 px'i.
           // Sol karakter hep sağa, sağ karakter hep sola bakar — birbirlerinin
@@ -719,13 +749,10 @@ class _SearchStage extends StatelessWidget {
           final friendStartC = hi + _charSize / 2;
           const friendEndOffset = _meetGap;
           final userX =
-              userStartC + (userEndC - userStartC) * su.pos - _charSize / 2;
+              userStartC + (userEndC - userStartC) * su0.pos - _charSize / 2;
           final friendX = friendStartC +
-              (centerX + friendEndOffset - friendStartC) * sf.pos -
+              (centerX + friendEndOffset - friendStartC) * sf0.pos -
               _charSize / 2;
-
-          final userCenter = userX + _charSize / 2;
-          final friendCenter = friendX + _charSize / 2;
 
           const pins = [
             (0.06, 44.0, true), (0.22, 54.0, false), (0.38, 44.0, true),
@@ -737,9 +764,8 @@ class _SearchStage extends StatelessWidget {
               inSearchMode: inSearchMode,
               type: myType, gender: me?.gender as String?,
               flip: false,
-              inspect: _crouchDepth(su, 0.0),
               pickupT: pickupT,
-              walk: su.walk,
+              walk: suWalk,
               celebrate: celebrate),
             const SizedBox(height: 3),
             _nameLabel(((me?.name ?? 'Sen') as String).split(' ').first),
@@ -758,12 +784,8 @@ class _SearchStage extends StatelessWidget {
                   child: Opacity(
                     opacity: pinT * (1 - celebrate),
                     child: _PulsingPin(
-                      pulseCtrl: pulseCtrl, color: accentColor, evenPhase: p.$3,
-                      boost: math.max(
-                        _pinBoost(w * p.$1 + 10, userCenter, su.inspect),
-                        isSolo
-                            ? 0.0
-                            : _pinBoost(w * p.$1 + 10, friendCenter, sf.inspect))))),
+                      pulseCtrl: pulseCtrl, color: accentColor,
+                      evenPhase: p.$3))),
 
               Positioned(
                 left: userX, bottom: _ground,
@@ -785,9 +807,8 @@ class _SearchStage extends StatelessWidget {
                           inSearchMode: inSearchMode,
                           type: friendType, gender: friend?.gender as String?,
                           flip: true,
-                          inspect: _crouchDepth(sf, 3.7), // farklı seed
                           pickupT: pickupT,
-                          walk: sf.walk,
+                          walk: sfWalk,
                           celebrate: celebrate),
                         const SizedBox(height: 3),
                         _nameLabel(
@@ -804,74 +825,15 @@ class _SearchStage extends StatelessWidget {
     );
   }
 
-  // ── Yaklaşma programları ──────────────────────────────────────────────────
-  // yürü → dur & incele → ortaya yürü. İki karakterin duraklaması bilinçli
-  // olarak farklı zamanda — aynı anda eğilmezler.
-  static const _approachUser = [
-    _WalkSeg(0.00, 0.38, 0.00, 0.45),
-    _WalkSeg(0.38, 0.58, 0.45, 0.45, pause: true),
-    _WalkSeg(0.58, 1.00, 0.45, 1.00),
-  ];
-
-  static const _approachFriend = [
-    _WalkSeg(0.00, 0.50, 0.00, 0.55),
-    _WalkSeg(0.50, 0.70, 0.55, 0.55, pause: true),
-    _WalkSeg(0.70, 1.00, 0.55, 1.00),
-  ];
-
-  static const _approachSolo = [
-    _WalkSeg(0.00, 0.45, 0.00, 0.50),
-    _WalkSeg(0.45, 0.65, 0.50, 0.50, pause: true),
-    _WalkSeg(0.65, 1.00, 0.50, 1.00),
-  ];
-
-  /// Durak kimliğinden 0..1 arası deterministik "rastgele" değer üretir.
-  static double _rand01(double seed) {
-    final v = math.sin(seed * 12.9898 + 78.233) * 43758.5453;
-    return v - v.floorToDouble();
-  }
-
-  /// t (0..1) → konum + inceleme yoğunluğu + adım yoğunluğu.
-  /// Yürüme dilimleri easeInOutCubic; adım yoğunluğu hızla orantılı (dilim
-  /// başında/sonunda yavaşlarken bacaklar da yavaşlar). Duraklamada konum
-  /// sabit, inspect yumuşakça 0→1→0.
-  static _WalkSample _sample(double t, List<_WalkSeg> schedule) {
-    for (final seg in schedule) {
-      if (t <= seg.t1 || identical(seg, schedule.last)) {
-        final local = ((t - seg.t0) / (seg.t1 - seg.t0)).clamp(0.0, 1.0);
-        if (seg.pause) {
-          final double inspect;
-          if (local < 0.25) {
-            inspect = Curves.easeOut.transform(local / 0.25);
-          } else if (local > 0.75) {
-            inspect = Curves.easeOut.transform((1.0 - local) / 0.25);
-          } else {
-            inspect = 1.0;
-          }
-          return _WalkSample(seg.p0, inspect, seg.t0 + seg.p0);
-        }
-        final eased = Curves.easeInOutCubic.transform(local);
-        final walk = math.sqrt(math.sin(math.pi * local).clamp(0.0, 1.0));
-        return _WalkSample(seg.p0 + (seg.p1 - seg.p0) * eased, 0.0, 0.0, walk);
-      }
-    }
-    return const _WalkSample(1.0, 0.0);
-  }
-
-  /// Karakter merkezi ile pin arasındaki yakınlığa göre parlama katsayısı.
-  static double _pinBoost(double pinCenterX, double charCenterX, double inspect) {
-    if (inspect <= 0.001) return 0.0;
-    final dx = (pinCenterX - charCenterX).abs();
-    final proximity = (1.0 - dx / 70.0).clamp(0.0, 1.0);
-    return inspect * proximity;
-  }
-
-  /// Çömelme derinliği: temel inspect değeri durak başına sözde-rastgele
-  /// ölçeklenir (0.70–1.0) — her incelemede birebir aynı poz tekrarlanmaz.
-  static double _crouchDepth(_WalkSample sample, double seed) {
-    if (sample.inspect <= 0.001) return 0.0;
-    final scale = 0.70 + 0.30 * _rand01(sample.anchor * 7.31 + seed);
-    return (sample.inspect * scale).clamp(0.0, 1.0);
+  // ── Yaklaşma ─────────────────────────────────────────────────────────────
+  // Duraklama / çömelme yok: karakterler dik gövdeyle tek seferde ortaya
+  // yürür. Konum easeInOutCubic; adım yoğunluğu hızla orantılı (başta ve
+  // sonda bacaklar yavaşlayarak durur).
+  static _WalkSample _sample(double t) {
+    final local = t.clamp(0.0, 1.0);
+    final eased = Curves.easeInOutCubic.transform(local);
+    final walk = math.sqrt(math.sin(math.pi * local).clamp(0.0, 1.0));
+    return _WalkSample(eased, walk);
   }
 }
 
@@ -1167,14 +1129,10 @@ class _PulsingPin extends StatelessWidget {
   final Color color;
   final bool evenPhase;
 
-  /// 0..1 — yakındaki karakter incelerken pin büyür ve parlar.
-  final double boost;
-
   const _PulsingPin({
     required this.pulseCtrl,
     required this.color,
     required this.evenPhase,
-    this.boost = 0.0,
   });
 
   @override
@@ -1183,17 +1141,14 @@ class _PulsingPin extends StatelessWidget {
       animation: pulseCtrl,
       builder: (_, __) {
         final raw = evenPhase ? pulseCtrl.value : (1.0 - pulseCtrl.value);
-        final scale = (0.72 + raw * 0.35) * (1.0 + 0.55 * boost);
-        final opacity = (0.42 + raw * 0.42 + 0.30 * boost).clamp(0.0, 1.0);
+        final scale = 0.72 + raw * 0.35;
+        final opacity = (0.42 + raw * 0.42).clamp(0.0, 1.0);
         return Transform.scale(
           scale: scale,
           child: Icon(
             Icons.location_on_rounded,
             color: color.withOpacity(opacity),
             size: 20,
-            shadows: boost > 0.05
-                ? [Shadow(color: color.withOpacity(0.6 * boost), blurRadius: 12)]
-                : null,
           ),
         );
       },
