@@ -17,6 +17,7 @@ import 'package:meetit/features/main/main_page.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/personality/friend_compatibility_page.dart';
+import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/personality/personality_analysis_page.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/notifiers/review_notifier.dart';
@@ -311,7 +312,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                               ),
                             )
                           : SizedBox(
-                              height: 140,
+                              height: 158,
                               child: ListView.separated(
                                 scrollDirection: Axis.horizontal,
                                 padding: const EdgeInsets.symmetric(
@@ -350,7 +351,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                           // Yorumlar hâlâ yükleniyorsa spinner göster.
                           if (topReviewsAsync.isLoading) {
                             return SizedBox(
-                              height: 216,
+                              height: 192,
                               child: Center(
                                 child: CircularProgressIndicator(
                                   color: context.colors.primary,
@@ -410,7 +411,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                               return false;
                             },
                             child: SizedBox(
-                              height: 216,
+                              height: 192,
                               child: ListView.separated(
                                 controller: _carouselController,
                                 scrollDirection: Axis.horizontal,
@@ -457,7 +458,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: SizedBox(
-                          height: 124,
+                          height: 136,
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -511,8 +512,13 @@ class _FriendCompatActionCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final myProfile = ref.watch(currentUserProvider)?.personalityProfile;
-    final friends = ref.watch(connectionsProvider);
+    final me = ref.watch(currentUserProvider);
+    final myProfile = me?.personalityProfile;
+    // Kullanıcının kendisi listede olsa bile asla "kendinle uyum" gösterme.
+    final friends = ref
+        .watch(connectionsProvider)
+        .where((f) => f.uid != me?.uid)
+        .toList();
 
     String subtitle = 'home.friend_compat_desc'.tr();
 
@@ -576,25 +582,37 @@ class _PersonalityActionCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: context.colors.border),
         ),
+        // Başlıklar iki kartta birebir aynı hizada: üstte sabit yükseklikli
+        // ikon satırı, altında sabit boşluk, sonra başlık + açıklama.
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: _kAccentGreenBase.withOpacity(isDark ? 0.20 : 0.16),
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                icon,
-                color: isDark ? _kAccentGreen : const Color(0xFF059669),
-                size: 20,
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: _kAccentGreenBase.withOpacity(isDark ? 0.20 : 0.16),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    icon,
+                    color: isDark ? _kAccentGreen : const Color(0xFF059669),
+                    size: 20,
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: isDark ? Colors.white38 : context.colors.hint,
+                ),
+              ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
             Text(
               title,
               maxLines: 1,
@@ -739,7 +757,10 @@ class _HomeFriendCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  friend.name.split(' ').first,
+                  titleCaseName(
+                    friend.name.split(' ').first,
+                    turkish: context.locale.languageCode == 'tr',
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -748,6 +769,36 @@ class _HomeFriendCard extends ConsumerWidget {
                     color: context.colors.textPrimary,
                   ),
                 ),
+                // Uyum yüzdesi (iki profil de varsa) ya da kişilik tipi
+                Builder(builder: (context) {
+                  final mine =
+                      ref.watch(currentUserProvider)?.personalityProfile;
+                  final theirs = friend.personalityProfile;
+                  final String? info = theirs == null
+                      ? null
+                      : mine != null
+                          ? 'home.compat_short'.tr(namedArgs: {
+                              'value': '${mine.compatibilityWith(theirs)}',
+                            })
+                          : theirs.dominantType.displayName;
+                  return SizedBox(
+                    height: 15,
+                    child: info == null
+                        ? null
+                        : Text(
+                            info,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? Colors.white54
+                                  : context.colors.textSecondary,
+                            ),
+                          ),
+                  );
+                }),
               ],
             ),
           ),
@@ -834,6 +885,7 @@ class _ReviewCarouselCard extends ConsumerWidget {
     final googleRating = review.googleRating ?? fallbackRating?.rating;
     final googleRatingCount =
         review.googleRatingCount ?? fallbackRating?.count;
+    final isMine = review.authorUid == ref.watch(currentUserProvider)?.uid;
     final author = titleCaseName(
       review.authorName,
       turkish: context.locale.languageCode == 'tr',
@@ -846,11 +898,16 @@ class _ReviewCarouselCard extends ConsumerWidget {
       rating: googleRating,
       ratingCount: googleRatingCount,
       distance: _distanceLabel(ref, review.lat, review.lng),
+      category: review.venueType != null ? review.typeLabel : null,
       footer: social.friendRecommended
           ? const _FriendRecommendedLabel()
-          : author.isEmpty
-              ? null
-              : _LikedByLabel(name: author),
+          : isMine
+              ? _LikedByLabel(text: 'home.liked_by_you'.tr())
+              : author.isEmpty
+                  ? null
+                  : _LikedByLabel(
+                      text: 'home.liked_by'.tr(namedArgs: {'name': author}),
+                    ),
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => VenueDetailPage(
@@ -889,6 +946,7 @@ class _PlaceCarouselCard extends ConsumerWidget {
       rating: venue.rating,
       ratingCount: venue.userRatingsTotal,
       distance: _distanceLabel(ref, venue.lat, venue.lng),
+      category: venue.primaryTypeLabel == 'Mekan' ? null : venue.primaryTypeLabel,
       footer: social.friendRecommended ? const _FriendRecommendedLabel() : null,
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
@@ -916,10 +974,12 @@ class _VenueCarouselCard extends StatelessWidget {
   final double? rating;
   final int? ratingCount;
   final String? distance;
+  final String? category;
   final Widget? footer;
   final VoidCallback onTap;
 
   const _VenueCarouselCard({
+    this.category,
     required this.photoUrl,
     required this.isUserFavorite,
     required this.name,
@@ -966,6 +1026,13 @@ class _VenueCarouselCard extends StatelessWidget {
                       left: 8,
                       child: _UserFavoriteBadge(),
                     ),
+                  // Mesafe rozeti fotoğrafın sağ üst köşesinde
+                  if (distance != null)
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: _DistanceBadge(label: distance!),
+                    ),
                 ],
               ),
             ),
@@ -986,28 +1053,37 @@ class _VenueCarouselCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    // Puan + mesafe aynı satırda
+                    // Puan + kategori ("★ 4.1 (186) • Restoran")
                     SizedBox(
-                      height: 20,
+                      height: 18,
                       child: Row(
                         children: [
                           if (rating != null)
+                            _StarScore(value: rating!, count: ratingCount),
+                          if (category != null)
                             Flexible(
-                              child: _StarScore(
-                                value: rating!,
-                                count: ratingCount,
+                              child: Padding(
+                                padding: EdgeInsets.only(
+                                  left: rating != null ? 6 : 0,
+                                ),
+                                child: Text(
+                                  rating != null ? '• $category' : category!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.white54
+                                        : context.colors.textSecondary,
+                                  ),
+                                ),
                               ),
-                            ),
-                          const Spacer(),
-                          if (distance != null)
-                            _VenueChip(
-                              icon: Iconsax.location,
-                              label: distance!,
                             ),
                         ],
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(height: 8),
                     // Alt satır her kartta aynı yükseklikte yer tutar
                     SizedBox(
                       height: 15,
@@ -1024,10 +1100,42 @@ class _VenueCarouselCard extends StatelessWidget {
   }
 }
 
-/// "♥ Salih Kocaturk beğendi" satırı.
+/// Fotoğrafın sağ üstündeki koyu, yarı saydam mesafe rozeti.
+class _DistanceBadge extends StatelessWidget {
+  final String label;
+  const _DistanceBadge({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.65),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Iconsax.location, size: 11, color: _kAccentGreen),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "♥ Salih Kocaturk beğendi" / "♥ Sen beğendin" satırı.
 class _LikedByLabel extends StatelessWidget {
-  final String name;
-  const _LikedByLabel({required this.name});
+  final String text;
+  const _LikedByLabel({required this.text});
 
   @override
   Widget build(BuildContext context) {
@@ -1037,7 +1145,7 @@ class _LikedByLabel extends StatelessWidget {
         const SizedBox(width: 4),
         Expanded(
           child: Text(
-            'home.liked_by'.tr(namedArgs: {'name': name}),
+            text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
@@ -1172,35 +1280,3 @@ class _VenueCardFallback extends StatelessWidget {
   }
 }
 
-/// Ana sayfa carousel kartlarında mekan tipi ve mesafe için küçük bilgi chip'i.
-class _VenueChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  const _VenueChip({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: context.colors.primary.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 10, color: context.colors.primary),
-          const SizedBox(width: 3),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              color: context.colors.primary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

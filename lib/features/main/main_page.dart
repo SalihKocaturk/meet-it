@@ -132,6 +132,15 @@ class _MainBottomNavBar extends ConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: context.colors.card,
+        // İçerikten temiz ayrım için 1 px çok hafif üst çizgi
+        border: Border(
+          top: BorderSide(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withOpacity(0.07)
+                : Colors.black.withOpacity(0.06),
+            width: 1,
+          ),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.06),

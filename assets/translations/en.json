@@ -483,6 +483,8 @@
     "featured_section": "Liked Venues Near You",
     "see_all": "See All",
     "liked_by": "Liked by {name}",
+    "liked_by_you": "You liked this",
+    "compat_short": "{value}% Match",
     "no_friends_hint": "You don't have any friends yet.",
     "no_friends_cta": "Friends you add will show up here. Invite or add one now!",
     "add_friend_button": "Add Friend",

@@ -483,6 +483,8 @@
     "featured_section": "Yakınındaki Beğenilen Mekanlar",
     "see_all": "Tümünü Gör",
     "liked_by": "{name} beğendi",
+    "liked_by_you": "Sen beğendin",
+    "compat_short": "%{value} Uyum",
     "no_friends_hint": "Henüz arkadaşın yok.",
     "no_friends_cta": "Arkadaş eklediğinde burada görünecekler. Hemen bir arkadaşını davet et veya ekle!",
     "add_friend_button": "Arkadaş Ekle",
