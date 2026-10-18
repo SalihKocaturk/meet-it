@@ -6,6 +6,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/services/notification_service.dart';
+import 'package:meetit/core/utils/geo_utils.dart';
 import 'package:meetit/features/auth/models/user_model.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/models/friendship_model.dart';
@@ -28,6 +29,14 @@ class FriendsState {
   /// "Tanıyor Olabilirsin" listesi yalnızca ortak arkadaşı olanları gösterir.
   final Map<String, int> mutualCounts;
 
+  /// Arkadaş olmayan kullanıcıların uid'leri, bana en yakından uzağa.
+  /// Ortak arkadaşlı öneri azsa liste bunlarla tamamlanır.
+  final List<String> nearbyOrder;
+
+  /// Arama yokken en az kaç öneri gösterilsin (uygulama yeniyken kimsenin
+  /// ortak arkadaşı olmayabilir — liste boş kalmasın).
+  static const int minSuggestions = 5;
+
   const FriendsState({
     this.suggestions = const [],
     this.connections = const [],
@@ -38,14 +47,16 @@ class FriendsState {
     this.searchQuery = '',
     this.blockedUids = const {},
     this.mutualCounts = const {},
+    this.nearbyOrder = const [],
   });
 
   /// Öneriler sekmesinde gösterilecek liste.
   ///
   /// Önceden arkadaş olmayan TÜM kullanıcılar listeleniyordu — kullanıcı az
   /// olduğu için herkes herkesin önerilerinde görünüyordu. Artık:
-  ///  • Arama yokken: sadece en az bir ortak arkadaşı olanlar, ortak arkadaş
-  ///    sayısına göre (en çok olan üstte).
+  ///  • Arama yokken: önce ortak arkadaşı olanlar (en çok olan üstte). Bunlar
+  ///    [minSuggestions]'dan azsa liste, bana en yakın kullanıcılarla
+  ///    tamamlanır — böylece herkes listelenmez ama liste de boş kalmaz.
   ///  • Arama varken (en az 2 harf): isme göre tüm kullanıcılarda arama —
   ///    tanıdığını ismiyle bulup ekleyebilsin diye.
   List<UserFriendModel> get filteredSuggestions {
@@ -53,9 +64,21 @@ class FriendsState {
     if (q.length >= 2) {
       return suggestions.where((f) => f.name.toLowerCase().contains(q)).toList();
     }
-    return suggestions.where((f) => (mutualCounts[f.uid] ?? 0) > 0).toList()
+    final mutual = suggestions
+        .where((f) => (mutualCounts[f.uid] ?? 0) > 0)
+        .toList()
       ..sort((a, b) =>
           (mutualCounts[b.uid] ?? 0).compareTo(mutualCounts[a.uid] ?? 0));
+    if (mutual.length >= minSuggestions) return mutual;
+
+    final shown = mutual.map((f) => f.uid).toSet();
+    final byUid = {for (final f in suggestions) f.uid: f};
+    final extra = nearbyOrder
+        .where((uid) => !shown.contains(uid))
+        .map((uid) => byUid[uid])
+        .whereType<UserFriendModel>()
+        .take(minSuggestions - mutual.length);
+    return [...mutual, ...extra];
   }
 
   FriendsState copyWith({
@@ -69,6 +92,7 @@ class FriendsState {
     String? searchQuery,
     Set<String>? blockedUids,
     Map<String, int>? mutualCounts,
+    List<String>? nearbyOrder,
   }) {
     return FriendsState(
       suggestions: suggestions ?? this.suggestions,
@@ -80,6 +104,7 @@ class FriendsState {
       searchQuery: searchQuery ?? this.searchQuery,
       blockedUids: blockedUids ?? this.blockedUids,
       mutualCounts: mutualCounts ?? this.mutualCounts,
+      nearbyOrder: nearbyOrder ?? this.nearbyOrder,
     );
   }
 }
@@ -107,10 +132,10 @@ class FriendsNotifier extends Notifier<FriendsState> {
 
     // Önce tüm kullanıcıları bir kere çek
     final usersSnap = await _db.collection('users').get();
-    final allUsers = usersSnap.docs
-        .map((d) => UserModel.fromMap(d.data()))
-        .where((u) => u.uid != currentUid)
-        .toList();
+    final everyone =
+        usersSnap.docs.map((d) => UserModel.fromMap(d.data())).toList();
+    final me = everyone.where((u) => u.uid == currentUid).firstOrNull;
+    final allUsers = everyone.where((u) => u.uid != currentUid).toList();
 
     // Friendships'i realtime dinle
     _friendshipSub?.cancel();
@@ -170,6 +195,8 @@ class FriendsNotifier extends Notifier<FriendsState> {
           personalityProfile: u.personalityProfile,
           meetCount: meetCounts[u.uid] ?? 0,
           gender: u.gender,
+          lat: u.lat,
+          lng: u.lng,
         );
         if (acceptedUids.contains(u.uid)) {
           connections.add(friend);
@@ -182,11 +209,24 @@ class FriendsNotifier extends Notifier<FriendsState> {
         }
       }
 
+      // Öneri listesi ortak arkadaşla dolmazsa yakındakilerle tamamlanır.
+      final myLat = me?.lat;
+      final myLng = me?.lng;
+      double distanceOf(UserFriendModel f) =>
+          (myLat == null || myLng == null || f.lat == null || f.lng == null)
+              ? double.infinity
+              : GeoUtils.haversineKm(myLat, myLng, f.lat!, f.lng!);
+      final nearbyOrder = ([...suggestions]
+            ..sort((a, b) => distanceOf(a).compareTo(distanceOf(b))))
+          .map((f) => f.uid)
+          .toList();
+
       state = state.copyWith(
         suggestions: suggestions,
         connections: connections,
         pendingInvitations: pendingInvitations,
         sentRequests: sentRequests,
+        nearbyOrder: nearbyOrder,
         isLoading: false,
       );
 
