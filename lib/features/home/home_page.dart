@@ -124,14 +124,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   static const _scrollStep = 1.2;
   static const _tickDuration = Duration(milliseconds: 16);
 
-  // Hızlı kategori kapsülleri: (emoji, çeviri anahtarı, aktivite seçimi)
-  static const _quickActions = <(String, String, Set<String>)>[
-    ('🎲', 'home.quick_random', <String>{}),
-    ('☕', 'home.quick_cafe', {'Kafe'}),
-    ('🍔', 'home.quick_restaurant', {'Restoran'}),
-    ('🎭', 'home.quick_culture', {'Kültür/Müze'}),
-  ];
-
   // Yakınızdaki beğenilen mekanlar carousel'inde gösterilecek max öğe sayısı.
   // Eğer Firestore'dan N yorum gelirse, (kMax - N) kadar API önerisi eklenir.
   static const _kMaxHybridVenues = 6;
@@ -184,9 +176,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     final topReviewsAsync = ref.watch(topReviewsProvider);
     final personalizedAsync = ref.watch(personalizedVenuesProvider);
     final connections = ref.watch(connectionsProvider);
-    // autoDispose aktivite seçimini canlı tut: hızlı kapsülle yapılan seçim,
-    // Buluşma ekranı yeniden çizilene kadar düşmesin.
-    ref.listen(selectedActivitiesProvider, (_, _) {});
     final sortedConnections = [...connections]
       ..sort((a, b) => b.meetCount.compareTo(a.meetCount));
 
@@ -266,43 +255,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                               ),
                             ),
                           ],
-                        ),
-                      ),
-                    ),
-
-                    // ── Hızlı kategori kapsülleri → Buluşma sekmesi ────────────
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 14),
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Row(
-                            children: [
-                              for (final q in _quickActions) ...[
-                                _QuickChip(
-                                  emoji: q.$1,
-                                  label: q.$2.tr(),
-                                  onTap: () {
-                                    // Seçili aktivite Buluşma ekranına hazır
-                                    // gelir; "Rastgele" filtreyi temizler.
-                                    // Sonuç ekranı açıksa forma dönülür.
-                                    ref.read(showVenuesProvider.notifier).state =
-                                        false;
-                                    ref
-                                        .read(
-                                          selectedActivitiesProvider.notifier,
-                                        )
-                                        .state = q.$3;
-                                    ref
-                                        .read(mainTabIndexProvider.notifier)
-                                        .state = 1;
-                                  },
-                                ),
-                                const SizedBox(width: 8),
-                              ],
-                            ],
-                          ),
                         ),
                       ),
                     ),
@@ -552,61 +504,6 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Hızlı kategori kapsülü ───────────────────────────────────────────────────
-
-class _QuickChip extends StatelessWidget {
-  final String emoji;
-  final String label;
-  final VoidCallback onTap;
-
-  const _QuickChip({
-    required this.emoji,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: isDark
-                ? Colors.white.withOpacity(0.04)
-                : context.colors.card,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isDark
-                  ? Colors.white.withOpacity(0.12)
-                  : context.colors.border,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(emoji, style: const TextStyle(fontSize: 14)),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: context.colors.textPrimary,
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
