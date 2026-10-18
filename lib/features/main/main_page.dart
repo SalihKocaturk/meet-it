@@ -4,7 +4,6 @@ import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/providers/network_provider.dart';
-import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/friends/friends_page.dart';
 import 'package:meetit/features/home/home_page.dart';
 import 'package:meetit/features/match/match_page.dart';
@@ -73,31 +72,6 @@ class _SideRail extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentUser = ref.watch(currentUserProvider);
-
-    Widget profileIcon({required bool active}) {
-      if (currentUser?.photoUrl != null) {
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: active
-                ? Border.all(color: context.colors.primary, width: 2)
-                : null,
-          ),
-          child: CircleAvatar(
-            radius: active ? 11 : 12,
-            backgroundImage: NetworkImage(currentUser!.photoUrl!),
-          ),
-        );
-      }
-      return Icon(
-        Iconsax.profile_circle,
-        size: 24,
-        color: active ? context.colors.primary : context.colors.hint,
-      );
-    }
-
     return NavigationRail(
       selectedIndex: currentIndex,
       onDestinationSelected: (i) =>
@@ -137,8 +111,8 @@ class _SideRail extends ConsumerWidget {
           label: Text('nav.friends'.tr()),
         ),
         NavigationRailDestination(
-          icon: profileIcon(active: false),
-          selectedIcon: profileIcon(active: true),
+          icon: const Icon(Iconsax.user),
+          selectedIcon: const Icon(Iconsax.user),
           label: Text('nav.profile'.tr()),
         ),
       ],
@@ -155,8 +129,6 @@ class _MainBottomNavBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentUser = ref.watch(currentUserProvider);
-
     return Container(
       decoration: BoxDecoration(
         color: context.colors.card,
@@ -198,57 +170,14 @@ class _MainBottomNavBar extends ConsumerWidget {
                 isSelected: currentIndex == 2,
                 onTap: () => ref.read(mainTabIndexProvider.notifier).state = 2,
               ),
-              // Profil — fotoğraf veya ikon
-              Expanded(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () =>
-                      ref.read(mainTabIndexProvider.notifier).state = 3,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: currentIndex == 3
-                              ? Border.all(
-                                  color: context.colors.primary,
-                                  width: 2,
-                                )
-                              : null,
-                        ),
-                        child: currentUser?.photoUrl != null
-                            ? CircleAvatar(
-                                radius: 13,
-                                backgroundImage: NetworkImage(
-                                  currentUser!.photoUrl!,
-                                ),
-                              )
-                            : Icon(
-                                Iconsax.profile_circle,
-                                color: currentIndex == 3
-                                    ? context.colors.primary
-                                    : context.colors.hint,
-                                size: 24,
-                              ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        'nav.profile'.tr(),
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: currentIndex == 3
-                              ? context.colors.primary
-                              : context.colors.hint,
-                          fontWeight: currentIndex == 3
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              // Profil — diğer sekmelerle aynı ikon dili (fotoğraf zaten
+              // ana sayfanın sağ üstünde gösteriliyor)
+              _NavItem(
+                icon: Iconsax.user,
+                activeIcon: Iconsax.user,
+                label: 'nav.profile'.tr(),
+                isSelected: currentIndex == 3,
+                onTap: () => ref.read(mainTabIndexProvider.notifier).state = 3,
               ),
             ],
           ),

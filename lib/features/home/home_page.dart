@@ -53,6 +53,10 @@ final class _PlaceItem extends _HybridItem {
 // Veri: `venueReviewsProvider(placeId)` — mekanın TÜM yorumları (carousel'in
 // kendi 50'lik örnekleminden bağımsız, sayım doğru olsun diye).
 const _kGoodReviewMinRating = 4;
+
+// Ana sayfa vurgu yeşilleri ("Tümünü Gör", Buluş butonu, ikon kutuları).
+const _kAccentGreenBase = Color(0xFF10B981);
+const _kAccentGreen = Color(0xFF34D399);
 const _kUserFavoriteMinReviewers = 5;
 
 class _VenueSocialProof {
@@ -203,15 +207,30 @@ class _HomePageState extends ConsumerState<HomePage> {
                                   Text(
                                     'home.greeting'.tr(
                                       namedArgs: {
-                                        'name':
-                                            currentUser?.name.split(' ').first ??
-                                            '',
+                                        'name': _titleCase(
+                                          currentUser?.name.split(' ').first ??
+                                              '',
+                                          turkish:
+                                              context.locale.languageCode ==
+                                                  'tr',
+                                        ),
                                       },
                                     ),
                                     style: TextStyle(
                                       fontSize: 22,
                                       fontWeight: FontWeight.bold,
                                       color: context.colors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'home.subtitle'.tr(),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? Colors.white60
+                                          : context.colors.textSecondary,
                                     ),
                                   ),
                                 ],
@@ -235,14 +254,46 @@ class _HomePageState extends ConsumerState<HomePage> {
                     // ── Arkadaşların ─────────────────────────────────────────
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-                        child: Text(
-                          'home.friends_section'.tr(),
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: context.colors.textPrimary,
-                          ),
+                        padding: const EdgeInsets.fromLTRB(20, 24, 12, 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'home.friends_section'.tr(),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: context.colors.textPrimary,
+                                ),
+                              ),
+                            ),
+                            if (connections.isNotEmpty)
+                              TextButton(
+                                onPressed: () => ref
+                                    .read(mainTabIndexProvider.notifier)
+                                    .state = 2,
+                                style: TextButton.styleFrom(
+                                  foregroundColor:
+                                      Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? _kAccentGreen
+                                          : const Color(0xFF059669),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                  ),
+                                  minimumSize: const Size(0, 32),
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: Text(
+                                  'home.see_all'.tr(),
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ),
@@ -400,27 +451,28 @@ class _HomePageState extends ConsumerState<HomePage> {
                         ),
                       ),
                     ),
+                    // İki kart yan yana, birebir aynı genişlik ve yükseklikte.
                     SliverToBoxAdapter(
-                      child: SizedBox(
-                        height: 124,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          itemCount: 2,
-                          separatorBuilder: (_, _) => const SizedBox(width: 12),
-                          itemBuilder: (_, i) {
-                            switch (i) {
-                              case 0:
-                                return _FriendCompatActionCard(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: SizedBox(
+                          height: 124,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: _FriendCompatActionCard(
                                   onTap: () => Navigator.of(context).push(
                                     MaterialPageRoute(
                                       builder: (_) =>
                                           const FriendCompatibilityPage(),
                                     ),
                                   ),
-                                );
-                              default:
-                                return _PersonalityActionCard(
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _PersonalityActionCard(
                                   icon: Iconsax.chart_2,
                                   title: 'home.view_analysis'.tr(),
                                   subtitle: 'home.view_analysis_desc'.tr(),
@@ -430,9 +482,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                                           const PersonalityAnalysisPage(),
                                     ),
                                   ),
-                                );
-                            }
-                          },
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -476,8 +529,13 @@ class _FriendCompatActionCard extends ConsumerWidget {
         }
       }
       if (bestFriend != null) {
-        final firstName = bestFriend.name.split(' ').first;
-        subtitle = '$firstName ile %$bestCompat uyum';
+        final firstName = _titleCase(
+          bestFriend.name.split(' ').first,
+          turkish: context.locale.languageCode == 'tr',
+        );
+        subtitle = 'home.friend_compat_value'.tr(
+          namedArgs: {'name': firstName, 'value': '$bestCompat'},
+        );
       }
     }
 
@@ -507,11 +565,11 @@ class _PersonalityActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 168,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: context.colors.card,
           borderRadius: BorderRadius.circular(16),
@@ -525,11 +583,15 @@ class _PersonalityActionCard extends StatelessWidget {
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: context.colors.primary.withOpacity(0.1),
+                color: _kAccentGreenBase.withOpacity(isDark ? 0.20 : 0.16),
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
-              child: Icon(icon, color: context.colors.primary, size: 20),
+              child: Icon(
+                icon,
+                color: isDark ? _kAccentGreen : const Color(0xFF059669),
+                size: 20,
+              ),
             ),
             const SizedBox(height: 10),
             Text(
@@ -701,10 +763,10 @@ class _HomeFriendCard extends ConsumerWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
               decoration: BoxDecoration(
-                color: context.colors.primary.withOpacity(0.1),
+                color: _kAccentGreenBase.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: context.colors.primary.withOpacity(0.3),
+                  color: _kAccentGreenBase.withOpacity(0.45),
                 ),
               ),
               child: FittedBox(
@@ -715,7 +777,10 @@ class _HomeFriendCard extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: context.colors.primary,
+                    // Açık temada açık yeşil okunmaz → koyu zümrüt
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF6EE7B7)
+                        : const Color(0xFF047857),
                   ),
                 ),
               ),
@@ -727,7 +792,43 @@ class _HomeFriendCard extends ConsumerWidget {
   }
 }
 
-// ── Carousel Kartı: Firestore Yorumu ──────────────────────────────────────────
+// ── Carousel Kartları ─────────────────────────────────────────────────────────
+//
+// Yorum kartı ve API öneri kartı aynı _VenueCarouselCard iskeletini kullanır:
+// sabit yükseklik, aynı iç hizalama — carousel'de hepsi birebir eşit görünür.
+//   • Fotoğraf (100 px) + gerekirse "Kullanıcı Favorisi" rozeti
+//   • Mekan adı
+//   • Tek satır: solda ★ 4.8 (1816), sağda 📍 1.9 km rozeti
+//   • En altta: "Arkadaşların tarafından öneriliyor" veya "♥ X beğendi"
+
+/// Kullanıcı konumundan mekana mesafe etiketi ("850 m" / "1.9 km").
+String? _distanceLabel(WidgetRef ref, double? lat, double? lng) {
+  final user = ref.watch(currentUserProvider);
+  if (lat == null || lng == null || user?.lat == null || user?.lng == null) {
+    return null;
+  }
+  final km = GeoUtils.haversineKm(user!.lat!, user.lng!, lat, lng);
+  return km < 1 ? '${(km * 1000).round()} m' : '${km.toStringAsFixed(1)} km';
+}
+
+/// "salih kocaturk" → "Salih Kocaturk". Yalnızca kelimelerin ilk harfi
+/// büyütülür (geri kalanı olduğu gibi kalır); Türkçede i → İ.
+String _titleCase(String input, {required bool turkish}) {
+  return input
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((w) => w.isNotEmpty)
+      .map((w) {
+        final f = w[0];
+        final upper = turkish && f == 'i'
+            ? 'İ'
+            : turkish && f == 'ı'
+                ? 'I'
+                : f.toUpperCase();
+        return upper + w.substring(1);
+      })
+      .join(' ');
+}
 
 class _ReviewCarouselCard extends ConsumerWidget {
   final VenueReviewModel review;
@@ -735,7 +836,6 @@ class _ReviewCarouselCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentUser = ref.watch(currentUserProvider);
     final fetchedPhotos = ref.watch(venuePhotosProvider(review.placeId));
     final freshPhotoUrl =
         fetchedPhotos.value?.isNotEmpty == true
@@ -752,7 +852,23 @@ class _ReviewCarouselCard extends ConsumerWidget {
     final googleRating = review.googleRating ?? fallbackRating?.rating;
     final googleRatingCount =
         review.googleRatingCount ?? fallbackRating?.count;
-    return GestureDetector(
+    final author = _titleCase(
+      review.authorName,
+      turkish: context.locale.languageCode == 'tr',
+    );
+
+    return _VenueCarouselCard(
+      photoUrl: displayUrl,
+      isUserFavorite: social.isUserFavorite,
+      name: review.venueName,
+      rating: googleRating,
+      ratingCount: googleRatingCount,
+      distance: _distanceLabel(ref, review.lat, review.lng),
+      footer: social.friendRecommended
+          ? const _FriendRecommendedLabel()
+          : author.isEmpty
+              ? null
+              : _LikedByLabel(name: author),
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => VenueDetailPage(
@@ -767,123 +883,9 @@ class _ReviewCarouselCard extends ConsumerWidget {
           ),
         ),
       ),
-      child: Container(
-        width: 220,
-        decoration: BoxDecoration(
-          color: context.colors.card,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: context.colors.border),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              height: 100,
-              width: double.infinity,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  displayUrl != null
-                      ? CachedNetworkImage(
-                          imageUrl: displayUrl,
-                          fit: BoxFit.cover,
-                          placeholder: (_, _) =>
-                              Container(color: context.colors.border),
-                          errorWidget: (_, _, _) => _VenueCardFallback(),
-                        )
-                      : _VenueCardFallback(),
-                  if (social.isUserFavorite)
-                    const Positioned(
-                      top: 8,
-                      left: 8,
-                      child: _UserFavoriteBadge(),
-                    ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      review.venueName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: context.colors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    // Store tarzı tek yıldız + Google puanı (örn. ★ 4.8 (1280))
-                    if (googleRating != null)
-                      _StarScore(value: googleRating, count: googleRatingCount)
-                    else
-                      const SizedBox(height: 15),
-                    const SizedBox(height: 5),
-                    Row(
-                      children: [
-                        if (review.venueType != null)
-                          _VenueChip(
-                            icon: Iconsax.category_2,
-                            label: review.typeLabel,
-                          ),
-                        if (review.lat != null &&
-                            currentUser?.lat != null &&
-                            currentUser?.lng != null) ...[
-                          const SizedBox(width: 5),
-                          _VenueChip(
-                            icon: Iconsax.location,
-                            label: () {
-                              final km = GeoUtils.haversineKm(
-                                currentUser!.lat!,
-                                currentUser.lng!,
-                                review.lat!,
-                                review.lng!,
-                              );
-                              return km < 1
-                                  ? '${(km * 1000).round()} m'
-                                  : '${km.toStringAsFixed(1)} km';
-                            }(),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 5),
-                    if (social.friendRecommended)
-                      const _FriendRecommendedLabel()
-                    else
-                      Text(
-                        review.authorName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: context.colors.primary,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
-
-// ── Carousel Kartı: API Önerisi (PlaceResult) ─────────────────────────────────
-//
-// _ReviewCarouselCard ile aynı boyut ve düzende — kullanıcı iki türü
-// aynı carousel'de tutarlı görür. Yazar adı yerine Google puanı + yorum
-// sayısı gösterilir. Dokununca VenueDetailPage'e geçiş yapar.
 
 class _PlaceCarouselCard extends ConsumerWidget {
   final PlaceResult venue;
@@ -891,7 +893,6 @@ class _PlaceCarouselCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentUser = ref.watch(currentUserProvider);
     final fetchedPhotos = ref.watch(venuePhotosProvider(venue.placeId));
     final photoUrl =
         fetchedPhotos.value?.isNotEmpty == true
@@ -899,7 +900,14 @@ class _PlaceCarouselCard extends ConsumerWidget {
             : venue.photoUrl;
     final social = _VenueSocialProof.watch(ref, venue.placeId);
 
-    return GestureDetector(
+    return _VenueCarouselCard(
+      photoUrl: photoUrl,
+      isUserFavorite: social.isUserFavorite,
+      name: venue.name,
+      rating: venue.rating,
+      ratingCount: venue.userRatingsTotal,
+      distance: _distanceLabel(ref, venue.lat, venue.lng),
+      footer: social.friendRecommended ? const _FriendRecommendedLabel() : null,
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => VenueDetailPage(
@@ -914,6 +922,36 @@ class _PlaceCarouselCard extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Carousel kartı iskeleti — iki kart türü de bunu kullanır.
+class _VenueCarouselCard extends StatelessWidget {
+  final String? photoUrl;
+  final bool isUserFavorite;
+  final String name;
+  final double? rating;
+  final int? ratingCount;
+  final String? distance;
+  final Widget? footer;
+  final VoidCallback onTap;
+
+  const _VenueCarouselCard({
+    required this.photoUrl,
+    required this.isUserFavorite,
+    required this.name,
+    required this.rating,
+    required this.ratingCount,
+    required this.distance,
+    required this.footer,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
       child: Container(
         width: 220,
         decoration: BoxDecoration(
@@ -933,14 +971,14 @@ class _PlaceCarouselCard extends ConsumerWidget {
                 children: [
                   photoUrl != null
                       ? CachedNetworkImage(
-                          imageUrl: photoUrl,
+                          imageUrl: photoUrl!,
                           fit: BoxFit.cover,
                           placeholder: (_, _) =>
                               Container(color: context.colors.border),
                           errorWidget: (_, _, _) => _VenueCardFallback(),
                         )
                       : _VenueCardFallback(),
-                  if (social.isUserFavorite)
+                  if (isUserFavorite)
                     const Positioned(
                       top: 8,
                       left: 8,
@@ -951,13 +989,12 @@ class _PlaceCarouselCard extends ConsumerWidget {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      venue.name,
+                      name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -966,42 +1003,34 @@ class _PlaceCarouselCard extends ConsumerWidget {
                         color: context.colors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 3),
-                    // Store tarzı tek yıldız + Google puanı (örn. ★ 4.6 (1280))
-                    if (venue.rating != null)
-                      _StarScore(
-                        value: venue.rating!,
-                        count: venue.userRatingsTotal,
-                      ),
-                    const SizedBox(height: 5),
-                    Row(
-                      children: [
-                        if (venue.lat != null &&
-                            currentUser?.lat != null &&
-                            currentUser?.lng != null) ...[
-                          const SizedBox(width: 5),
-                          _VenueChip(
-                            icon: Iconsax.location,
-                            label: () {
-                              final km = GeoUtils.haversineKm(
-                                currentUser!.lat!,
-                                currentUser.lng!,
-                                venue.lat!,
-                                venue.lng!,
-                              );
-                              return km < 1
-                                  ? '${(km * 1000).round()} m'
-                                  : '${km.toStringAsFixed(1)} km';
-                            }(),
-                          ),
+                    const SizedBox(height: 6),
+                    // Puan + mesafe aynı satırda
+                    SizedBox(
+                      height: 20,
+                      child: Row(
+                        children: [
+                          if (rating != null)
+                            Flexible(
+                              child: _StarScore(
+                                value: rating!,
+                                count: ratingCount,
+                              ),
+                            ),
+                          const Spacer(),
+                          if (distance != null)
+                            _VenueChip(
+                              icon: Iconsax.location,
+                              label: distance!,
+                            ),
                         ],
-                      ],
+                      ),
                     ),
-                    const SizedBox(height: 5),
-                    // _ReviewCarouselCard'daki yazar adı satırına karşılık
-                    // gelir: arkadaşlardan biri iyi yorum yaptıysa bu yazı.
-                    if (social.friendRecommended)
-                      const _FriendRecommendedLabel(),
+                    const Spacer(),
+                    // Alt satır her kartta aynı yükseklikte yer tutar
+                    SizedBox(
+                      height: 15,
+                      child: footer ?? const SizedBox.shrink(),
+                    ),
                   ],
                 ),
               ),
@@ -1009,6 +1038,34 @@ class _PlaceCarouselCard extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// "♥ Salih Kocaturk beğendi" satırı.
+class _LikedByLabel extends StatelessWidget {
+  final String name;
+  const _LikedByLabel({required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Icon(Icons.favorite_rounded, size: 11, color: Color(0xFFF87171)),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            'home.liked_by'.tr(namedArgs: {'name': name}),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: context.colors.textSecondary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
