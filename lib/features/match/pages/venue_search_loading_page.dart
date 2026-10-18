@@ -591,9 +591,9 @@ class _VenueSearchLoadingPageState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Durum satırı: nefes alan nokta + metin | akıcı yüzde
+                    // Durum satırı: metin | akıcı yüzde
                     AnimatedBuilder(
-                      animation: Listenable.merge([_visualCtrl, _pulseCtrl]),
+                      animation: _visualCtrl,
                       builder: (_, __) {
                         final pct = _displayPct();
                         final label = _progressFull
@@ -605,11 +605,6 @@ class _VenueSearchLoadingPageState
                           padding: const EdgeInsets.only(bottom: 12),
                           child: Row(
                             children: [
-                              _StatusDot(
-                                pulse: _pulseCtrl.value,
-                                done: _progressFull,
-                              ),
-                              const SizedBox(width: 8),
                               Expanded(
                                 child: AnimatedSwitcher(
                                   duration: const Duration(milliseconds: 350),
@@ -653,14 +648,6 @@ class _VenueSearchLoadingPageState
                             Theme.of(context).brightness == Brightness.dark
                                 ? 0.08
                                 : 0.07),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    AnimatedBuilder(
-                      animation: _visualCtrl,
-                      builder: (_, __) => _StepIndicator(
-                        progress: _progressFull ? 1.0 : _visualCtrl.value,
-                        finished: _progressFull,
                       ),
                     ),
 
@@ -849,14 +836,16 @@ class _SearchStage extends StatelessWidget {
           // Yürüyüş ilerleme yüzdesinden bağımsız: 6.5 sn'lik walkCtrl.
           final su0 = _sample(walkCtrl.value);
           final sf0 = su0;
-          final suWalk = su0.walk;
+          final suWalk = isSolo ? 0.0 : su0.walk;
           final sfWalk = sf0.walk;
 
           // Karakter MERKEZLERİ: başlangıçta köşeler, sonunda ortanın ±38 px'i.
           // Sol karakter hep sağa, sağ karakter hep sola bakar — birbirlerinin
           // içinden geçmezler, böylece üst üste binme imkânsız.
-          final userStartC = lo + _charSize / 2;
-          final userEndC = isSolo ? centerX - 30 : centerX - _meetGap;
+          // Tek kişilik aramada karakter baştan sona ekranın tam ortasında
+          // durur (yürümez).
+          final userStartC = isSolo ? centerX : lo + _charSize / 2;
+          final userEndC = isSolo ? centerX : centerX - _meetGap;
           final friendStartC = hi + _charSize / 2;
           const friendEndOffset = _meetGap;
           final userX =
@@ -963,56 +952,16 @@ const _kEmeraldDeep  = Color(0xFF059669);
 const _kEmerald      = Color(0xFF10B981);
 const _kEmeraldLight = Color(0xFF34D399);
 
-// ── Durum noktası ─────────────────────────────────────────────────────────────
-
-/// "Aranıyor..." yanında nefes alan küçük yeşil nokta; %100'de sabit parlar.
-class _StatusDot extends StatelessWidget {
-  final double pulse; // 0..1 (ileri-geri)
-  final bool done;
-
-  const _StatusDot({required this.pulse, required this.done});
-
-  @override
-  Widget build(BuildContext context) {
-    final p = done ? 1.0 : Curves.easeInOut.transform(pulse);
-    final color = done ? _kEmerald : _kEmeraldLight;
-    return SizedBox(
-      width: 10,
-      height: 10,
-      child: Center(
-        child: Transform.scale(
-          scale: done ? 1.0 : 0.80 + 0.25 * p,
-          child: Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: color.withOpacity(done ? 1.0 : 0.55 + 0.45 * p),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withOpacity(done ? 0.75 : 0.25 + 0.45 * p),
-                  blurRadius: done ? 8 : 3 + 5 * p,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // ── Gradient Progress Bar ─────────────────────────────────────────────────────
 
-/// İnce (10 px) hap şeklinde bar: zümrüt gradyan dolgu, dolgu içinde sürekli
-/// soldan sağa akan shimmer ve dolgunun ucunda hafif neon parlama.
-/// Slider topuzu (beyaz daire) yok.
+/// İnce (7 px), sade hap şeklinde bar: zümrüt gradyan dolgu ve dolgu içinde
+/// soldan sağa akan hafif shimmer. Topuz / uç parlaması yok.
 class _GradientProgressBar extends StatelessWidget {
   final double progress;
   final double shimmer;
   final Color  trackColor;
 
-  static const double height = 10;
+  static const double height = 7;
 
   const _GradientProgressBar({
     required this.progress,
@@ -1065,16 +1014,6 @@ class _ProgressPainter extends CustomPainter {
     final fillRect = Rect.fromLTWH(0, 0, fillW, h);
     final fillRRect = RRect.fromRectAndRadius(fillRect, radius);
 
-    // Uçtaki neon parlama (BoxShadow blur 10 eşdeğeri) — dolgunun altında
-    canvas.drawCircle(
-      Offset(fillW - h / 2, h / 2),
-      h * 0.75,
-      Paint()
-        ..color = _kEmeraldLight.withOpacity(0.70)
-        ..maskFilter = MaskFilter.blur(
-            BlurStyle.normal, Shadow.convertRadiusToSigma(10)),
-    );
-
     // Dolgu: #059669 → #10B981 → #34D399
     canvas.drawRRect(
       fillRRect,
@@ -1096,7 +1035,7 @@ class _ProgressPainter extends CustomPainter {
       Paint()
         ..shader = LinearGradient(colors: [
           Colors.white.withOpacity(0),
-          Colors.white.withOpacity(0.38),
+          Colors.white.withOpacity(0.28),
           Colors.white.withOpacity(0),
         ]).createShader(shimRect),
     );
@@ -1108,130 +1047,6 @@ class _ProgressPainter extends CustomPainter {
       old.progress != progress ||
       old.shimmer != shimmer ||
       old.trackColor != trackColor;
-}
-
-// ── Adım Göstergesi ───────────────────────────────────────────────────────────
-
-enum _StepState { completed, active, upcoming }
-
-/// 4 adım: Konum (%0–25), Mekanlar (%25–55), Filtreleme (%55–85),
-/// Hazır (%85–100). Her adım: üstte ince gösterge çubuğu + altında etiket.
-class _StepIndicator extends StatelessWidget {
-  final double progress;
-  final bool finished;
-
-  const _StepIndicator({required this.progress, required this.finished});
-
-  static const _labels = ['Konum', 'Mekanlar', 'Filtreleme', 'Hazır'];
-  static const _starts = [0.00, 0.25, 0.55, 0.85];
-  static const _ends   = [0.25, 0.55, 0.85, 1.00];
-
-  _StepState _stateFor(int i) {
-    final done = i == _labels.length - 1 ? finished : progress >= _ends[i];
-    if (done) return _StepState.completed;
-    if (progress >= _starts[i]) return _StepState.active;
-    return _StepState.upcoming;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final base = context.colors.textPrimary;
-    const dur = Duration(milliseconds: 380);
-
-    return Row(
-      children: List.generate(_labels.length, (i) {
-        final st = _stateFor(i);
-
-        final Color barColor;
-        final Color textColor;
-        final FontWeight weight;
-        final List<BoxShadow> glow;
-        switch (st) {
-          case _StepState.completed:
-            barColor = _kEmerald;
-            textColor = isDark ? _kEmerald : _kEmeraldDeep;
-            weight = FontWeight.w600;
-            glow = const [];
-          case _StepState.active:
-            barColor = _kEmeraldLight;
-            textColor =
-                isDark ? const Color(0xFFD1FAE5) : const Color(0xFF047857);
-            weight = FontWeight.w600;
-            glow = [
-              BoxShadow(
-                color: _kEmeraldLight.withOpacity(0.55),
-                blurRadius: 8,
-              ),
-            ];
-          case _StepState.upcoming:
-            barColor = base.withOpacity(isDark ? 0.14 : 0.10);
-            textColor = base.withOpacity(0.35);
-            weight = FontWeight.w500;
-            glow = const [];
-        }
-
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: i == 0 ? 0 : 3,
-              right: i == _labels.length - 1 ? 0 : 3,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AnimatedContainer(
-                  duration: dur,
-                  curve: Curves.easeOut,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: barColor,
-                    borderRadius: BorderRadius.circular(99),
-                    boxShadow: glow,
-                  ),
-                ),
-                const SizedBox(height: 7),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Tamamlandı: etiketin önünde zarif bir tik belirir
-                    AnimatedSize(
-                      duration: dur,
-                      curve: Curves.easeOut,
-                      child: st == _StepState.completed
-                          ? Padding(
-                              padding: const EdgeInsets.only(right: 3),
-                              child: Icon(Icons.check_rounded,
-                                  size: 12, color: textColor),
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-                    Flexible(
-                      child: AnimatedDefaultTextStyle(
-                        duration: dur,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: weight,
-                          color: textColor,
-                          letterSpacing: 0.1,
-                        ),
-                        child: Text(
-                          _labels[i],
-                          maxLines: 1,
-                          overflow: TextOverflow.fade,
-                          softWrap: false,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      }),
-    );
-  }
 }
 
 // ── Kişilik Tipi Rozeti ───────────────────────────────────────────────────────
