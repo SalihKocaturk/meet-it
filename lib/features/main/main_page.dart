@@ -1,11 +1,8 @@
-import 'dart:ui' show ImageFilter;
-
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
-import 'package:meetit/core/constants/emerald_palette.dart';
 import 'package:meetit/core/providers/network_provider.dart';
 import 'package:meetit/features/friends/friends_page.dart';
 import 'package:meetit/features/home/home_page.dart';
@@ -58,11 +55,9 @@ class MainPage extends ConsumerWidget {
       );
     }
 
-    // ── Telefon düzeni: altta yüzen kapsül nav bar ──────────────────────
+    // ── Telefon düzeni: altta BottomNavBar ──────────────────────────────
     return Scaffold(
       backgroundColor: context.colors.scaffold,
-      // İçerik (harita dahil) kapsülün arkasına kadar uzanır
-      extendBody: true,
       body: pageContent,
       bottomNavigationBar: _MainBottomNavBar(currentIndex: currentIndex),
     );
@@ -125,80 +120,75 @@ class _SideRail extends ConsumerWidget {
   }
 }
 
-// ── Telefon: altta yüzen buzlu cam kapsül (floating pill) ───────────────────
-//
-// Scaffold `extendBody: true` ile içerik kapsülün arkasına kadar uzanır.
-// Scaffold, gövdenin MediaQuery alt padding'ine kapsülün yüksekliğini
-// ekler; sekmelerdeki SafeArea / alt boşluklar bu sayede kapsülün üstünde
-// kalır (son kartlar barın arkasında kaybolmaz).
+// ── Telefon: altta özel navigasyon barı ─────────────────────────────────────
 
 class _MainBottomNavBar extends ConsumerWidget {
   final int currentIndex;
 
   const _MainBottomNavBar({required this.currentIndex});
 
-  // (pasif ikon, aktif ikon, çeviri anahtarı)
-  static const _items = [
-    (Icons.home_outlined, Icons.home_rounded, 'nav.home'),
-    (Icons.location_on_outlined, Icons.location_on_rounded, 'nav.meetup'),
-    (Icons.people_alt_outlined, Icons.people_alt_rounded, 'nav.friends'),
-    (Icons.person_outline_rounded, Icons.person_rounded, 'nav.profile'),
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final radius = BorderRadius.circular(40);
-
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-        child: DecoratedBox(
-          // Gölge ClipRRect'in dışında kalmalı, yoksa kırpılır
-          decoration: BoxDecoration(
-            borderRadius: radius,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.45 : 0.14),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
+    return Container(
+      decoration: BoxDecoration(
+        color: context.colors.card,
+        // İçerikten temiz ayrım için 1 px çok hafif üst çizgi
+        border: Border(
+          top: BorderSide(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withOpacity(0.07)
+                : Colors.black.withOpacity(0.06),
+            width: 1,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 60,
+          child: Row(
+            children: [
+              // Ana Sayfa
+              _NavItem(
+                icon: Iconsax.home_2,
+                activeIcon: Iconsax.home,
+                label: 'nav.home'.tr(),
+                isSelected: currentIndex == 0,
+                onTap: () => ref.read(mainTabIndexProvider.notifier).state = 0,
+              ),
+              // Buluşma
+              _NavItem(
+                icon: Iconsax.location,
+                activeIcon: Iconsax.location,
+                label: 'nav.meetup'.tr(),
+                isSelected: currentIndex == 1,
+                onTap: () => ref.read(mainTabIndexProvider.notifier).state = 1,
+              ),
+              // Arkadaşlar
+              _NavItem(
+                icon: Iconsax.people,
+                activeIcon: Iconsax.people,
+                label: 'nav.friends'.tr(),
+                isSelected: currentIndex == 2,
+                onTap: () => ref.read(mainTabIndexProvider.notifier).state = 2,
+              ),
+              // Profil — diğer sekmelerle aynı ikon dili (fotoğraf zaten
+              // ana sayfanın sağ üstünde gösteriliyor)
+              _NavItem(
+                icon: Iconsax.user,
+                activeIcon: Iconsax.user,
+                label: 'nav.profile'.tr(),
+                isSelected: currentIndex == 3,
+                onTap: () => ref.read(mainTabIndexProvider.notifier).state = 3,
               ),
             ],
-          ),
-          child: ClipRRect(
-            borderRadius: radius,
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Container(
-                height: 64,
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF141A17).withOpacity(0.82)
-                      : Colors.white.withOpacity(0.85),
-                  borderRadius: radius,
-                  border: Border.all(
-                    color: isDark
-                        ? Colors.white.withOpacity(0.1)
-                        : Colors.black.withOpacity(0.06),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    for (var i = 0; i < _items.length; i++)
-                      _NavItem(
-                        icon: _items[i].$1,
-                        activeIcon: _items[i].$2,
-                        label: _items[i].$3.tr(),
-                        isSelected: currentIndex == i,
-                        onTap: () =>
-                            ref.read(mainTabIndexProvider.notifier).state = i,
-                      ),
-                  ],
-                ),
-              ),
-            ),
           ),
         ),
       ),
@@ -206,9 +196,6 @@ class _MainBottomNavBar extends ConsumerWidget {
   }
 }
 
-/// Etiketsiz ikon sekmesi: aktifken dolgulu zümrüt ikon + hafif glow +
-/// altında 4 px nokta; pasifken çizgisel ikon. Etiket ekran okuyucu için
-/// Semantics'te durur.
 class _NavItem extends StatelessWidget {
   final IconData icon;
   final IconData activeIcon;
@@ -226,58 +213,30 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final activeColor = isDark ? Emerald.light : Emerald.deep;
-    final idleColor =
-        isDark ? Colors.white.withOpacity(0.65) : Colors.black54;
-
     return Expanded(
-      child: Semantics(
-        label: label,
-        button: true,
-        selected: isSelected,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AnimatedScale(
-                scale: isSelected ? 1.12 : 1.0,
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeOut,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: Emerald.base.withOpacity(0.35),
-                              blurRadius: 16,
-                            ),
-                          ]
-                        : const [],
-                  ),
-                  child: Icon(
-                    isSelected ? activeIcon : icon,
-                    size: 26,
-                    color: isSelected ? activeColor : idleColor,
-                  ),
-                ),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isSelected ? activeIcon : icon,
+              color: isSelected ? context.colors.primary : context.colors.hint,
+              size: 24,
+            ),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                color: isSelected
+                    ? context.colors.primary
+                    : context.colors.hint,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
               ),
-              const SizedBox(height: 4),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 4,
-                height: 4,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isSelected ? Emerald.base : Colors.transparent,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
