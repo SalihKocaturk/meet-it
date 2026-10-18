@@ -76,6 +76,11 @@ class _VenueSearchLoadingPageState
   /// visualProgress: ekranda görünen, yumuşatılmış ilerleme. Karakter
   /// yürüyüşü, aksesuar geçişi, faz metni, % göstergesi ve bar BUNU dinler.
   late final AnimationController _visualCtrl;
+  /// Aksesuar → büyüteç geçişi (2 sn, zamanla sürülür).
+  late final AnimationController _swapCtrl;
+  /// Ortaya yürüyüş (6.5 sn) — ilerleme yüzdesinden tamamen bağımsız:
+  /// yüzde ne kadar sıçrarsa sıçrasın karakterler sabit hızda yürür.
+  late final AnimationController _walkCtrl;
   late final AnimationController _shimmerCtrl;  // progress bar shimmer
   late final AnimationController _pulseCtrl;    // merkez pin nabzı
   late final AnimationController _celebrateCtrl; // %100: beşlik + sevinç pozu
@@ -92,6 +97,8 @@ class _VenueSearchLoadingPageState
   bool _adDismissed      = true;  // reklam yok ya da kapandı → geçişe izin ver
   bool _progressFull     = false; // görsel ilerleme %100'e ulaştı mı
   bool _rawDone          = false; // ham ilerleme 1.0'a ulaştı (arama bitti)
+  bool _swapStarted      = false; // aksesuar → büyüteç geçişi başladı mı
+  bool _walkStarted      = false; // ortaya yürüyüş başladı mı
   double _visualTarget   = 0.0;   // visualProgress'in son hedefi
 
   /// Görsel ilerlemenin yumuşaklığı: kritik sönümlü yay, bir sıçramayı
@@ -160,6 +167,22 @@ class _VenueSearchLoadingPageState
     _visualCtrl = AnimationController(vsync: this, value: 0);
     _progressCtrl.addListener(_onRawProgress);
     _visualCtrl.addListener(_onVisualProgress);
+
+    // %12'de aksesuar 2 sn'de solar / büyüteç belirir; karakterler bu sırada
+    // köşelerinde sabit durur. Geçiş bitip ilerleme %25'i geçince yürüyüş
+    // başlar (6.5 sn, easeInOutSine).
+    _swapCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..addStatusListener((s) {
+        if (s == AnimationStatus.completed) _maybeStartWalk();
+      });
+    _walkCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 6500),
+    )..addStatusListener((s) {
+        if (s == AnimationStatus.completed) _maybeCelebrate();
+      });
 
     // Shimmer şeridi
     _shimmerCtrl = AnimationController(
@@ -293,25 +316,52 @@ class _VenueSearchLoadingPageState
     ));
   }
 
-  /// visualProgress %100'e vardığında: atla butonu, kutlama, oto-geçiş.
+  /// visualProgress değişti: geçiş / yürüyüş tetikleri ve %100 sonu.
   void _onVisualProgress() {
-    if (!_rawDone || _progressFull || _visualCtrl.value < 0.995) return;
+    final v = _visualCtrl.value;
+    if (!_swapStarted && v >= 0.12) {
+      _swapStarted = true;
+      _swapCtrl.forward();
+    }
+    _maybeStartWalk();
+
+    if (!_rawDone || _progressFull || v < 0.995) return;
     // Bayrak ÖNCE set edilir: value ataması dinleyiciyi yeniden tetikler.
     _progressFull = true;
     _visualCtrl.value = 1.0;
     setState(() => _showSkipButton = true);
+
+    // %100 olduğunda yürüyüş bitmediyse kalan yolu hızlıca tamamla.
+    if (!_walkCtrl.isCompleted) {
+      if (!_swapStarted) {
+        _swapStarted = true;
+        _swapCtrl.forward();
+      }
+      _walkStarted = true;
+      final ms = ((1.0 - _walkCtrl.value) * 6500 * 0.35).clamp(500, 2000).round();
+      _walkCtrl.animateTo(1.0,
+          duration: Duration(milliseconds: ms), curve: Curves.linear);
+    }
     _maybeCelebrate();
-    // 3 sn sonra otomatik geç (kullanıcı atlamazsa)
-    Future.delayed(const Duration(milliseconds: 3000), () {
-      if (mounted && _showSkipButton) _doNavigate();
-    });
+  }
+
+  /// Geçiş bitti VE görsel ilerleme %25'i geçti → yürüyüşü başlat.
+  void _maybeStartWalk() {
+    if (_walkStarted || !_swapCtrl.isCompleted) return;
+    if (_visualCtrl.value < 0.25) return;
+    _walkStarted = true;
+    _walkCtrl.forward();
   }
 
   /// Karakterler ortada buluşmuş VE ilerleme %100 ise sevinç sahnesini oynat.
   void _maybeCelebrate() {
-    if (!mounted || !_progressFull) return;
+    if (!mounted || !_progressFull || !_walkCtrl.isCompleted) return;
     if (_celebrateCtrl.isAnimating || _celebrateCtrl.value > 0) return;
     _celebrateCtrl.forward();
+    // Beşlikten 3 sn sonra otomatik geç (kullanıcı atlamazsa)
+    Future.delayed(const Duration(milliseconds: 3000), () {
+      if (mounted && _showSkipButton) _doNavigate();
+    });
   }
 
   void _doNavigate() {
@@ -337,6 +387,8 @@ class _VenueSearchLoadingPageState
     _progressCtrl.removeListener(_onRawProgress);
     _progressCtrl.dispose();
     _visualCtrl.dispose();
+    _swapCtrl.dispose();
+    _walkCtrl.dispose();
     _shimmerCtrl.dispose();
     _pulseCtrl.dispose();
     _celebrateCtrl.dispose();
@@ -479,8 +531,8 @@ class _VenueSearchLoadingPageState
                   myType: myType,
                   friendType: friendType,
                   slideAnim: _slideAnim,
-                  progressCtrl: _visualCtrl,
-                  searchDone: _searchDone,
+                  swapCtrl: _swapCtrl,
+                  walkCtrl: _walkCtrl,
                   celebrateCtrl: _celebrateCtrl,
                   pulseCtrl: _pulseCtrl,
                   accentColor: primary,
@@ -613,13 +665,14 @@ class _VenueSearchLoadingPageState
 //     crossfade ile arama moduna geçer, elindeki aksesuarı bırakıp yerden
 //     büyüteci alır (pickup sekansı) ve yürüyüşe koyulur.
 //
-// Koreografi (tamamı yumuşatılmış visualProgress'e bağlı):
-//   1) %0–15 : karakterler köşelerde kişilik pozunda.
-//   2) %15–40: elindeki aksesuar çok yavaşça solar (opacity 1→0), büyüteç
-//      easeInOut ile belirir. Karakter dimdik durur — sıfır dikey hareket.
-//   3) %20–92: dik gövdeyle, yavaş adımlarla tek seferde ortaya yürürler.
-//   4) %100  : ortanın ±38 px'inde, aynı zemin hizasında beşlik çakarlar.
-//      Parıltı / konfeti / partikül yok.
+// Koreografi:
+//   1) %0–12 : karakterler köşelerde kişilik pozunda.
+//   2) %12'de: aksesuar 2 sn'de yavaşça solar, büyüteç belirir (swapCtrl).
+//      Karakterler bu sırada köşelerinde sabit, dimdik durur.
+//   3) Geçiş bitip %25 geçilince: ilerleme yüzdesinden BAĞIMSIZ 6.5 sn'lik
+//      yürüyüş (walkCtrl, easeInOutSine) — yüzde sıçrasa da fırlama olmaz.
+//      %100'e gelindiğinde yürüyüş bitmediyse kalan yol hızlıca tamamlanır.
+//   4) Ortaya varınca + %100: ±38 px'te beşlik. Parıltı / partikül yok.
 
 /// Yaklaşmanın anlık örneği: konum (0..1) + adım yoğunluğu (0..1).
 class _WalkSample {
@@ -635,8 +688,8 @@ class _SearchStage extends StatelessWidget {
   final PersonalityType myType;
   final PersonalityType friendType;
   final Animation<double> slideAnim;
-  final AnimationController progressCtrl;
-  final bool searchDone;
+  final AnimationController swapCtrl;
+  final AnimationController walkCtrl;
   final AnimationController celebrateCtrl;
   final AnimationController pulseCtrl;
   final Color accentColor;
@@ -657,8 +710,8 @@ class _SearchStage extends StatelessWidget {
     required this.myType,
     required this.friendType,
     required this.slideAnim,
-    required this.progressCtrl,
-    required this.searchDone,
+    required this.swapCtrl,
+    required this.walkCtrl,
     required this.celebrateCtrl,
     required this.pulseCtrl,
     required this.accentColor,
@@ -704,7 +757,7 @@ class _SearchStage extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: Listenable.merge([
-        slideAnim, progressCtrl, celebrateCtrl, pulseCtrl,
+        slideAnim, swapCtrl, walkCtrl, celebrateCtrl, pulseCtrl,
       ]),
       builder: (_, __) => LayoutBuilder(
         builder: (_, constraints) {
@@ -716,13 +769,12 @@ class _SearchStage extends StatelessWidget {
           final centerX = w / 2;
 
           final slide = slideAnim.value.clamp(0.0, 1.0);
-          final prog = progressCtrl.value;
           final celebrate = celebrateCtrl.value;
 
-          // Aksesuar → büyüteç geçişi %15–%40 aralığına yayılır (≈2 sn):
-          // aksesuar elde yavaşça solar, büyüteç belirir. Karakter dik durur.
-          final inSearchMode = prog >= 0.15;
-          final pickupT = ((prog - 0.15) / 0.25).clamp(0.0, 1.0);
+          // Aksesuar → büyüteç geçişi (2 sn): aksesuar elde yavaşça solar,
+          // büyüteç belirir. Bu sırada karakterler köşelerinde sabit durur.
+          final inSearchMode = swapCtrl.status != AnimationStatus.dismissed;
+          final pickupT = swapCtrl.value;
 
           // Şehir silüeti en baştan sahnede; mekan pinleri arama başlarken,
           // büyüteci alma sekansının ilk %60'ında yavaşça belirir.
@@ -730,16 +782,11 @@ class _SearchStage extends StatelessWidget {
               ? 0.0
               : Curves.easeInOut.transform((pickupT / 0.6).clamp(0.0, 1.0));
 
-          // Yaklaşma %20'de başlar, %92'de ortaya varılır — yürüyüş geniş
-          // bir aralığa yayıldığı için adımlar yavaş ve sakin.
-          final a = ((prog - 0.20) / 0.72).clamp(0.0, 1.0);
-          final su0 = _sample(a);
-          final sf0 = _sample(a);
-          // Arama sürerken ilerleme çok yavaşladığında (%90+) adımlar da
-          // kısalır — yerinde sayar gibi görünmesin.
-          final creep = (!searchDone && prog >= 0.90) ? 0.35 : 1.0;
-          final suWalk = su0.walk * creep;
-          final sfWalk = sf0.walk * creep;
+          // Yürüyüş ilerleme yüzdesinden bağımsız: 6.5 sn'lik walkCtrl.
+          final su0 = _sample(walkCtrl.value);
+          final sf0 = su0;
+          final suWalk = su0.walk;
+          final sfWalk = sf0.walk;
 
           // Karakter MERKEZLERİ: başlangıçta köşeler, sonunda ortanın ±38 px'i.
           // Sol karakter hep sağa, sağ karakter hep sola bakar — birbirlerinin
@@ -826,14 +873,23 @@ class _SearchStage extends StatelessWidget {
   }
 
   // ── Yaklaşma ─────────────────────────────────────────────────────────────
-  // Duraklama / çömelme yok: karakterler dik gövdeyle tek seferde ortaya
-  // yürür. Konum easeInOutCubic; adım yoğunluğu hızla orantılı (başta ve
-  // sonda bacaklar yavaşlayarak durur).
-  static _WalkSample _sample(double t) {
-    final local = t.clamp(0.0, 1.0);
-    final eased = Curves.easeInOutCubic.transform(local);
-    final walk = math.sqrt(math.sin(math.pi * local).clamp(0.0, 1.0));
-    return _WalkSample(eased, walk);
+  // walkT (0..1) → konum (easeInOutSine) + adım genişliği (stride envelope).
+  // Adımlar ilk %15'te küçükten normale açılır, son %15'te küçülerek kapanır
+  // — bacaklar hiçbir zaman bir anda makas gibi açılıp kapanmaz.
+  static _WalkSample _sample(double walkT) {
+    final t = walkT.clamp(0.0, 1.0);
+    final pos = Curves.easeInOutSine.transform(t);
+    final double stride;
+    if (t <= 0.0 || t >= 1.0) {
+      stride = 0.0;
+    } else if (t < 0.15) {
+      stride = Curves.easeInOut.transform(t / 0.15);
+    } else if (t > 0.85) {
+      stride = Curves.easeInOut.transform((1.0 - t) / 0.15);
+    } else {
+      stride = 1.0;
+    }
+    return _WalkSample(pos, stride);
   }
 }
 

@@ -334,7 +334,7 @@ class _CharacterPainter extends CustomPainter {
   /// Arama modunda büyüteç tutan sağ el — kol, büyüteç ve alma sekansı
   /// aynı noktayı kullansın diye tek yerde hesaplanır.
   Offset _searchRightHand(double s) {
-    final swing = math.sin(_walkPhase) * s * 0.022 * walkAmount;
+    final swing = math.sin(_walkPhase) * s * 0.016 * walkAmount;
     var hand = Offset(s * 0.620, s * 0.432 - swing * 0.35);
     // Etrafı inceliyormuş gibi yavaş, küçük daireler
     final w = time * 2 * math.pi / 3.2;
@@ -708,11 +708,13 @@ class _CharacterPainter extends CustomPainter {
       final double walk, liftL, liftR;
       if (searchMode) {
         // Gerçek adım: ayaklar karşılıklı ileri-geri, öne gelen ayak kalkar.
+        // walkAmount = adım genişliği zarfı (başta/sonda yumuşakça 0'a iner);
+        // genlik kibar, kısa adımlar için küçük tutuldu.
         final amt = walkAmount;
         final ph = _walkPhase;
-        walk = math.sin(ph) * s * 0.045 * amt;
-        liftL = math.max(0.0, -math.cos(ph)) * s * 0.022 * amt;
-        liftR = math.max(0.0, math.cos(ph)) * s * 0.022 * amt;
+        walk = math.sin(ph) * s * 0.030 * amt;
+        liftL = math.max(0.0, -math.cos(ph)) * s * 0.014 * amt;
+        liftR = math.max(0.0, math.cos(ph)) * s * 0.014 * amt;
       } else {
         walk = math.sin(anim * math.pi) * s * 0.045;
         liftL = 0.0;
@@ -753,7 +755,7 @@ class _CharacterPainter extends CustomPainter {
     if (searchMode) {
       // Arama pozu: sağ el büyüteci yüz hizasında tutar, sol el yürüme
       // dengesi için yavaşça sallanır.
-      final swing = math.sin(_walkPhase) * s * 0.022 * walkAmount;
+      final swing = math.sin(_walkPhase) * s * 0.016 * walkAmount;
       final rHand = _searchRightHand(s);
       canvas.drawLine(rs, rHand, armP);
       var lHand = Offset(s * 0.285 - swing, s * 0.660);
