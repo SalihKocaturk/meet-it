@@ -92,7 +92,11 @@ class _VenueSearchLoadingPageState
   bool _popping          = false;
   bool _navigated        = false; // çifte pop koruması (Atla + oto-geçiş yarışı)
   bool _searchDone       = false;
-  bool _showSkipButton   = false; // %100 olunca gösterilir
+  bool _skipVisible      = false; // aramanın 2. sn'sinden itibaren görünür
+  bool _skipRequested    = false; // kullanıcı "Animasyonu Atla"ya bastı
+  bool _resultsReady     = false; // arama sonucu hazır (geçiş yapılabilir)
+  int  _shownPct         = 0;     // ekrandaki yüzde (yalnızca artar)
+  Timer? _skipTimer;
   bool _showInterstitial = false; // bu aramada tam ekran reklam gösterilecek mi?
   bool _adDismissed      = true;  // reklam yok ya da kapandı → geçişe izin ver
   bool _progressFull     = false; // görsel ilerleme %100'e ulaştı mı
@@ -137,6 +141,11 @@ class _VenueSearchLoadingPageState
     );
     _slideAnim = CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOutBack);
     _slideCtrl.forward();
+
+    // "Animasyonu Atla" aramanın 2. saniyesinde yumuşakça belirir.
+    _skipTimer = Timer(const Duration(milliseconds: 2000), () {
+      if (mounted && !_progressFull) setState(() => _skipVisible = true);
+    });
 
     // Progress koreografiyle senkron:
     //   %0–40  (4 sn)  : intro + büyüteci alma — karakterler köşelerde
@@ -275,6 +284,13 @@ class _VenueSearchLoadingPageState
   void _finishAndPop() {
     if (_popping) return;
     _popping = true;
+    _resultsReady = true;
+
+    // Kullanıcı daha önce "Animasyonu Atla"ya bastıysa beklemeden geç.
+    if (_skipRequested) {
+      _doNavigate();
+      return;
+    }
 
     // Minimum 6 saniye animasyon süresi garantisi
     final elapsed  = DateTime.now().difference(_startTime).inMilliseconds;
@@ -329,7 +345,8 @@ class _VenueSearchLoadingPageState
     // Bayrak ÖNCE set edilir: value ataması dinleyiciyi yeniden tetikler.
     _progressFull = true;
     _visualCtrl.value = 1.0;
-    setState(() => _showSkipButton = true);
+    _skipTimer?.cancel();
+    setState(() {}); // atla butonu gizlenir, başlık "Mekanlar bulundu!"
 
     // %100 olduğunda yürüyüş bitmediyse kalan yolu hızlıca tamamla.
     if (!_walkCtrl.isCompleted) {
@@ -360,8 +377,26 @@ class _VenueSearchLoadingPageState
     _celebrateCtrl.forward();
     // Beşlikten 3 sn sonra otomatik geç (kullanıcı atlamazsa)
     Future.delayed(const Duration(milliseconds: 3000), () {
-      if (mounted && _showSkipButton) _doNavigate();
+      if (mounted) _doNavigate();
     });
+  }
+
+  /// "Animasyonu Atla": sonuç hazırsa hemen geç; değilse arama biter bitmez
+  /// (6 sn minimum beklemeden) geçilir. Sonuç gelmeden pop edilirse arama
+  /// sayfası "mekan bulunamadı" gösterirdi.
+  void _onSkipPressed() {
+    if (_skipRequested) return;
+    setState(() => _skipRequested = true);
+    if (_resultsReady) _doNavigate();
+  }
+
+  /// Ekrandaki yüzde: visualProgress'ten 1'er 1'er akar, asla geri gitmez;
+  /// %100 yalnızca gerçekten bittiğinde gösterilir.
+  int _displayPct() {
+    final raw = (_visualCtrl.value * 100).floor();
+    final target = _progressFull ? 100 : raw.clamp(0, 99);
+    if (target > _shownPct) _shownPct = target;
+    return _shownPct;
   }
 
   void _doNavigate() {
@@ -393,6 +428,7 @@ class _VenueSearchLoadingPageState
     _pulseCtrl.dispose();
     _celebrateCtrl.dispose();
     _simTimer?.cancel();
+    _skipTimer?.cancel();
     super.dispose();
   }
 
@@ -555,33 +591,52 @@ class _VenueSearchLoadingPageState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Durum satırı: nefes alan nokta + metin | akıcı yüzde
                     AnimatedBuilder(
-                      animation: _visualCtrl,
+                      animation: Listenable.merge([_visualCtrl, _pulseCtrl]),
                       builder: (_, __) {
-                        final pct = (_visualCtrl.value * 100).round();
+                        final pct = _displayPct();
+                        final label = _progressFull
+                            ? 'Mekanlar bulundu!'
+                            : widget.simulationMode
+                                ? 'Simülasyon çalışıyor...'
+                                : 'Aranıyor...';
                         return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.only(bottom: 12),
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                _searchDone
-                                    ? 'Mekanlar bulundu!'
-                                    : widget.simulationMode
-                                        ? 'Simülasyon çalışıyor...'
-                                        : 'Aranıyor...',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: context.colors.textSecondary,
+                              _StatusDot(
+                                pulse: _pulseCtrl.value,
+                                done: _progressFull,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 350),
+                                  layoutBuilder: (current, previous) => Stack(
+                                    alignment: Alignment.centerLeft,
+                                    children: [...previous, if (current != null) current],
+                                  ),
+                                  child: Text(
+                                    label,
+                                    key: ValueKey<String>(label),
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: _progressFull
+                                          ? _kEmerald
+                                          : context.colors.textSecondary,
+                                    ),
+                                  ),
                                 ),
                               ),
                               Text(
                                 '%$pct',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w800,
-                                  color: primary,
+                                  color: _kEmerald,
+                                  fontFeatures: [FontFeature.tabularFigures()],
                                 ),
                               ),
                             ],
@@ -591,57 +646,66 @@ class _VenueSearchLoadingPageState
                     ),
                     AnimatedBuilder(
                       animation: Listenable.merge([_visualCtrl, _shimmerCtrl]),
-                      builder: (_, __) => _GradientProgressBar(
+                      builder: (context, _) => _GradientProgressBar(
                         progress: _visualCtrl.value,
                         shimmer: _shimmerCtrl.value,
-                        color: primary,
+                        trackColor: context.colors.textPrimary.withOpacity(
+                            Theme.of(context).brightness == Brightness.dark
+                                ? 0.08
+                                : 0.07),
                       ),
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 16),
                     AnimatedBuilder(
                       animation: _visualCtrl,
-                      builder: (_, __) => _StepDots(
-                        progress: _visualCtrl.value,
-                        accentColor: primary,
+                      builder: (_, __) => _StepIndicator(
+                        progress: _progressFull ? 1.0 : _visualCtrl.value,
+                        finished: _progressFull,
                       ),
                     ),
 
-                    // ── Animasyonu Atla butonu (%100 olunca belirir) ──────────
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 400),
-                      child: _showSkipButton
-                          ? Padding(
-                              key: const ValueKey('skip_btn'),
-                              padding: const EdgeInsets.only(top: 20),
-                              child: Center(
-                                child: TextButton.icon(
-                                  onPressed: _doNavigate,
-                                  icon: Icon(Icons.skip_next_rounded,
-                                      size: 18, color: primary),
-                                  label: Text(
-                                    'Animasyonu Atla',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: primary,
-                                    ),
+                    // ── Animasyonu Atla: aramanın 2. sn'sinden itibaren
+                    // görünür, %100'de (zaten geçiş yapılacağı için) gizlenir.
+                    Builder(builder: (_) {
+                      final visible =
+                          _skipVisible && !_progressFull && !_skipRequested;
+                      return IgnorePointer(
+                        ignoring: !visible,
+                        child: AnimatedOpacity(
+                          opacity: visible ? 1.0 : 0.0,
+                          duration: const Duration(milliseconds: 450),
+                          curve: Curves.easeInOut,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 20),
+                            child: Center(
+                              child: TextButton.icon(
+                                onPressed: _onSkipPressed,
+                                icon: Icon(Icons.skip_next_rounded,
+                                    size: 18, color: primary),
+                                label: Text(
+                                  'Animasyonu Atla',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: primary,
                                   ),
-                                  style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 20, vertical: 10),
-                                    backgroundColor: primary.withOpacity(0.09),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(24),
-                                      side: BorderSide(
-                                          color: primary.withOpacity(0.28)),
-                                    ),
+                                ),
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 10),
+                                  backgroundColor: primary.withOpacity(0.09),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(24),
+                                    side: BorderSide(
+                                        color: primary.withOpacity(0.28)),
                                   ),
                                 ),
                               ),
-                            )
-                          : const SizedBox(key: ValueKey('skip_btn_hidden'),
-                              height: 0),
-                    ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
                     const SizedBox(height: 16),
                   ],
                 ),
@@ -893,30 +957,80 @@ class _SearchStage extends StatelessWidget {
   }
 }
 
+// ── Renkler (alt bar) ─────────────────────────────────────────────────────────
+
+const _kEmeraldDeep  = Color(0xFF059669);
+const _kEmerald      = Color(0xFF10B981);
+const _kEmeraldLight = Color(0xFF34D399);
+
+// ── Durum noktası ─────────────────────────────────────────────────────────────
+
+/// "Aranıyor..." yanında nefes alan küçük yeşil nokta; %100'de sabit parlar.
+class _StatusDot extends StatelessWidget {
+  final double pulse; // 0..1 (ileri-geri)
+  final bool done;
+
+  const _StatusDot({required this.pulse, required this.done});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = done ? 1.0 : Curves.easeInOut.transform(pulse);
+    final color = done ? _kEmerald : _kEmeraldLight;
+    return SizedBox(
+      width: 10,
+      height: 10,
+      child: Center(
+        child: Transform.scale(
+          scale: done ? 1.0 : 0.80 + 0.25 * p,
+          child: Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color.withOpacity(done ? 1.0 : 0.55 + 0.45 * p),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(done ? 0.75 : 0.25 + 0.45 * p),
+                  blurRadius: done ? 8 : 3 + 5 * p,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Gradient Progress Bar ─────────────────────────────────────────────────────
 
+/// İnce (10 px) hap şeklinde bar: zümrüt gradyan dolgu, dolgu içinde sürekli
+/// soldan sağa akan shimmer ve dolgunun ucunda hafif neon parlama.
+/// Slider topuzu (beyaz daire) yok.
 class _GradientProgressBar extends StatelessWidget {
   final double progress;
   final double shimmer;
-  final Color  color;
+  final Color  trackColor;
+
+  static const double height = 10;
 
   const _GradientProgressBar({
     required this.progress,
     required this.shimmer,
-    required this.color,
+    required this.trackColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 20,
+      height: height,
       child: CustomPaint(
         painter: _ProgressPainter(
           progress: progress,
           shimmer: shimmer,
-          color: color,
+          trackColor: trackColor,
         ),
-        size: const Size(double.infinity, 20),
+        size: const Size(double.infinity, height),
       ),
     );
   }
@@ -925,126 +1039,195 @@ class _GradientProgressBar extends StatelessWidget {
 class _ProgressPainter extends CustomPainter {
   final double progress;
   final double shimmer;
-  final Color  color;
+  final Color  trackColor;
 
   const _ProgressPainter({
     required this.progress,
     required this.shimmer,
-    required this.color,
+    required this.trackColor,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final r = size.height / 2;
+    final h = size.height;
+    const radius = Radius.circular(99);
 
+    // Ray
     canvas.drawRRect(
-      RRect.fromRectAndRadius(
-          Rect.fromLTWH(0, 0, size.width, size.height), Radius.circular(r)),
-      Paint()..color = color.withOpacity(0.13),
+      RRect.fromRectAndRadius(Offset.zero & size, radius),
+      Paint()..color = trackColor,
     );
 
-    if (progress <= 0.005) return;
+    final p = progress.clamp(0.0, 1.0);
+    if (p <= 0.003) return;
 
-    final fillW    = size.width * progress.clamp(0.0, 1.0);
-    final fillRect = Rect.fromLTWH(0, 0, fillW, size.height);
-    final fillRRect = RRect.fromRectAndRadius(fillRect, Radius.circular(r));
+    final fillW = math.max(h, size.width * p);
+    final fillRect = Rect.fromLTWH(0, 0, fillW, h);
+    final fillRRect = RRect.fromRectAndRadius(fillRect, radius);
 
+    // Uçtaki neon parlama (BoxShadow blur 10 eşdeğeri) — dolgunun altında
+    canvas.drawCircle(
+      Offset(fillW - h / 2, h / 2),
+      h * 0.75,
+      Paint()
+        ..color = _kEmeraldLight.withOpacity(0.70)
+        ..maskFilter = MaskFilter.blur(
+            BlurStyle.normal, Shadow.convertRadiusToSigma(10)),
+    );
+
+    // Dolgu: #059669 → #10B981 → #34D399
     canvas.drawRRect(
       fillRRect,
       Paint()
-        ..shader = LinearGradient(
-          colors: [
-            color,
-            Color.lerp(color, Colors.white, 0.35)!,
-          ],
-        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
+        ..shader = const LinearGradient(
+          colors: [_kEmeraldDeep, _kEmerald, _kEmeraldLight],
+          stops: [0.0, 0.55, 1.0],
+        ).createShader(fillRect),
     );
 
+    // Shimmer: dolgu içinde sürekli soldan sağa akan yumuşak ışık dalgası
     canvas.save();
     canvas.clipRRect(fillRRect);
-    final shimW = size.width * 0.38;
-    final shimX = -shimW + shimmer * (size.width + shimW);
+    final shimW = math.max(48.0, fillW * 0.45);
+    final shimX = -shimW + shimmer * (fillW + shimW);
+    final shimRect = Rect.fromLTWH(shimX, 0, shimW, h);
     canvas.drawRect(
-      Rect.fromLTWH(shimX, 0, shimW, size.height),
+      shimRect,
       Paint()
         ..shader = LinearGradient(colors: [
           Colors.white.withOpacity(0),
-          Colors.white.withOpacity(0.30),
+          Colors.white.withOpacity(0.38),
           Colors.white.withOpacity(0),
-        ]).createShader(Rect.fromLTWH(shimX, 0, shimW, size.height)),
+        ]).createShader(shimRect),
     );
     canvas.restore();
-
-    if (progress > 0.02 && progress < 0.998) {
-      canvas.drawCircle(
-        Offset(fillW, size.height / 2),
-        size.height * 0.62,
-        Paint()
-          ..color = color.withOpacity(0.50)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
-      );
-      canvas.drawCircle(
-        Offset(fillW, size.height / 2),
-        size.height * 0.26,
-        Paint()..color = Colors.white.withOpacity(0.80),
-      );
-    }
   }
 
   @override
   bool shouldRepaint(covariant _ProgressPainter old) =>
-      old.progress != progress || old.shimmer != shimmer;
+      old.progress != progress ||
+      old.shimmer != shimmer ||
+      old.trackColor != trackColor;
 }
 
 // ── Adım Göstergesi ───────────────────────────────────────────────────────────
 
-class _StepDots extends StatelessWidget {
+enum _StepState { completed, active, upcoming }
+
+/// 4 adım: Konum (%0–25), Mekanlar (%25–55), Filtreleme (%55–85),
+/// Hazır (%85–100). Her adım: üstte ince gösterge çubuğu + altında etiket.
+class _StepIndicator extends StatelessWidget {
   final double progress;
-  final Color  accentColor;
+  final bool finished;
 
-  const _StepDots({required this.progress, required this.accentColor});
+  const _StepIndicator({required this.progress, required this.finished});
 
-  static const _labels     = ['Konum', 'Mekanlar', 'Filtreleme', 'Hazır'];
-  static const _thresholds = [0.20, 0.52, 0.78, 1.0];
+  static const _labels = ['Konum', 'Mekanlar', 'Filtreleme', 'Hazır'];
+  static const _starts = [0.00, 0.25, 0.55, 0.85];
+  static const _ends   = [0.25, 0.55, 0.85, 1.00];
+
+  _StepState _stateFor(int i) {
+    final done = i == _labels.length - 1 ? finished : progress >= _ends[i];
+    if (done) return _StepState.completed;
+    if (progress >= _starts[i]) return _StepState.active;
+    return _StepState.upcoming;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: List.generate(_labels.length, (i) {
-        final done   = progress >= _thresholds[i];
-        final active = !done && (i == 0 || progress >= _thresholds[i - 1]);
-        final col    = done
-            ? accentColor
-            : active
-                ? accentColor.withOpacity(0.48)
-                : Colors.grey.withOpacity(0.22);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final base = context.colors.textPrimary;
+    const dur = Duration(milliseconds: 380);
 
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 340),
-              curve: Curves.easeOut,
-              width: done ? 24 : 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: col,
-                borderRadius: BorderRadius.circular(4),
+    return Row(
+      children: List.generate(_labels.length, (i) {
+        final st = _stateFor(i);
+
+        final Color barColor;
+        final Color textColor;
+        final FontWeight weight;
+        final List<BoxShadow> glow;
+        switch (st) {
+          case _StepState.completed:
+            barColor = _kEmerald;
+            textColor = isDark ? _kEmerald : _kEmeraldDeep;
+            weight = FontWeight.w600;
+            glow = const [];
+          case _StepState.active:
+            barColor = _kEmeraldLight;
+            textColor =
+                isDark ? const Color(0xFFD1FAE5) : const Color(0xFF047857);
+            weight = FontWeight.w600;
+            glow = [
+              BoxShadow(
+                color: _kEmeraldLight.withOpacity(0.55),
+                blurRadius: 8,
               ),
+            ];
+          case _StepState.upcoming:
+            barColor = base.withOpacity(isDark ? 0.14 : 0.10);
+            textColor = base.withOpacity(0.35);
+            weight = FontWeight.w500;
+            glow = const [];
+        }
+
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: i == 0 ? 0 : 3,
+              right: i == _labels.length - 1 ? 0 : 3,
             ),
-            const SizedBox(height: 5),
-            AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 300),
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight:
-                    (done || active) ? FontWeight.w700 : FontWeight.w400,
-                color: col,
-              ),
-              child: Text(_labels[i]),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedContainer(
+                  duration: dur,
+                  curve: Curves.easeOut,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: barColor,
+                    borderRadius: BorderRadius.circular(99),
+                    boxShadow: glow,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Tamamlandı: etiketin önünde zarif bir tik belirir
+                    AnimatedSize(
+                      duration: dur,
+                      curve: Curves.easeOut,
+                      child: st == _StepState.completed
+                          ? Padding(
+                              padding: const EdgeInsets.only(right: 3),
+                              child: Icon(Icons.check_rounded,
+                                  size: 12, color: textColor),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                    Flexible(
+                      child: AnimatedDefaultTextStyle(
+                        duration: dur,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: weight,
+                          color: textColor,
+                          letterSpacing: 0.1,
+                        ),
+                        child: Text(
+                          _labels[i],
+                          maxLines: 1,
+                          overflow: TextOverflow.fade,
+                          softWrap: false,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
+          ),
         );
       }),
     );
