@@ -74,9 +74,9 @@ class _VenueSearchLoadingPageState
   late final AnimationController _progressCtrl; // progress bar dolumu (5 sn)
   late final AnimationController _shimmerCtrl;  // progress bar shimmer
   late final AnimationController _pulseCtrl;    // merkez pin nabzı
-  late final AnimationController _approachCtrl; // köşelerden ortaya yürüyüş
   late final AnimationController _pickupCtrl;   // büyüteci yerden alma sekansı
   late final AnimationController _celebrateCtrl; // %100: sevinç + orta pin
+  late final AnimationController _rippleCtrl;    // kutlama pini radar halkaları
 
   late final Animation<double> _slideAnim;
 
@@ -90,18 +90,19 @@ class _VenueSearchLoadingPageState
   bool _showInterstitial = false; // bu aramada tam ekran reklam gösterilecek mi?
   bool _adDismissed      = true;  // reklam yok ya da kapandı → geçişe izin ver
   bool _progressFull     = false; // ilerleme %100'e ulaştı mı
-  int  _phaseIdx       = 0;
   late final DateTime _startTime;
-  Timer? _phaseTimer;
   Timer? _introTimer;
   Timer? _simTimer;
 
-  static const _phases = [
-    'Konumunuz alınıyor...',
-    'Kişiliğinize göre mekanlar aranıyor...',
-    'En iyi eşleşmeler seçiliyor...',
-    'Son dokunuşlar yapılıyor...',
-  ];
+  /// Durum metni doğrudan ilerlemeye bağlı — zamanlayıcıyla dönüp başa
+  /// sarmaz ("Son dokunuşlar" → tekrar "Konumunuz alınıyor" olmaz).
+  static String _phaseFor(double p) {
+    if (p >= 0.999) return 'Mekanlar bulundu!';
+    if (p < 0.25) return 'Konumunuz alınıyor...';
+    if (p < 0.55) return 'Kişiliğinize göre mekanlar aranıyor...';
+    if (p < 0.80) return 'En iyi eşleşmeler seçiliyor...';
+    return 'Son dokunuşlar yapılıyor...';
+  }
 
   // ── Init ─────────────────────────────────────────────────────────────────
   @override
@@ -118,25 +119,28 @@ class _VenueSearchLoadingPageState
     _slideAnim = CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOutBack);
     _slideCtrl.forward();
 
-    // Progress: iki fazlı — takılı görünmemesi için 80%'de hız düşer.
-    //   Faz 1: 0 → %80 — 3.5 sn, easeOut (hızlı başlar, yavaşlar)
-    //   Faz 2: %80 → %95 — 9 sn, linear (çok yavaş ama daima hareket ediyor)
-    //   Arama bitince: %100'e 480 ms'de zıplar
+    // Progress koreografiyle senkron:
+    //   %0–40  (4 sn)  : intro + büyüteci alma — karakterler köşelerde
+    //   %40–90 (3.5 sn): ortaya yürüyüş (yaklaşma %40–%96'ya yayılır)
+    //   %90–96 (9 sn)  : arama sürüyorsa çok yavaş ilerler (takılı görünmez)
+    //   Arama bitince : kalan yol doğal hızda tamamlanır → %100'de kutlama
     _progressCtrl = AnimationController(vsync: this, value: 0);
     _progressCtrl
-        .animateTo(
-          0.80,
-          duration: const Duration(milliseconds: 3500),
-          curve: Curves.easeOut,
-        )
+        .animateTo(0.40,
+            duration: const Duration(milliseconds: 4000),
+            curve: Curves.easeInOut)
         .then((_) {
-      // Faz 1 bitti → arama zaten tamamlandıysa ikinci fazı başlatma
       if (!mounted || _searchDone) return;
-      _progressCtrl.animateTo(
-        0.95,
-        duration: const Duration(milliseconds: 9000),
-        curve: Curves.linear,
-      );
+      _progressCtrl
+          .animateTo(0.90,
+              duration: const Duration(milliseconds: 3500),
+              curve: Curves.easeInOut)
+          .then((_) {
+        if (!mounted || _searchDone) return;
+        _progressCtrl.animateTo(0.96,
+            duration: const Duration(milliseconds: 9000),
+            curve: Curves.linear);
+      });
     });
 
     // Shimmer şeridi
@@ -151,17 +155,14 @@ class _VenueSearchLoadingPageState
       duration: const Duration(milliseconds: 850),
     )..repeat(reverse: true);
 
-    // Yaklaşma: büyüteci alan karakterler köşelerden ortaya yürür, yolda bir
-    // kez durup inceler; sonunda ortanın ±38 px'inde yan yana durur.
-    _approachCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 3400),
-    );
-
-    // Final: mekanlar bulununca karakterler sevinir, ortada pin belirir.
+    // Final: mekanlar bulununca karakterler beşlik çakar, ortada pin patlar.
     _celebrateCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 1400),
+    );
+    _rippleCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
     );
 
     // Büyüteci alma sekansı: elindeki aksesuarı bırak → çömel → büyüteci
@@ -171,21 +172,12 @@ class _VenueSearchLoadingPageState
       duration: const Duration(milliseconds: 1500),
     );
 
-    // Faz metni döngüsü
-    _phaseTimer = Timer.periodic(const Duration(milliseconds: 1700), (_) {
-      if (!mounted) return;
-      setState(() => _phaseIdx = (_phaseIdx + 1) % _phases.length);
-    });
-
     // 2.5 sn sonra intro → arama moduna geç: önce büyüteci alma sekansı,
     // o bitince yürüyüş controller'ı başlar.
     _introTimer = Timer(const Duration(milliseconds: 2500), () {
       if (!mounted) return;
       setState(() => _inSearchMode = true);
-      _pickupCtrl.forward().whenComplete(() {
-        if (!mounted) return;
-        _approachCtrl.forward().whenComplete(_maybeCelebrate);
-      });
+      _pickupCtrl.forward();
     });
 
     // ── Reklam kararı ───────────────────────────────────────────────────
@@ -258,7 +250,6 @@ class _VenueSearchLoadingPageState
   void _finishAndPop() {
     if (_popping) return;
     _popping = true;
-    _phaseTimer?.cancel();
 
     // Minimum 6 saniye animasyon süresi garantisi
     final elapsed  = DateTime.now().difference(_startTime).inMilliseconds;
@@ -268,10 +259,13 @@ class _VenueSearchLoadingPageState
       if (!mounted) return;
       setState(() => _searchDone = true);
 
+      // Kalan yolu doğal hızda tamamla — karakterler koşturmadan ortaya varır.
+      final remaining = 1.0 - _progressCtrl.value;
+      final ms = (remaining * 6000).clamp(600, 3500).round();
       _progressCtrl
           .animateTo(1.0,
-              duration: const Duration(milliseconds: 480),
-              curve: Curves.easeOut)
+              duration: Duration(milliseconds: ms),
+              curve: Curves.easeInOut)
           .then((_) {
         if (!mounted) return;
         // %100 oldu → Animasyonu Atla butonunu göster
@@ -290,9 +284,10 @@ class _VenueSearchLoadingPageState
 
   /// Karakterler ortada buluşmuş VE ilerleme %100 ise sevinç sahnesini oynat.
   void _maybeCelebrate() {
-    if (!mounted || !_progressFull || !_approachCtrl.isCompleted) return;
+    if (!mounted || !_progressFull) return;
     if (_celebrateCtrl.isAnimating || _celebrateCtrl.value > 0) return;
     _celebrateCtrl.forward();
+    _rippleCtrl.repeat();
   }
 
   void _doNavigate() {
@@ -306,7 +301,6 @@ class _VenueSearchLoadingPageState
     if (!_adDismissed) return;
 
     _navigated = true;
-    _phaseTimer?.cancel();
     _introTimer?.cancel();
     _simTimer?.cancel();
 
@@ -320,10 +314,9 @@ class _VenueSearchLoadingPageState
     _progressCtrl.dispose();
     _shimmerCtrl.dispose();
     _pulseCtrl.dispose();
-    _approachCtrl.dispose();
     _pickupCtrl.dispose();
     _celebrateCtrl.dispose();
-    _phaseTimer?.cancel();
+    _rippleCtrl.dispose();
     _introTimer?.cancel();
     _simTimer?.cancel();
     super.dispose();
@@ -397,7 +390,9 @@ class _VenueSearchLoadingPageState
               const SizedBox(height: 8),
 
               // ── Faz metni ─────────────────────────────────────────────────
-              SizedBox(
+              AnimatedBuilder(
+                animation: _progressCtrl,
+                builder: (context, _) => SizedBox(
                 height: 20,
                 // Eski metin önce tamamen söner, yeni metin sonra belirir —
                 // geçişte iki metin asla üst üste binmez.
@@ -411,9 +406,8 @@ class _VenueSearchLoadingPageState
                     child: child,
                   ),
                   child: Text(
-                    _searchDone ? 'Mekanlar bulundu!' : _phases[_phaseIdx],
-                    key: ValueKey<String>(
-                        _searchDone ? 'Mekanlar bulundu!' : _phases[_phaseIdx]),
+                    _phaseFor(_progressCtrl.value),
+                    key: ValueKey<String>(_phaseFor(_progressCtrl.value)),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
@@ -423,13 +417,10 @@ class _VenueSearchLoadingPageState
                   ),
                 ),
               ),
+              ),
 
-              // ── Kişilik tipi rozetleri (intro sırasında göster, yürüyüş başlayınca kaybolur) ─
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 500),
-                child: !_inSearchMode
-                    ? Padding(
-                        key: const ValueKey('personality_chips'),
+              // ── Kişilik tipi rozetleri: arama boyunca hep görünür ──────────
+              Padding(
                         padding: const EdgeInsets.only(top: 14),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -449,9 +440,7 @@ class _VenueSearchLoadingPageState
                             ],
                           ],
                         ),
-                      )
-                    : const SizedBox(key: ValueKey('personality_chips_hidden'), height: 0),
-              ),
+                      ),
 
               const Spacer(),
 
@@ -469,9 +458,11 @@ class _VenueSearchLoadingPageState
                   friendType: friendType,
                   inSearchMode: _inSearchMode,
                   slideAnim: _slideAnim,
-                  approachCtrl: _approachCtrl,
+                  progressCtrl: _progressCtrl,
+                  searchDone: _searchDone,
                   pickupCtrl: _pickupCtrl,
                   celebrateCtrl: _celebrateCtrl,
+                  rippleCtrl: _rippleCtrl,
                   pulseCtrl: _pulseCtrl,
                   accentColor: primary,
                 ),
@@ -638,9 +629,11 @@ class _SearchStage extends StatelessWidget {
   final PersonalityType friendType;
   final bool inSearchMode;
   final Animation<double> slideAnim;
-  final AnimationController approachCtrl;
+  final AnimationController progressCtrl;
+  final bool searchDone;
   final AnimationController pickupCtrl;
   final AnimationController celebrateCtrl;
+  final AnimationController rippleCtrl;
   final AnimationController pulseCtrl;
   final Color accentColor;
 
@@ -661,9 +654,11 @@ class _SearchStage extends StatelessWidget {
     required this.friendType,
     required this.inSearchMode,
     required this.slideAnim,
-    required this.approachCtrl,
+    required this.progressCtrl,
+    required this.searchDone,
     required this.pickupCtrl,
     required this.celebrateCtrl,
+    required this.rippleCtrl,
     required this.pulseCtrl,
     required this.accentColor,
   });
@@ -687,7 +682,7 @@ class _SearchStage extends StatelessWidget {
               type: type, gender: gender,
               size: _charSize, searchMode: true, flipX: flip,
               inspect: inspect, pickup: pickupT,
-              walkAmount: walk, celebrate: celebrate)
+              walkAmount: walk, celebrate: celebrate, highFive: !isSolo)
           : PersonalityCharacterWidget(
               key: const ValueKey('intro'),
               type: type, gender: gender,
@@ -698,19 +693,8 @@ class _SearchStage extends StatelessWidget {
     );
   }
 
-  /// Mekanlar bulununca ortada yaylanarak beliren yeşil konum pini.
-  Widget _meetPin(double c) {
-    if (c <= 0.001) return const SizedBox.shrink();
-    return Transform.scale(
-      scale: Curves.elasticOut.transform(c),
-      child: Icon(
-        Icons.location_on_rounded,
-        size: 36,
-        color: accentColor,
-        shadows: [Shadow(color: accentColor.withOpacity(0.5), blurRadius: 14)],
-      ),
-    );
-  }
+  /// Kutlama pini kutusunun boyutu (pin + radar halkaları + konfeti).
+  static const _pinBox = 150.0;
 
   Widget _nameLabel(String name) => Text(
         name,
@@ -721,8 +705,10 @@ class _SearchStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: Listenable.merge(
-          [slideAnim, approachCtrl, pickupCtrl, celebrateCtrl, pulseCtrl]),
+      animation: Listenable.merge([
+        slideAnim, progressCtrl, pickupCtrl, celebrateCtrl, rippleCtrl,
+        pulseCtrl,
+      ]),
       builder: (_, __) => LayoutBuilder(
         builder: (_, constraints) {
           final w = constraints.maxWidth;
@@ -742,10 +728,18 @@ class _SearchStage extends StatelessWidget {
               ? 0.0
               : Curves.easeInOut.transform((pickupT / 0.6).clamp(0.0, 1.0));
 
-          // Yaklaşma programı: yürü → dur & incele → ortaya yürü.
-          final a = approachCtrl.value;
-          final su = _sample(a, isSolo ? _approachSolo : _approachUser);
-          final sf = _sample(a, _approachFriend);
+          // Yaklaşma programı ilerlemeye bağlı: %40'ta başlar, %96'da ortaya
+          // varılır — kalan %4 kutlamaya geçiş. Böylece karakterler ortada
+          // "put gibi" beklemez; vardıkları an kutlama başlar.
+          final p = progressCtrl.value;
+          final a = ((p - 0.40) / 0.56).clamp(0.0, 1.0);
+          final su0 = _sample(a, isSolo ? _approachSolo : _approachUser);
+          final sf0 = _sample(a, _approachFriend);
+          // Arama sürerken ilerleme çok yavaşladığında (%90+) adımlar da
+          // kısalır — yerinde sayar gibi görünmesin.
+          final creep = (!searchDone && p >= 0.90) ? 0.35 : 1.0;
+          final su = _WalkSample(su0.pos, su0.inspect, su0.anchor, su0.walk * creep);
+          final sf = _WalkSample(sf0.pos, sf0.inspect, sf0.anchor, sf0.walk * creep);
 
           // Karakter MERKEZLERİ: başlangıçta köşeler, sonunda ortanın ±38 px'i.
           // Sol karakter hep sağa, sağ karakter hep sola bakar — birbirlerinin
@@ -831,12 +825,26 @@ class _SearchStage extends StatelessWidget {
                   ),
                 ),
 
-              // %100: tam ortada (solo modda karakterin yanında) yeşil pin
-              Positioned(
-                left: (isSolo ? centerX + 40 : centerX) - 18,
-                bottom: _ground + (isSolo ? 40.0 : _charSize * 0.62),
-                child: _meetPin(celebrate),
-              ),
+              // %100: iki karakterin tam ortasında, baş hizasının ~38 px
+              // üstünde büyüyerek patlayan kutlama pini (solo: başın üstünde).
+              // Baş tepesi zeminden ≈ _ground + isim(17) + 148·(1−0.28) yukarıda.
+              if (celebrate > 0)
+                Positioned(
+                  left: (isSolo ? userCenter : centerX) - _pinBox / 2,
+                  bottom: _ground + 17 + _charSize * 0.72 + 38 - (_pinBox / 2 - 30),
+                  child: IgnorePointer(
+                    child: CustomPaint(
+                      size: const Size(_pinBox, _pinBox),
+                      painter: _CelebrationPinPainter(
+                        pop: Curves.elasticOut
+                            .transform((celebrate / 0.75).clamp(0.0, 1.0)),
+                        burst: celebrate,
+                        ripple: rippleCtrl.value,
+                        ripplesOn: rippleCtrl.isAnimating,
+                      ),
+                    ),
+                  ),
+                ),
             ]),
           );
         },
@@ -913,6 +921,148 @@ class _SearchStage extends StatelessWidget {
     final scale = 0.70 + 0.30 * _rand01(sample.anchor * 7.31 + seed);
     return (sample.inspect * scale).clamp(0.0, 1.0);
   }
+}
+
+// ── Kutlama Pini ──────────────────────────────────────────────────────────────
+
+/// Zümrüt yeşili (#10B981 → #34D399) gradyanlı, beyaz çerçeveli konum pini;
+/// ortasında beyaz yıldız. Arkasında dışa yayılan 2 radar halkası, etrafına
+/// saçılan 8 konfeti parçası (altın sarısı / açık yeşil / beyaz).
+class _CelebrationPinPainter extends CustomPainter {
+  final double pop;    // 0..1+ (elasticOut) — pinin ölçeği, büyüyerek patlar
+  final double burst;  // 0..1 — konfeti saçılma ilerlemesi
+  final double ripple; // 0..1 tekrar eden — radar halkası fazı
+  final bool ripplesOn;
+
+  const _CelebrationPinPainter({
+    required this.pop,
+    required this.burst,
+    required this.ripple,
+    required this.ripplesOn,
+  });
+
+  static const _emerald = Color(0xFF10B981);
+  static const _mint    = Color(0xFF34D399);
+
+  Path _star(Offset c, double outer, double inner) {
+    final path = Path();
+    for (var i = 0; i < 10; i++) {
+      final r = i.isEven ? outer : inner;
+      final a = -math.pi / 2 + i * math.pi / 5;
+      final pt = Offset(c.dx + r * math.cos(a), c.dy + r * math.sin(a));
+      if (i == 0) {
+        path.moveTo(pt.dx, pt.dy);
+      } else {
+        path.lineTo(pt.dx, pt.dy);
+      }
+    }
+    return path..close();
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    const headR = 21.0;               // pinin yuvarlak başı
+    final headC = center.translate(0, -8);
+    final tip = center.translate(0, 30);
+
+    // ── Radar halkaları (pin başının arkasından) ─────────────────────────────
+    if (ripplesOn) {
+      for (var i = 0; i < 2; i++) {
+        final k = (ripple + i * 0.5) % 1.0;
+        canvas.drawCircle(
+          headC,
+          headR * (1.0 + k * 1.6),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.0
+            ..color = _mint.withOpacity((1.0 - k) * 0.55),
+        );
+      }
+    }
+
+    // ── Konfeti ──────────────────────────────────────────────────────────────
+    if (burst > 0 && burst < 1) {
+      const colors = [Color(0xFFFBBF24), Color(0xFF86EFAC), Colors.white];
+      final travel = Curves.easeOutCubic.transform(burst) * 58;
+      final fade = (1.0 - burst).clamp(0.0, 1.0);
+      for (var i = 0; i < 8; i++) {
+        final ang = i * math.pi / 4 + 0.3;
+        final pos = headC.translate(math.cos(ang) * (headR + travel),
+            math.sin(ang) * (headR + travel));
+        final paint = Paint()..color = colors[i % 3].withOpacity(fade);
+        if (i.isEven) {
+          canvas.save();
+          canvas.translate(pos.dx, pos.dy);
+          canvas.rotate(burst * math.pi * 2 + i);
+          canvas.drawPath(_star(Offset.zero, 5, 2.2), paint);
+          canvas.restore();
+        } else {
+          canvas.drawCircle(pos, 2.6, paint);
+        }
+      }
+    }
+
+    if (pop <= 0.001) return;
+
+    // ── Pin (uçtan ölçeklenir → yere çakılı gibi büyür) ──────────────────────
+    canvas.save();
+    canvas.translate(tip.dx, tip.dy);
+    canvas.scale(pop);
+    canvas.translate(-tip.dx, -tip.dy);
+
+    // Damla formu: daire + uca giden teğet üçgen
+    final d = (tip - headC).distance;
+    final phi = math.acos(headR / d);
+    final p1 = headC.translate(headR * math.sin(phi), headR * math.cos(phi));
+    final p2 = headC.translate(-headR * math.sin(phi), headR * math.cos(phi));
+    final pin = Path.combine(
+      PathOperation.union,
+      Path()..addOval(Rect.fromCircle(center: headC, radius: headR)),
+      Path()
+        ..moveTo(tip.dx, tip.dy)
+        ..lineTo(p1.dx, p1.dy)
+        ..lineTo(p2.dx, p2.dy)
+        ..close(),
+    );
+
+    // Yumuşak gölge / parıltı
+    canvas.drawPath(
+      pin,
+      Paint()
+        ..color = _emerald.withOpacity(0.45)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+    );
+    // Gradyan dolgu
+    canvas.drawPath(
+      pin,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [_mint, _emerald],
+        ).createShader(Rect.fromPoints(
+            headC.translate(-headR, -headR), tip)),
+    );
+    // Parlak beyaz çerçeve
+    canvas.drawPath(
+      pin,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..strokeJoin = StrokeJoin.round
+        ..color = Colors.white,
+    );
+    // Ortada beyaz yıldız
+    canvas.drawPath(_star(headC, 10, 4.4), Paint()..color = Colors.white);
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _CelebrationPinPainter old) =>
+      old.pop != pop || old.burst != burst || old.ripple != ripple ||
+      old.ripplesOn != ripplesOn;
 }
 
 // ── Gradient Progress Bar ─────────────────────────────────────────────────────
