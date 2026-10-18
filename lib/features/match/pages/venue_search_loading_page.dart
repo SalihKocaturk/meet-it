@@ -74,8 +74,9 @@ class _VenueSearchLoadingPageState
   late final AnimationController _progressCtrl; // progress bar dolumu (5 sn)
   late final AnimationController _shimmerCtrl;  // progress bar shimmer
   late final AnimationController _pulseCtrl;    // merkez pin nabzı
-  late final AnimationController _walkCtrl;     // karakterlerin ekran boyunca yürüyüşü
+  late final AnimationController _approachCtrl; // köşelerden ortaya yürüyüş
   late final AnimationController _pickupCtrl;   // büyüteci yerden alma sekansı
+  late final AnimationController _celebrateCtrl; // %100: sevinç + orta pin
 
   late final Animation<double> _slideAnim;
 
@@ -88,6 +89,7 @@ class _VenueSearchLoadingPageState
   bool _showSkipButton   = false; // %100 olunca gösterilir
   bool _showInterstitial = false; // bu aramada tam ekran reklam gösterilecek mi?
   bool _adDismissed      = true;  // reklam yok ya da kapandı → geçişe izin ver
+  bool _progressFull     = false; // ilerleme %100'e ulaştı mı
   int  _phaseIdx       = 0;
   late final DateTime _startTime;
   Timer? _phaseTimer;
@@ -149,10 +151,17 @@ class _VenueSearchLoadingPageState
       duration: const Duration(milliseconds: 850),
     )..repeat(reverse: true);
 
-    // Yürüyüş: 12 sn periyot, ileri-geri — waypoint'lerde durup inceleme yapar
-    _walkCtrl = AnimationController(
+    // Yaklaşma: büyüteci alan karakterler köşelerden ortaya yürür, yolda bir
+    // kez durup inceler; sonunda ortanın ±38 px'inde yan yana durur.
+    _approachCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 12000),
+      duration: const Duration(milliseconds: 3400),
+    );
+
+    // Final: mekanlar bulununca karakterler sevinir, ortada pin belirir.
+    _celebrateCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
     );
 
     // Büyüteci alma sekansı: elindeki aksesuarı bırak → çömel → büyüteci
@@ -174,7 +183,8 @@ class _VenueSearchLoadingPageState
       if (!mounted) return;
       setState(() => _inSearchMode = true);
       _pickupCtrl.forward().whenComplete(() {
-        if (mounted) _walkCtrl.repeat(reverse: true);
+        if (!mounted) return;
+        _approachCtrl.forward().whenComplete(_maybeCelebrate);
       });
     });
 
@@ -265,13 +275,24 @@ class _VenueSearchLoadingPageState
           .then((_) {
         if (!mounted) return;
         // %100 oldu → Animasyonu Atla butonunu göster
-        setState(() => _showSkipButton = true);
+        setState(() {
+          _showSkipButton = true;
+          _progressFull = true;
+        });
+        _maybeCelebrate();
         // 3 sn sonra otomatik geç (kullanıcı atlamazsa)
         Future.delayed(const Duration(milliseconds: 3000), () {
           if (mounted && _showSkipButton) _doNavigate();
         });
       });
     });
+  }
+
+  /// Karakterler ortada buluşmuş VE ilerleme %100 ise sevinç sahnesini oynat.
+  void _maybeCelebrate() {
+    if (!mounted || !_progressFull || !_approachCtrl.isCompleted) return;
+    if (_celebrateCtrl.isAnimating || _celebrateCtrl.value > 0) return;
+    _celebrateCtrl.forward();
   }
 
   void _doNavigate() {
@@ -299,8 +320,9 @@ class _VenueSearchLoadingPageState
     _progressCtrl.dispose();
     _shimmerCtrl.dispose();
     _pulseCtrl.dispose();
-    _walkCtrl.dispose();
+    _approachCtrl.dispose();
     _pickupCtrl.dispose();
+    _celebrateCtrl.dispose();
     _phaseTimer?.cancel();
     _introTimer?.cancel();
     _simTimer?.cancel();
@@ -377,11 +399,21 @@ class _VenueSearchLoadingPageState
               // ── Faz metni ─────────────────────────────────────────────────
               SizedBox(
                 height: 20,
+                // Eski metin önce tamamen söner, yeni metin sonra belirir —
+                // geçişte iki metin asla üst üste binmez.
                 child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 380),
+                  duration: const Duration(milliseconds: 420),
+                  transitionBuilder: (child, anim) => FadeTransition(
+                    opacity: CurvedAnimation(
+                      parent: anim,
+                      curve: const Interval(0.5, 1.0, curve: Curves.easeOut),
+                    ),
+                    child: child,
+                  ),
                   child: Text(
-                    _phases[_phaseIdx],
-                    key: ValueKey(_phaseIdx),
+                    _searchDone ? 'Mekanlar bulundu!' : _phases[_phaseIdx],
+                    key: ValueKey<String>(
+                        _searchDone ? 'Mekanlar bulundu!' : _phases[_phaseIdx]),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
@@ -437,8 +469,9 @@ class _VenueSearchLoadingPageState
                   friendType: friendType,
                   inSearchMode: _inSearchMode,
                   slideAnim: _slideAnim,
-                  walkCtrl: _walkCtrl,
+                  approachCtrl: _approachCtrl,
                   pickupCtrl: _pickupCtrl,
+                  celebrateCtrl: _celebrateCtrl,
                   pulseCtrl: _pulseCtrl,
                   accentColor: primary,
                 ),
@@ -570,12 +603,13 @@ class _VenueSearchLoadingPageState
 //     crossfade ile arama moduna geçer, elindeki aksesuarı bırakıp yerden
 //     büyüteci alır (pickup sekansı) ve yürüyüşe koyulur.
 //
-// Yürüyüş, waypoint tabanlı bir programla ilerler:
-//   yürü → pinin yanında dur → çömelip büyüteçle incele → devam et
-// walkCtrl.value 0→1→0 repeat(reverse: true) ile:
-//   • Kullanıcı: sol kenardan sağa → geri sola → …
-//   • Arkadaş:   sağ kenardan sola → geri sağa → …
-// Yön değiştiklerinde flipX otomatik değişir (sola giden sola bakar).
+// Koreografi:
+//   1) Intro: karakterler köşelerde kişilik pozunda; sonra aksesuarı yere
+//      bırakıp (yumuşakça iner, solar) yerdeki büyüteci alırlar.
+//   2) Yaklaşma: adım atarak (bacak + adım sekmesi) ortaya yürürler, yolda
+//      bir kez durup büyüteçle incelerler; el küçük daireler çizer.
+//   3) Buluşma: ortanın ±38 px'inde, aynı zemin hizasında yan yana dururlar.
+//      %100 olunca büyüteçleri indirip sevinirler, ortada yeşil pin belirir.
 
 /// Yürüyüş programındaki tek bir zaman dilimi.
 class _WalkSeg {
@@ -585,14 +619,15 @@ class _WalkSeg {
   const _WalkSeg(this.t0, this.t1, this.p0, this.p1, {this.pause = false});
 }
 
-/// Programın bir anlık örneği: konum + inceleme yoğunluğu (0..1).
-/// [anchor] duraklamanın kimliğidir (durulan pozisyon) — durak başına
-/// sözde-rastgele varyasyon üretmek için tohum olarak kullanılır.
+/// Programın bir anlık örneği: konum + inceleme yoğunluğu (0..1) + adım
+/// yoğunluğu (0..1). [anchor] duraklamanın kimliğidir (durulan pozisyon) —
+/// durak başına sözde-rastgele varyasyon üretmek için tohum olarak kullanılır.
 class _WalkSample {
   final double pos;
   final double inspect;
   final double anchor;
-  const _WalkSample(this.pos, this.inspect, [this.anchor = 0.0]);
+  final double walk;
+  const _WalkSample(this.pos, this.inspect, [this.anchor = 0.0, this.walk = 0.0]);
 }
 
 class _SearchStage extends StatelessWidget {
@@ -603,12 +638,20 @@ class _SearchStage extends StatelessWidget {
   final PersonalityType friendType;
   final bool inSearchMode;
   final Animation<double> slideAnim;
-  final AnimationController walkCtrl;
+  final AnimationController approachCtrl;
   final AnimationController pickupCtrl;
+  final AnimationController celebrateCtrl;
   final AnimationController pulseCtrl;
   final Color accentColor;
 
   static const _charSize = 148.0;
+
+  /// Karakterlerin ayak hizası — ikisi için de birebir aynı (üst üste
+  /// binme / biri diğerinin başına çıkma olmasın).
+  static const _ground = 22.0;
+
+  /// Buluşma anında karakter merkezlerinin ortadan uzaklığı (px).
+  static const _meetGap = 38.0;
 
   const _SearchStage({
     required this.me,
@@ -618,21 +661,23 @@ class _SearchStage extends StatelessWidget {
     required this.friendType,
     required this.inSearchMode,
     required this.slideAnim,
-    required this.walkCtrl,
+    required this.approachCtrl,
     required this.pickupCtrl,
+    required this.celebrateCtrl,
     required this.pulseCtrl,
     required this.accentColor,
   });
 
   /// Intro ↔ arama modu karakteri: mod değişince 450 ms crossfade —
-  /// kişilik pozu (ve painter içi kişilik arka planı) yumuşakça söner,
-  /// arama karakteri aynı konumda belirir.
+  /// kişilik pozu yumuşakça söner, arama karakteri aynı konumda belirir.
   Widget _characterSwitcher({
     required PersonalityType type,
     required String? gender,
     required bool flip,
     required double inspect,
     required double pickupT,
+    required double walk,
+    required double celebrate,
   }) {
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 450),
@@ -641,7 +686,8 @@ class _SearchStage extends StatelessWidget {
               key: const ValueKey('search'),
               type: type, gender: gender,
               size: _charSize, searchMode: true, flipX: flip,
-              inspect: inspect, pickup: pickupT)
+              inspect: inspect, pickup: pickupT,
+              walkAmount: walk, celebrate: celebrate)
           : PersonalityCharacterWidget(
               key: const ValueKey('intro'),
               type: type, gender: gender,
@@ -652,101 +698,87 @@ class _SearchStage extends StatelessWidget {
     );
   }
 
+  /// Mekanlar bulununca ortada yaylanarak beliren yeşil konum pini.
+  Widget _meetPin(double c) {
+    if (c <= 0.001) return const SizedBox.shrink();
+    return Transform.scale(
+      scale: Curves.elasticOut.transform(c),
+      child: Icon(
+        Icons.location_on_rounded,
+        size: 36,
+        color: accentColor,
+        shadows: [Shadow(color: accentColor.withOpacity(0.5), blurRadius: 14)],
+      ),
+    );
+  }
+
+  Widget _nameLabel(String name) => Text(
+        name,
+        style: TextStyle(
+            fontSize: 11, fontWeight: FontWeight.w700, color: accentColor),
+      );
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation:
-          Listenable.merge([slideAnim, walkCtrl, pickupCtrl, pulseCtrl]),
+      animation: Listenable.merge(
+          [slideAnim, approachCtrl, pickupCtrl, celebrateCtrl, pulseCtrl]),
       builder: (_, __) => LayoutBuilder(
         builder: (_, constraints) {
           final w = constraints.maxWidth;
           final h = constraints.maxHeight;
-          final pad = 6.0;
-          final lo = pad;
+          const pad = 6.0;
+          const lo = pad;
           final hi = w - _charSize - pad;
+          final centerX = w / 2;
 
           final slide = slideAnim.value.clamp(0.0, 1.0);
           final pickupT = pickupCtrl.value;
+          final celebrate = celebrateCtrl.value;
 
-          // Şehir silüeti EN BAŞTAN sahnede (sayfa girişiyle belirir) —
-          // dekor hiç değişmez. Sadece mekan pinleri arama başlarken,
+          // Şehir silüeti en baştan sahnede; mekan pinleri arama başlarken,
           // büyüteci alma sekansının ilk %60'ında yavaşça belirir.
           final pinT = !inSearchMode
               ? 0.0
               : Curves.easeInOut.transform((pickupT / 0.6).clamp(0.0, 1.0));
 
-          final rawT = walkCtrl.value;
-          final su = _sample(rawT, _scheduleUser);   // kullanıcı programı
-          final sf = _sample(rawT, _scheduleFriend); // arkadaş programı (farklı)
-          final pos = su.pos;
-          final inspect = su.inspect;
+          // Yaklaşma programı: yürü → dur & incele → ortaya yürü.
+          final a = approachCtrl.value;
+          final su = _sample(a, isSolo ? _approachSolo : _approachUser);
+          final sf = _sample(a, _approachFriend);
 
-          final goingForward = walkCtrl.status != AnimationStatus.reverse;
+          // Karakter MERKEZLERİ: başlangıçta köşeler, sonunda ortanın ±38 px'i.
+          // Sol karakter hep sağa, sağ karakter hep sola bakar — birbirlerinin
+          // içinden geçmezler, böylece üst üste binme imkânsız.
+          final userStartC = lo + _charSize / 2;
+          final userEndC = isSolo ? centerX - 30 : centerX - _meetGap;
+          final friendStartC = hi + _charSize / 2;
+          const friendEndOffset = _meetGap;
+          final userX =
+              userStartC + (userEndC - userStartC) * su.pos - _charSize / 2;
+          final friendX = friendStartC +
+              (centerX + friendEndOffset - friendStartC) * sf.pos -
+              _charSize / 2;
 
-          final userX    = lo + (hi - lo) * su.pos;
-          final userFlip = !goingForward;
-          final friendX  = hi - (hi - lo) * sf.pos;
-          final friendFlip = goingForward;
-
-          // Zıplama pozisyona bağlı → durunca kendiliğinden durur;
-          // (1 - inspect) ile de yumuşakça yere basar. Her karakter kendi
-          // inceleme durumuna göre yavaşlar/durur.
-          final userBobAmp   = 8.0 * (1.0 - su.inspect);
-          final friendBobAmp = 8.0 * (1.0 - sf.inspect);
-
-          if (isSolo) {
-            const soloPins = [
-              (0.10, 46.0, true), (0.28, 54.0, false), (0.46, 44.0, true),
-              (0.64, 56.0, false), (0.82, 46.0, true),
-            ];
-            final soloX = lo + (hi - lo) * pos;
-            final soloCenter = soloX + _charSize / 2;
-            final soloY = 14.0 + math.sin(pos * math.pi * 8) * userBobAmp;
-            return SizedBox(
-              width: w, height: h,
-              child: Stack(clipBehavior: Clip.none, children: [
-                Positioned.fill(
-                  child: Opacity(
-                    opacity: slide,
-                    child: _CityScapeWidget(color: accentColor))),
-                for (final p in soloPins)
-                  Positioned(left: w * p.$1, bottom: p.$2,
-                    child: Opacity(
-                      opacity: pinT,
-                      child: _PulsingPin(
-                        pulseCtrl: pulseCtrl, color: accentColor,
-                        evenPhase: p.$3,
-                        boost: _pinBoost(w * p.$1 + 10, soloCenter, inspect)))),
-                Positioned(
-                  left: soloX, bottom: soloY,
-                  child: Transform.translate(
-                    offset: Offset(0, 24 * (1 - slide)),
-                    child: Opacity(
-                      opacity: slide,
-                      child: _characterSwitcher(
-                        type: myType, gender: me?.gender as String?,
-                        flip: userFlip,
-                        inspect: _crouchDepth(su, 0.0),
-                        pickupT: pickupT)))),
-              ]),
-            );
-          }
-
-          final userBob   = math.sin(su.pos * math.pi * 8) * userBobAmp;
-          final friendBob =
-              math.sin(sf.pos * math.pi * 8 + math.pi) * friendBobAmp;
-
-          final dist = (userX - friendX).abs();
-          final push = (_charSize * 1.05 - dist).clamp(0.0, _charSize) * 0.46;
-          final userBottom   = (22.0 + userBob + push).clamp(8.0, 90.0);
-          final friendBottom = (22.0 + friendBob - push).clamp(8.0, 90.0);
+          final userCenter = userX + _charSize / 2;
+          final friendCenter = friendX + _charSize / 2;
 
           const pins = [
             (0.06, 44.0, true), (0.22, 54.0, false), (0.38, 44.0, true),
             (0.54, 56.0, false), (0.70, 46.0, true), (0.84, 52.0, false),
           ];
-          final userCenter   = userX + _charSize / 2;
-          final friendCenter = friendX + _charSize / 2;
+
+          final userWidget = Column(mainAxisSize: MainAxisSize.min, children: [
+            _characterSwitcher(
+              type: myType, gender: me?.gender as String?,
+              flip: false,
+              inspect: _crouchDepth(su, 0.0),
+              pickupT: pickupT,
+              walk: su.walk,
+              celebrate: celebrate),
+            const SizedBox(height: 3),
+            _nameLabel(((me?.name ?? 'Sen') as String).split(' ').first),
+          ]);
 
           return SizedBox(
             width: w, height: h,
@@ -759,51 +791,51 @@ class _SearchStage extends StatelessWidget {
               for (final p in pins)
                 Positioned(left: w * p.$1, bottom: p.$2,
                   child: Opacity(
-                    opacity: pinT,
+                    opacity: pinT * (1 - celebrate),
                     child: _PulsingPin(
                       pulseCtrl: pulseCtrl, color: accentColor, evenPhase: p.$3,
                       boost: math.max(
                         _pinBoost(w * p.$1 + 10, userCenter, su.inspect),
-                        _pinBoost(w * p.$1 + 10, friendCenter, sf.inspect))))),
+                        isSolo
+                            ? 0.0
+                            : _pinBoost(w * p.$1 + 10, friendCenter, sf.inspect))))),
 
               Positioned(
-                left: userX, bottom: userBottom,
+                left: userX, bottom: _ground,
                 child: Transform.translate(
                   offset: Offset(-160 * (1 - slide), 0),
-                  child: Opacity(
-                    opacity: slide,
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      _characterSwitcher(
-                        type: myType, gender: me?.gender as String?,
-                        flip: userFlip,
-                        inspect: _crouchDepth(su, 0.0),
-                        pickupT: pickupT),
-                      const SizedBox(height: 3),
-                      Text(((me?.name ?? 'Sen') as String).split(' ').first,
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accentColor)),
-                    ]),
-                  ),
+                  child: Opacity(opacity: slide, child: userWidget),
                 ),
               ),
 
-              Positioned(
-                left: friendX, bottom: friendBottom,
-                child: Transform.translate(
-                  offset: Offset(160 * (1 - slide), 0),
-                  child: Opacity(
-                    opacity: slide,
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      _characterSwitcher(
-                        type: friendType, gender: friend?.gender as String?,
-                        flip: friendFlip,
-                        inspect: _crouchDepth(sf, 3.7), // farklı seed
-                        pickupT: pickupT),
-                      const SizedBox(height: 3),
-                      Text(((friend?.name ?? '') as String).split(' ').first,
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accentColor)),
-                    ]),
+              if (!isSolo)
+                Positioned(
+                  left: friendX, bottom: _ground,
+                  child: Transform.translate(
+                    offset: Offset(160 * (1 - slide), 0),
+                    child: Opacity(
+                      opacity: slide,
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        _characterSwitcher(
+                          type: friendType, gender: friend?.gender as String?,
+                          flip: true,
+                          inspect: _crouchDepth(sf, 3.7), // farklı seed
+                          pickupT: pickupT,
+                          walk: sf.walk,
+                          celebrate: celebrate),
+                        const SizedBox(height: 3),
+                        _nameLabel(
+                            ((friend?.name ?? '') as String).split(' ').first),
+                      ]),
+                    ),
                   ),
                 ),
+
+              // %100: tam ortada (solo modda karakterin yanında) yeşil pin
+              Positioned(
+                left: (isSolo ? centerX + 40 : centerX) - 18,
+                bottom: _ground + (isSolo ? 40.0 : _charSize * 0.62),
+                child: _meetPin(celebrate),
               ),
             ]),
           );
@@ -812,45 +844,41 @@ class _SearchStage extends StatelessWidget {
     );
   }
 
-  // ── Yürüyüş programları ─────────────────────────────────────────────────────
-  // yürü(easeInOut) → dur & incele → yürü → dur & incele → …
-  // İki karakterin programı bilinçli olarak FARKLI: duraklama zamanları ve
-  // noktaları örtüşmez, böylece aynı anda eğilmezler — her biri kendi
-  // keşfini yapıyormuş gibi görünür.
-  static const _scheduleUser = [
-    _WalkSeg(0.00, 0.15, 0.00, 0.24),
-    _WalkSeg(0.15, 0.30, 0.24, 0.24, pause: true),
-    _WalkSeg(0.30, 0.45, 0.24, 0.52),
-    _WalkSeg(0.45, 0.60, 0.52, 0.52, pause: true),
-    _WalkSeg(0.60, 0.75, 0.52, 0.80),
-    _WalkSeg(0.75, 0.90, 0.80, 0.80, pause: true),
-    _WalkSeg(0.90, 1.00, 0.80, 1.00),
+  // ── Yaklaşma programları ──────────────────────────────────────────────────
+  // yürü → dur & incele → ortaya yürü. İki karakterin duraklaması bilinçli
+  // olarak farklı zamanda — aynı anda eğilmezler.
+  static const _approachUser = [
+    _WalkSeg(0.00, 0.38, 0.00, 0.45),
+    _WalkSeg(0.38, 0.58, 0.45, 0.45, pause: true),
+    _WalkSeg(0.58, 1.00, 0.45, 1.00),
   ];
 
-  static const _scheduleFriend = [
-    _WalkSeg(0.00, 0.06, 0.00, 0.10),
-    _WalkSeg(0.06, 0.17, 0.10, 0.10, pause: true),
-    _WalkSeg(0.17, 0.32, 0.10, 0.42),
-    _WalkSeg(0.32, 0.44, 0.42, 0.42, pause: true),
-    _WalkSeg(0.44, 0.62, 0.42, 0.72),
-    _WalkSeg(0.62, 0.74, 0.72, 0.72, pause: true),
-    _WalkSeg(0.74, 1.00, 0.72, 1.00),
+  static const _approachFriend = [
+    _WalkSeg(0.00, 0.50, 0.00, 0.55),
+    _WalkSeg(0.50, 0.70, 0.55, 0.55, pause: true),
+    _WalkSeg(0.70, 1.00, 0.55, 1.00),
+  ];
+
+  static const _approachSolo = [
+    _WalkSeg(0.00, 0.45, 0.00, 0.50),
+    _WalkSeg(0.45, 0.65, 0.50, 0.50, pause: true),
+    _WalkSeg(0.65, 1.00, 0.50, 1.00),
   ];
 
   /// Durak kimliğinden 0..1 arası deterministik "rastgele" değer üretir.
-  /// Aynı durakta aynı değeri verir (titreme olmaz), duraklar arasında değişir.
   static double _rand01(double seed) {
     final v = math.sin(seed * 12.9898 + 78.233) * 43758.5453;
     return v - v.floorToDouble();
   }
 
-  /// rawT (0..1) → konum + inceleme yoğunluğu.
-  /// Pause dilimlerinde konum sabittir; inspect yumuşakça 0→1→0 gider,
-  /// böylece eğilme/pin parlaması ani değil akıcı olur.
-  static _WalkSample _sample(double rawT, List<_WalkSeg> schedule) {
+  /// t (0..1) → konum + inceleme yoğunluğu + adım yoğunluğu.
+  /// Yürüme dilimleri easeInOutCubic; adım yoğunluğu hızla orantılı (dilim
+  /// başında/sonunda yavaşlarken bacaklar da yavaşlar). Duraklamada konum
+  /// sabit, inspect yumuşakça 0→1→0.
+  static _WalkSample _sample(double t, List<_WalkSeg> schedule) {
     for (final seg in schedule) {
-      if (rawT <= seg.t1 || identical(seg, schedule.last)) {
-        final local = ((rawT - seg.t0) / (seg.t1 - seg.t0)).clamp(0.0, 1.0);
+      if (t <= seg.t1 || identical(seg, schedule.last)) {
+        final local = ((t - seg.t0) / (seg.t1 - seg.t0)).clamp(0.0, 1.0);
         if (seg.pause) {
           final double inspect;
           if (local < 0.25) {
@@ -862,8 +890,9 @@ class _SearchStage extends StatelessWidget {
           }
           return _WalkSample(seg.p0, inspect, seg.t0 + seg.p0);
         }
-        final eased = Curves.easeInOut.transform(local);
-        return _WalkSample(seg.p0 + (seg.p1 - seg.p0) * eased, 0.0);
+        final eased = Curves.easeInOutCubic.transform(local);
+        final walk = math.sqrt(math.sin(math.pi * local).clamp(0.0, 1.0));
+        return _WalkSample(seg.p0 + (seg.p1 - seg.p0) * eased, 0.0, 0.0, walk);
       }
     }
     return const _WalkSample(1.0, 0.0);
@@ -879,8 +908,6 @@ class _SearchStage extends StatelessWidget {
 
   /// Çömelme derinliği: temel inspect değeri durak başına sözde-rastgele
   /// ölçeklenir (0.70–1.0) — her incelemede birebir aynı poz tekrarlanmaz.
-  /// Gerçek çömelme pozunu PersonalityCharacterWidget kendi painter'ında
-  /// çizer (dizler bükülür, gövde öne eğilir, büyüteç yere doğrultulur).
   static double _crouchDepth(_WalkSample sample, double seed) {
     if (sample.inspect <= 0.001) return 0.0;
     final scale = 0.70 + 0.30 * _rand01(sample.anchor * 7.31 + seed);
