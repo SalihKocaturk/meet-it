@@ -334,12 +334,36 @@ class _SuggestionsTab extends ConsumerWidget {
         ...suggestions.map((f) => _SuggestionTile(friend: f)),
         if (suggestions.isEmpty)
           Padding(
-            padding: EdgeInsets.symmetric(vertical: 40),
+            padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 12),
             child: Center(
-              child: Text(
-                'common.no_result'.tr(),
-                style: TextStyle(color: context.colors.textSecondary),
-              ),
+              child: ref.watch(friendsProvider).searchQuery.trim().length >= 2
+                  ? Text(
+                      'common.no_result'.tr(),
+                      style: TextStyle(color: context.colors.textSecondary),
+                    )
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'friends.no_suggestions'.tr(),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: context.colors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'friends.no_suggestions_desc'.tr(),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.4,
+                            color: context.colors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
             ),
           ),
         const SizedBox(height: 20),
@@ -483,13 +507,20 @@ class _SuggestionTile extends ConsumerWidget {
                     color: context.colors.textPrimary,
                   ),
                 ),
-                Text(
-                  '@${friend.name.toLowerCase().replaceAll(' ', '')}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: context.colors.textSecondary,
-                  ),
-                ),
+                Builder(builder: (context) {
+                  final mutual =
+                      ref.watch(friendsProvider).mutualCounts[friend.uid] ?? 0;
+                  return Text(
+                    mutual > 0
+                        ? 'friends.mutual_count'
+                            .tr(namedArgs: {'count': '$mutual'})
+                        : '@${friend.name.toLowerCase().replaceAll(' ', '')}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.colors.textSecondary,
+                    ),
+                  );
+                }),
               ],
             ),
           ),

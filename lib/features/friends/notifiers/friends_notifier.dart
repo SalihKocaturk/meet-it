@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' show min;
 
 import 'package:flutter/foundation.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -23,6 +24,10 @@ class FriendsState {
   /// Benim engellediklerim + beni engelleyenler (iki yönlü gizleme).
   final Set<String> blockedUids;
 
+  /// Arkadaş olmayan kullanıcılarla kaç ortak arkadaşım var (uid → sayı).
+  /// "Tanıyor Olabilirsin" listesi yalnızca ortak arkadaşı olanları gösterir.
+  final Map<String, int> mutualCounts;
+
   const FriendsState({
     this.suggestions = const [],
     this.connections = const [],
@@ -32,13 +37,25 @@ class FriendsState {
     this.errorMessage,
     this.searchQuery = '',
     this.blockedUids = const {},
+    this.mutualCounts = const {},
   });
 
+  /// Öneriler sekmesinde gösterilecek liste.
+  ///
+  /// Önceden arkadaş olmayan TÜM kullanıcılar listeleniyordu — kullanıcı az
+  /// olduğu için herkes herkesin önerilerinde görünüyordu. Artık:
+  ///  • Arama yokken: sadece en az bir ortak arkadaşı olanlar, ortak arkadaş
+  ///    sayısına göre (en çok olan üstte).
+  ///  • Arama varken (en az 2 harf): isme göre tüm kullanıcılarda arama —
+  ///    tanıdığını ismiyle bulup ekleyebilsin diye.
   List<UserFriendModel> get filteredSuggestions {
-    if (searchQuery.isEmpty) return suggestions;
-    return suggestions
-        .where((f) => f.name.toLowerCase().contains(searchQuery.toLowerCase()))
-        .toList();
+    final q = searchQuery.trim().toLowerCase();
+    if (q.length >= 2) {
+      return suggestions.where((f) => f.name.toLowerCase().contains(q)).toList();
+    }
+    return suggestions.where((f) => (mutualCounts[f.uid] ?? 0) > 0).toList()
+      ..sort((a, b) =>
+          (mutualCounts[b.uid] ?? 0).compareTo(mutualCounts[a.uid] ?? 0));
   }
 
   FriendsState copyWith({
@@ -51,6 +68,7 @@ class FriendsState {
     bool clearError = false,
     String? searchQuery,
     Set<String>? blockedUids,
+    Map<String, int>? mutualCounts,
   }) {
     return FriendsState(
       suggestions: suggestions ?? this.suggestions,
@@ -61,6 +79,7 @@ class FriendsState {
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       searchQuery: searchQuery ?? this.searchQuery,
       blockedUids: blockedUids ?? this.blockedUids,
+      mutualCounts: mutualCounts ?? this.mutualCounts,
     );
   }
 }
@@ -170,6 +189,9 @@ class FriendsNotifier extends Notifier<FriendsState> {
         sentRequests: sentRequests,
         isLoading: false,
       );
+
+      // Ortak arkadaş sayıları arkadaş listesi değiştikçe yeniden hesaplanır.
+      _loadMutualCounts(acceptedUids).ignore();
     });
     } catch (e) {
       debugPrint('[FriendsNotifier] _listenFriendships hatası: $e — 3sn sonra tekrar deneniyor');
@@ -556,6 +578,53 @@ class FriendsNotifier extends Notifier<FriendsState> {
     state = state.copyWith(
       suggestions: state.suggestions.where((f) => f.uid != targetUid).toList(),
     );
+  }
+
+  int _mutualGen = 0;
+
+  /// Arkadaşlarımın kabul edilmiş arkadaşlıklarını okuyup, arkadaşım
+  /// olmayan her kullanıcı için kaç ortak arkadaşımız olduğunu sayar.
+  /// Firestore `whereIn` en fazla 30 değer aldığı için arkadaş listesi
+  /// 30'luk parçalar halinde sorgulanır.
+  Future<void> _loadMutualCounts(Set<String> friendUids) async {
+    final gen = ++_mutualGen;
+    if (friendUids.isEmpty) {
+      state = state.copyWith(mutualCounts: const {});
+      return;
+    }
+    final counts = <String, int>{};
+    final seenDocs = <String>{};
+    final ids = friendUids.toList();
+    try {
+      for (var i = 0; i < ids.length; i += 30) {
+        final chunk = ids.sublist(i, min(i + 30, ids.length));
+        final snaps = await Future.wait([
+          _db.collection('friendships').where('fromUid', whereIn: chunk).get(),
+          _db.collection('friendships').where('toUid', whereIn: chunk).get(),
+        ]);
+        for (final snap in snaps) {
+          for (final doc in snap.docs) {
+            if (!seenDocs.add(doc.id)) continue;
+            final data = doc.data();
+            if (data['status'] != FriendshipStatus.accepted.name) continue;
+            final a = data['fromUid'] as String?;
+            final b = data['toUid'] as String?;
+            if (a == null || b == null) continue;
+            final aIsFriend = friendUids.contains(a);
+            final bIsFriend = friendUids.contains(b);
+            // İki uç da zaten arkadaşımsa ya da hiçbiri değilse sayılmaz.
+            if (aIsFriend == bIsFriend) continue;
+            final other = aIsFriend ? b : a;
+            counts[other] = (counts[other] ?? 0) + 1;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[FriendsNotifier] ortak arkadaş hesabı hatası: $e');
+      return;
+    }
+    if (gen != _mutualGen) return; // daha yeni bir hesap başladı
+    state = state.copyWith(mutualCounts: counts);
   }
 
   void updateSearchQuery(String query) =>
