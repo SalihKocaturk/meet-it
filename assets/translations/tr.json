@@ -694,74 +694,74 @@
   },
   "quiz_questions": {
     "q1": {
-      "question": "Cuma akşamı ve hiçbir planın yok. İçinden ne geçer?",
+      "question": "Cuma akşamı ve hiçbir planın yok. İçinden ne yapmak geçer?",
       "a": "Arkadaşları toplayıp canlı bir yere gitmek",
-      "b": "Evde ya da sakin bir köşede kafamı dinlemek",
-      "c": "Evde duramam, hiç gitmediğim bir semte atlarım",
-      "d": "Merak ettiğim yeni bir yerde güzel bir yemek"
+      "b": "Evde ya da sakin bir köşede kafa dinlemek",
+      "c": "Evde durmayıp hiç gitmediğim bir semti keşfe çıkmak",
+      "d": "Merak ettiğim yeni bir mekânda güzel bir yemek yemek"
     },
     "q2": {
-      "question": "Bir arkadaşınla saatlerce sohbet etseniz konu genelde nereye gider?",
-      "a": "Bir kitap, film ya da kafa yoran bir fikir",
-      "b": "Ortak arkadaşlar, son olaylar, gülüp geçtiğimiz şeyler",
-      "c": "Bir sonraki tatil ya da yapmak istediğimiz çılgın planlar",
-      "d": "En son ne yediğimiz, nerede ne güzel yapılıyor"
+      "question": "Bir arkadaşınla saatlerce sohbet etseniz konu genelde nereye gelir?",
+      "a": "Bir kitaba, filme ya da kafa yoran bir fikre",
+      "b": "Ortak arkadaşlara, son olaylara ve gülüp geçtiğimiz şeylere",
+      "c": "Bir sonraki tatile ya da yapmak istediğimiz çılgın planlara",
+      "d": "En son ne yediğimize ve nerede neyin güzel yapıldığına"
     },
     "q3": {
-      "question": "Tatil planlıyorsun. Hangisi sana daha çok benziyor?",
-      "a": "Rota yok, nereye gideceğime orada karar veririm",
-      "b": "Sakin bir yer, uzun kahvaltılar, hiç acele yok",
-      "c": "Müzeler, tarihi yerler, o şehrin hikâyesi",
-      "d": "Gideceğim yerin yöresel yemeklerini çoktan araştırdım"
+      "question": "Tatil planlıyorsun. Hangi yaklaşım sana daha çok uyuyor?",
+      "a": "Önceden rota çizmemek, nereye gideceğime yolda karar vermek",
+      "b": "Sakin bir yer seçip uzun kahvaltılarla acele etmeden vakit geçirmek",
+      "c": "Müzeleri, tarihi yerleri gezmek ve o şehrin hikâyesinin peşine düşmek",
+      "d": "Gideceğim yerin yöresel yemeklerini ve en iyi mekânlarını önceden araştırmak"
     },
     "q4": {
       "question": "Menüde adını ilk kez duyduğun bir yemek var. Ne yaparsın?",
-      "a": "Hemen onu söylerim, tadını merak ettim",
-      "b": "Önce garsona sorarım, nereden geldiğini öğrenmek isterim",
-      "c": "Bildiğim, sevdiğim bir şeyi söylerim",
-      "d": "Ortaya söyleriz, masadaki herkes tadına bakar"
+      "a": "Tadını merak ettiğim için hemen onu sipariş ederim.",
+      "b": "Önce garsona içeriğini ve nasıl bir yemek olduğunu sorarım.",
+      "c": "Riske girmem; bildiğim ve sevdiğim bir yemeği söylerim.",
+      "d": "Ortaya söylerim, masadaki herkesle birlikte denerim."
     },
     "q5": {
-      "question": "Bir doğum günü partisindesin ve tanımadığın bir sürü insan var. Ne yaparsın?",
-      "a": "Harika, herkesle tanışırım",
-      "b": "Tanıdığım bir iki kişiyle sakin bir köşede takılırım",
-      "c": "İlginç biriyle derin bir sohbete dalarım",
-      "d": "Önce ikramlara bir bakarım 😄"
+      "question": "Bir doğum günü partisindesin ve içeride tanımadığın bir sürü insan var. Ne yaparsın?",
+      "a": "Fırsat bu fırsat der, hemen herkesle tanışırım.",
+      "b": "Tanıdığım bir iki kişiyle sakin bir köşede takılırım.",
+      "c": "Gözüme kestirdiğim ilginç biriyle derin bir sohbete dalarım.",
+      "d": "Önce ikramların olduğu masaya doğru yönelirim. 😄"
     },
     "q6": {
       "question": "Yorucu bir haftanın sonunda seni en çok ne toparlar?",
       "a": "Arkadaşlarla dışarı çıkıp gülüp eğlenmek",
-      "b": "Kimsenin aramadığı, tamamen bana ait bir gün",
-      "c": "Doğaya kaçmak ya da hareketli bir şey yapmak",
-      "d": "Güzel bir yemek, gerekirse kendim pişiririm"
+      "b": "Kimsenin arayıp sormadığı, tamamen bana ait bir gün geçirmek",
+      "c": "Doğaya kaçmak ya da hareketli bir aktivite yapmak",
+      "d": "Güzel bir yemek yemek, gerekirse mutfağa girip kendim pişirmek"
     },
     "q7": {
       "question": "Şehirde yeni bir sergi açılmış. Ne yaparsın?",
-      "a": "İlk fırsatta giderim, acele etmeden her köşesini gezerim",
-      "b": "Arkadaşlar gidiyorsa ben de gelirim, beraber güzel olur",
-      "c": "Sergi yerine daha hareketli bir şey yapmayı tercih ederim",
-      "d": "Yakınında güzel bir kafe ya da restoran varsa neden olmasın"
+      "a": "İlk fırsatta gider, acele etmeden her köşesini gezerim.",
+      "b": "Arkadaşlarım gidiyorsa onlara katılırım, beraber güzel olur.",
+      "c": "Sergi gezmek yerine daha hareketli bir aktivite yapmayı tercih ederim.",
+      "d": "Yakınında güzel bir kafe ya da restoran varsa gitmeyi düşünürüm."
     },
     "q8": {
-      "question": "Senin için ideal hafta sonu temposu hangisi?",
-      "a": "Dolu dolu: kahvaltı, buluşma, akşam yine insanlarla",
-      "b": "Yavaş: geç kalkmak, plan yapmamak, keyfime bakmak",
-      "c": "Bir konuya dalmak: kitap, belgesel ya da bir atölye",
-      "d": "Yeni şeyler denemek, biraz adrenalin olursa daha iyi"
+      "question": "Senin için ideal hafta sonu temposu nasıldır?",
+      "a": "Dolu dolu; kahvaltılar yapmak, arkadaşlarla buluşmak ve akşam yine sosyalleşmek",
+      "b": "Yavaş; geç uyanmak, hiçbir plan yapmamak ve tamamen keyfime bakmak",
+      "c": "Odaklı; bir kitaba gömülmek, belgesel izlemek ya da bir atölyeye katılmak",
+      "d": "Hareketli; yeni şeyler denemek ve biraz adrenalin peşinde koşmak"
     },
     "q9": {
-      "question": "Arkadaşlarla oyun gecesi var. Hangisini seçersin?",
-      "a": "Strateji ya da bilgi yarışması, biraz kafa yorulsun",
-      "b": "İki üç kişiyle sakin bir kutu oyunu",
-      "c": "Oyun bahane, asıl olay herkesin getirdiği atıştırmalıklar",
-      "d": "Oyun yerine kaçış odası ya da paintball"
+      "question": "Arkadaşlarla oyun gecesi yapacaksınız. Tercihin ne olur?",
+      "a": "Biraz kafa yoracağımız bir strateji oyunu ya da bilgi yarışması oynamak",
+      "b": "İki üç kişiyle sakin bir kutu oyunu oynamak",
+      "c": "Oyunu bahane edip herkesin getirdiği atıştırmalıkların tadını çıkarmak",
+      "d": "Evde oturmak yerine kaçış odasına ya da paintballa gitmek"
     },
     "q10": {
-      "question": "Bir arkadaşınla buluşacaksın. İlk aklına gelen yer neresi?",
-      "a": "Kalabalık, müziği olan canlı bir mekan",
-      "b": "Sessiz bir kafe, köşe masa",
-      "c": "Bir kitapçı, sergi ya da müze",
-      "d": "Yeni bir semt keşfi, yemek ne olursa olur"
+      "question": "Bir arkadaşınla buluşacaksın. Aklına gelen ilk yer neresi olur?",
+      "a": "Kalabalık ve müziği olan canlı bir mekân",
+      "b": "Sessiz, sakin bir kafedeki köşe masa",
+      "c": "Gezebileceğimiz bir kitapçı, sergi ya da müze",
+      "d": "Daha önce gitmediğimiz yeni bir semtteki herhangi bir restoran"
     }
   }
 }
