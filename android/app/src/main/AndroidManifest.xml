@@ -30,6 +30,19 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="meetit" android:host="delete-account"/>
             </intent-filter>
+
+            <!-- Davet linki (App Link): https://salihkocaturk.github.io/meet-it/davet/?u=...
+                 Uygulama yüklüyse link doğrudan uygulamada açılır. Doğrulama:
+                 salihkocaturk.github.io/.well-known/assetlinks.json
+                 (bkz. link-verification/README.md). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https"
+                      android:host="salihkocaturk.github.io"
+                      android:pathPrefix="/meet-it/davet"/>
+            </intent-filter>
         </activity>
 
         <!-- Google Maps API Key — değer build.gradle.kts tarafından

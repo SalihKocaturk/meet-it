@@ -10,6 +10,7 @@ import 'package:meetit/features/history/meeting_history_detail_page.dart';
 import 'package:meetit/features/history/meeting_history_page.dart';
 import 'package:meetit/features/history/models/meeting_record.dart';
 import 'package:meetit/features/main/main_page.dart';
+import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/reviews/models/venue_review_model.dart';
 import 'package:meetit/features/reviews/venue_detail_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -129,6 +130,7 @@ IconData notificationIcon(String type) {
     case 'friend_request':
       return Iconsax.profile_add;
     case 'friend_accepted':
+    case 'invite_joined':
       return Iconsax.profile_tick;
     case 'meetup_invite':
     case 'venue_found':
@@ -144,6 +146,7 @@ Color notificationColor(BuildContext context, String type) {
       return const Color(0xFFE53935);
     case 'friend_request':
     case 'friend_accepted':
+    case 'invite_joined':
       return context.colors.primary;
     case 'meetup_invite':
     case 'venue_found':
@@ -161,6 +164,7 @@ String notificationTitle(String type) {
     case 'friend_accepted':
     case 'meetup_invite':
     case 'venue_found':
+    case 'invite_joined':
       return 'notifications.titles.$type'.tr();
     default:
       return 'MeetIt';
@@ -185,6 +189,15 @@ String notificationText(NotificationItem item) {
     case 'venue_found':
       return 'notifications.venue_found'
           .tr(namedArgs: {'name': item.fromName});
+    case 'invite_joined':
+      final compat = item.extra['compat'];
+      return compat is num
+          ? 'notifications.invite_joined_compat'.tr(namedArgs: {
+              'name': item.fromName,
+              'value': '${compat.round()}',
+            })
+          : 'notifications.invite_joined'
+              .tr(namedArgs: {'name': item.fromName});
     default:
       return item.fromName;
   }
@@ -207,6 +220,16 @@ Future<void> openNotificationTarget(
       nav.popUntil((route) => route.isFirst);
       ref.read(mainTabIndexProvider.notifier).state = 2;
       ref.read(friendsTabIndexProvider.notifier).state = 2; // Bağlantılarım
+      break;
+
+    case 'invite_joined':
+      // Davetle katılan arkadaşla hemen ortak mekan aramaya geç.
+      nav.popUntil((route) => route.isFirst);
+      if (item.fromUid.isNotEmpty) {
+        ref.read(selectedFriendUidProvider.notifier).state = item.fromUid;
+      }
+      ref.read(showVenuesProvider.notifier).state = false;
+      ref.read(mainTabIndexProvider.notifier).state = 1;
       break;
 
     case 'meetup_invite':

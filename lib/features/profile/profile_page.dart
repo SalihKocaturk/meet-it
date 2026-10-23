@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/constants/emerald_palette.dart';
+import 'package:meetit/features/invite/personality_share_card.dart';
 import 'package:meetit/core/router/app_routes.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/models/user_model.dart';
@@ -277,6 +278,39 @@ class _ProfileHeader extends ConsumerWidget {
           ),
 
           SizedBox(height: 12),
+
+          // Kişilik kartını paylaş → arkadaşını davet et (test çözüldüyse)
+          if (ref.watch(currentUserProvider)?.personalityProfile != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => showPersonalityShareSheet(context, ref),
+                  icon: Icon(
+                    Icons.ios_share_rounded,
+                    size: 16,
+                    color: context.accentOnTint,
+                  ),
+                  label: Text(
+                    'invite.share_entry'.tr(),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: context.accentOnTint,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: Emerald.base.withOpacity(0.15),
+                    side: BorderSide(color: Emerald.base.withOpacity(0.45)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
           // NOT: Profil sekmesinde konum ve kişilik (dominant tip) satırı
           // kaldırıldı — kullanıcı isteği: bu bilgilerin profil tab'ında

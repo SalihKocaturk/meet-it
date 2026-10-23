@@ -653,7 +653,30 @@
     "tier_medium": "Orta seviye bir uyum, farklılıklarınız ilginç olabilir.",
     "tier_different": "Oldukça farklı kişiliklere sahipsiniz, bu da yeni deneyimler getirebilir."
   },
+  "invite": {
+    "share_entry": "Kişilik kartımı paylaş",
+    "sheet_title": "Kartını paylaş, arkadaşını davet et",
+    "sheet_desc": "Linke tıklayan arkadaşın testi çözünce uyumunuzu görürsünüz.",
+    "share_button": "Paylaş",
+    "copy_link": "Davet linkini kopyala",
+    "link_copied": "Davet linki kopyalandı",
+    "share_text": "MeetIt'te kişilik tipim: {type} 👀 Bakalım ne kadar uyumluyuz? Testi çöz, beraber gidecek yer bulalım: {link}",
+    "card_label": "{name} · Kişilik Kartı",
+    "card_secondary": "İkinci yanım: {name}",
+    "card_cta": "Benimle uyumunu test et 👀",
+    "card_code": "MeetIt · arkadaş kodum {code}",
+    "quiz_banner": "Testi bitir, {name} ile uyumunu gör 👀",
+    "reveal_title": "{name} ile uyumunuz",
+    "verdict_great": "Harika bir ikilisiniz! 🎉",
+    "verdict_good": "Çok uyumlusunuz! 🙌",
+    "verdict_diff": "Farklılıklar buluşmaları renklendirir ✨",
+    "reveal_friends_now": "{name} ile artık arkadaşsınız.",
+    "reveal_cta": "Hemen ortak mekan bulun",
+    "reveal_later": "Daha sonra"
+  },
   "notifications": {
+    "invite_joined": "{name} davetinle MeetIt'e katıldı, artık arkadaşsınız!",
+    "invite_joined_compat": "{name} testi çözdü: %{value} uyumlusunuz! Hadi bir yer bulun.",
     "title": "Bildirimler",
     "empty": "Henüz bildirim yok",
     "empty_desc": "Beğeniler ve arkadaşlık istekleri burada görünecek.",
@@ -666,6 +689,7 @@
     "minutes_ago": "{n} dakika önce",
     "hours_ago": "{n} saat önce",
     "titles": {
+      "invite_joined": "Davetin kabul edildi 🎉",
       "meetup_invite": "Buluşma daveti 📍",
       "venue_found": "Mekan bulundu 🗺️",
       "friend_request": "Arkadaşlık isteği 👋",

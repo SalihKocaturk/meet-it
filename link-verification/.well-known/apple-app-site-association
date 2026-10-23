@@ -1,0 +1,13 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["93TA7AZTCY.com.kocaturksalih.meetit"],
+        "components": [
+          { "/": "/meet-it/davet", "comment": "MeetIt davet linki" },
+          { "/": "/meet-it/davet/*", "comment": "MeetIt davet linki" }
+        ]
+      }
+    ]
+  }
+}

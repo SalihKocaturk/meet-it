@@ -9,6 +9,8 @@ import 'package:meetit/features/auth/sign_in_page.dart';
 import 'package:meetit/features/auth/sign_up_page.dart';
 import 'package:meetit/features/auth/splash_page.dart';
 import 'package:meetit/features/auth/verification_page.dart';
+import 'package:meetit/features/invite/invite_link.dart';
+import 'package:meetit/features/invite/invite_provider.dart';
 import 'package:meetit/features/main/main_page.dart';
 import 'package:meetit/features/personality/quiz_page.dart';
 import 'package:meetit/features/settings/change_password_page.dart';
@@ -75,6 +77,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final needsEmailVerification = authState.needsEmailVerification;
       final needsProfileCompletion = authState.needsProfileCompletion;
       final location = state.matchedLocation;
+
+      // Davet linki (App Link / Universal Link): davet edeni kaydet, sonra
+      // normal akışa devam et. Oturum durumundan ÖNCE yakalanır ki splash /
+      // giriş yönlendirmelerinde link parametresi kaybolmasın. Asıl işlem
+      // (otomatik arkadaşlık, uyum ekranı) InviteHost'ta.
+      if (InviteLink.isInvitePath(state.uri.path)) {
+        final inviterUid = InviteLink.uidFromUri(state.uri);
+        if (inviterUid != null) {
+          final name = state.uri.queryParameters['n'];
+          // Redirect build sırasında çalışabilir — state'i hemen değiştirme.
+          Future.microtask(() => ref
+              .read(inviteProvider.notifier)
+              .setPending(InviteRef(inviterUid, name)));
+        }
+        if (isSessionLoading) return AppRoutes.splash;
+        if (isAwaitingFirebaseRestore) return AppRoutes.restoring;
+        return isAuthenticated ? AppRoutes.main : AppRoutes.signIn;
+      }
 
       // Oturum henüz SharedPreferences'tan yükleniyor → splash'te kal
       if (isSessionLoading) return AppRoutes.splash;
@@ -236,6 +256,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.privacyPolicy,
         builder: (context, state) => const PrivacyPolicyPage(),
+      ),
+
+      // Davet linki — yalnızca eşleşme için; redirect yukarıda yakalayıp
+      // ana sayfaya / girişe yönlendirir.
+      GoRoute(
+        path: '/meet-it/davet',
+        redirect: (_, _) => AppRoutes.main,
       ),
 
       // Hesap silme — deep link meetit://delete-account → /delete-account

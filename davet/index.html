@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MeetIt Daveti</title>
+<meta name="description" content="Arkadaşın seni MeetIt'e davet etti. Kişilik testini çöz, uyumunuzu gör, ikinize de uyan mekanı bulun.">
+<meta property="og:title" content="Benimle uyumunu test et 👀">
+<meta property="og:description" content="MeetIt'te kişilik testini çöz, uyumumuzu gör ve beraber gidecek yeri bulalım.">
+<meta property="og:image" content="https://salihkocaturk.github.io/meet-it/indir/logo.png">
+<link rel="icon" href="../indir/logo.png">
+<style>
+  :root { --bg:#0B1512; --card:#12201B; --ink:#F0F6FC; --muted:#9FB3AA; --green:#10B981; --green-l:#34D399; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+         background:radial-gradient(120% 80% at 50% 0%, #133528 0%, var(--bg) 60%); color:var(--ink);
+         font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding:24px 16px; }
+  main { width:100%; max-width:380px; text-align:center; }
+  .logo { width:84px; height:84px; border-radius:22px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+  .eyebrow { margin:22px 0 6px; color:var(--green-l); font-weight:700; font-size:14px; letter-spacing:.2px; }
+  h1 { margin:0 0 10px; font-size:28px; line-height:1.15; letter-spacing:-.5px; }
+  p { margin:0 0 24px; color:var(--muted); font-size:15px; line-height:1.55; }
+  .steps { text-align:left; background:var(--card); border:1px solid rgba(255,255,255,.08);
+           border-radius:16px; padding:14px 16px; margin:0 0 24px; }
+  .steps div { display:flex; gap:10px; align-items:flex-start; font-size:14px; line-height:1.45; padding:6px 0; }
+  .steps b { flex:0 0 22px; height:22px; border-radius:50%; background:rgba(16,185,129,.18);
+             color:var(--green-l); font-size:12px; display:flex; align-items:center; justify-content:center; }
+  .stores { display:flex; flex-direction:column; align-items:center; gap:12px; }
+  .stores a { display:block; width:240px; }
+  .stores img { display:block; width:100%; height:auto; }
+  .note { margin-top:18px; font-size:12.5px; color:var(--muted); line-height:1.5; }
+  .code { display:inline-block; margin-top:4px; padding:3px 10px; border-radius:8px;
+          background:rgba(16,185,129,.15); color:var(--green-l); font-weight:700; letter-spacing:1px; }
+  .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:#1E2B26;
+           color:var(--ink); padding:10px 16px; border-radius:12px; font-size:13px; opacity:0; transition:opacity .2s; }
+  .toast.show { opacity:1; }
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="../indir/logo.png" alt="MeetIt">
+  <div class="eyebrow" id="eyebrow">Bir arkadaşın seni davet etti 👋</div>
+  <h1>Bakalım ne kadar<br>uyumlusunuz?</h1>
+  <p>MeetIt, kişiliğinize uyan ve ikinize de yakın mekanı saniyeler içinde bulur.</p>
+  <div class="steps">
+    <div><b>1</b><span>Uygulamayı indir ve giriş yap</span></div>
+    <div><b>2</b><span>Kısa kişilik testini çöz</span></div>
+    <div><b>3</b><span id="step3">Uyumunuzu gör, beraber gidecek yeri bulun</span></div>
+  </div>
+  <div class="stores">
+    <a id="ios" href="https://apps.apple.com/tr/app/meetit/id6800778351"><img src="../indir/app-store.png" alt="App Store'dan İndirin"></a>
+    <a id="android" href="https://play.google.com/store/apps/details?id=com.kocaturksalih.meetit"><img src="../indir/google-play.png" alt="Google Play'den İndirin"></a>
+  </div>
+  <div class="note" id="note">Uygulama yüklüyse bu link doğrudan uygulamayı açar.</div>
+</main>
+<div class="toast" id="toast">Davet kodun kopyalandı ✓</div>
+<script>
+  (function () {
+    var params = new URLSearchParams(location.search);
+    var uid = (params.get('u') || '').trim();
+    var name = (params.get('n') || '').trim().slice(0, 30);
+    var validUid = /^[A-Za-z0-9]{10,64}$/.test(uid);
+
+    if (name) {
+      // textContent → isimdeki HTML çalıştırılmaz
+      document.getElementById('eyebrow').textContent = name + ' seni MeetIt\'e davet etti 👋';
+      document.getElementById('step3').textContent = name + ' ile uyumunu gör, beraber gidecek yeri bulun';
+    }
+
+    if (validUid) {
+      var code = uid.slice(0, 6).toUpperCase();
+      var note = document.getElementById('note');
+      note.innerHTML = 'Uygulama yüklüyse bu link doğrudan uygulamayı açar.<br>Davet otomatik gelmezse uygulamada <b>Arkadaş Ekle → Kod ile ekle</b>:<br>';
+      var c = document.createElement('span');
+      c.className = 'code';
+      c.textContent = code;
+      note.appendChild(c);
+    }
+
+    // Mağazaya giderken davet kodunu panoya kopyala: uygulama ilk açılışta
+    // panoyu bir kez okuyup daveti tamamlar (MEETIT-DAVET:{uid}).
+    function copyInvite() {
+      if (!validUid) return Promise.resolve();
+      var text = 'MEETIT-DAVET:' + uid;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          return navigator.clipboard.writeText(text).then(showToast, fallbackCopy.bind(null, text));
+        }
+      } catch (e) {}
+      fallbackCopy(text);
+      return Promise.resolve();
+    }
+    function fallbackCopy(text) {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        if (document.execCommand('copy')) showToast();
+        document.body.removeChild(ta);
+      } catch (e) {}
+    }
+    function showToast() {
+      var t = document.getElementById('toast');
+      t.classList.add('show');
+      setTimeout(function () { t.classList.remove('show'); }, 1600);
+    }
+
+    var ua = navigator.userAgent || '';
+    var ios = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    var android = /Android/i.test(ua);
+    var playWeb = 'https://play.google.com/store/apps/details?id=com.kocaturksalih.meetit';
+    var intent = 'intent://details?id=com.kocaturksalih.meetit#Intent;scheme=market;package=com.android.vending;S.browser_fallback_url=' + encodeURIComponent(playWeb) + ';end';
+
+    if (android) {
+      document.getElementById('android').href = intent;
+      document.getElementById('ios').style.display = 'none';
+    } else if (ios) {
+      document.getElementById('android').style.display = 'none';
+    }
+
+    // Pano kopyalama tarayıcıda kullanıcı dokunuşu gerektirir — otomatik
+    // yönlendirme yok, butona basınca önce kopyala sonra mağazaya git.
+    ['ios', 'android'].forEach(function (id) {
+      var a = document.getElementById(id);
+      a.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        var href = a.href;
+        copyInvite().then(function () {
+          setTimeout(function () { location.href = href; }, 350);
+        });
+      });
+    });
+  })();
+</script>
+</body>
+</html>

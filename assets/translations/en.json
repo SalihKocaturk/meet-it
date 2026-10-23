@@ -653,7 +653,30 @@
     "tier_medium": "A moderate match — your differences could make things interesting.",
     "tier_different": "Quite different personalities, which can also bring new experiences."
   },
+  "invite": {
+    "share_entry": "Share my personality card",
+    "sheet_title": "Share your card, invite a friend",
+    "sheet_desc": "When your friend opens the link and takes the test, you'll see your match.",
+    "share_button": "Share",
+    "copy_link": "Copy invite link",
+    "link_copied": "Invite link copied",
+    "share_text": "My MeetIt personality type: {type} 👀 How well do we match? Take the test and let's find a place to go: {link}",
+    "card_label": "{name} · Personality Card",
+    "card_secondary": "My other side: {name}",
+    "card_cta": "Test your match with me 👀",
+    "card_code": "MeetIt · my friend code {code}",
+    "quiz_banner": "Finish the test to see your match with {name} 👀",
+    "reveal_title": "Your match with {name}",
+    "verdict_great": "You're a great duo! 🎉",
+    "verdict_good": "You match really well! 🙌",
+    "verdict_diff": "Differences make meetups more fun ✨",
+    "reveal_friends_now": "You and {name} are now friends.",
+    "reveal_cta": "Find a place together",
+    "reveal_later": "Later"
+  },
   "notifications": {
+    "invite_joined": "{name} joined MeetIt with your invite — you're now friends!",
+    "invite_joined_compat": "{name} took the test: you're a {value}% match! Find a place together.",
     "title": "Notifications",
     "empty": "No notifications yet",
     "empty_desc": "Likes and friend requests will appear here.",
@@ -666,6 +689,7 @@
     "minutes_ago": "{n}m ago",
     "hours_ago": "{n}h ago",
     "titles": {
+      "invite_joined": "Invite accepted 🎉",
       "meetup_invite": "Meetup invite 📍",
       "venue_found": "Venue found 🗺️",
       "friend_request": "Friend request 👋",

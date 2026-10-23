@@ -146,10 +146,33 @@ class FriendsNotifier extends Notifier<FriendsState> {
           Filter('toUid', isEqualTo: currentUid),
         ))
         .snapshots()
-        .listen((snap) {
+        .listen((snap) async {
       final friendships = snap.docs
           .map((d) => FriendshipModel.fromMap(d.id, d.data()))
           .toList();
+
+      // Kullanıcı listesi açılışta bir kez çekiliyor. Sonradan katılan biri
+      // (ör. davet linkiyle gelen yeni kullanıcı) arkadaşlık kurduğunda
+      // listede yok — eksik kişileri tek tek çekip ekle ki bağlantılarda
+      // hemen görünsün.
+      final knownUids = allUsers.map((u) => u.uid).toSet();
+      final missing = <String>{};
+      for (final f in friendships) {
+        final other = f.fromUid == currentUid ? f.toUid : f.fromUid;
+        if (!knownUids.contains(other)) missing.add(other);
+      }
+      if (missing.isNotEmpty) {
+        final fetched = await Future.wait(missing.map((uid) async {
+          try {
+            final doc = await _db.collection('users').doc(uid).get();
+            final data = doc.data();
+            return data == null ? null : UserModel.fromMap(data);
+          } catch (_) {
+            return null;
+          }
+        }));
+        allUsers.addAll(fetched.whereType<UserModel>());
+      }
 
       final acceptedUids = <String>{};
       final pendingFromMe = <String>{};

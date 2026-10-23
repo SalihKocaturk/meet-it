@@ -70,6 +70,14 @@ exports.sendPushNotification = onDocumentCreated(
         title = "Mekan Bulundu 🗺️";
         body = `${data.fromName} seninle buluşmak için mekan buldu!`;
         break;
+      case "invite_joined": {
+        const compat = data.extra?.compat;
+        title = "Davetin kabul edildi 🎉";
+        body = typeof compat === "number"
+          ? `${data.fromName} testi çözdü: %${Math.round(compat)} uyumlusunuz! Hadi bir yer bulun.`
+          : `${data.fromName} davetinle MeetIt'e katıldı, artık arkadaşsınız!`;
+        break;
+      }
       case "review_liked":
         title = "Yorumun Beğenildi ❤️";
         body = `${data.fromName}, "${data.extra?.venueName ?? "bir mekan"}" yorumunu beğendi.`;

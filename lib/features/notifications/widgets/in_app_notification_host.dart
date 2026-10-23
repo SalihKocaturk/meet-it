@@ -39,6 +39,7 @@ class _InAppNotificationHostState extends ConsumerState<InAppNotificationHost>
     'friend_request',
     'friend_accepted',
     'review_liked',
+    'invite_joined',
   };
 
   late final AnimationController _anim = AnimationController(

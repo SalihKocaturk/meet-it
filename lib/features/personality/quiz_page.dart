@@ -5,7 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/router/app_routes.dart';
+import 'package:meetit/core/constants/emerald_palette.dart';
+import 'package:meetit/core/utils/text_utils.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
+import 'package:meetit/features/invite/invite_provider.dart';
+import 'package:meetit/features/invite/personality_share_card.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/personality/providers/personality_provider.dart';
 import 'package:meetit/features/personality/widgets/personality_character.dart';
@@ -158,6 +162,35 @@ class _QuizPageState extends ConsumerState<QuizPage>
                   ),
                 ],
               ),
+
+              // Davetle geldiyse: "Testi bitir, Salih ile uyumunu gör"
+              Builder(builder: (context) {
+                final reveal = ref.watch(inviteProvider).reveal;
+                if (reveal == null) return const SizedBox.shrink();
+                final name = titleCaseName(
+                  (reveal.name ?? '').split(' ').first,
+                  turkish: context.locale.languageCode == 'tr',
+                );
+                if (name.isEmpty) return const SizedBox.shrink();
+                return Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(top: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: Emerald.tint(radius: 12),
+                  child: Text(
+                    'invite.quiz_banner'.tr(namedArgs: {'name': name}),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: context.accentOnTint,
+                    ),
+                  ),
+                );
+              }),
 
               SizedBox(height: 8),
 
@@ -489,7 +522,39 @@ class _ResultPage extends ConsumerWidget {
                 ),
               ),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 20),
+
+              // Kişilik kartını paylaş → arkadaşını davet et
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () =>
+                      showPersonalityShareSheet(context, ref, profile: result),
+                  icon: Icon(
+                    Icons.ios_share_rounded,
+                    size: 18,
+                    color: context.accentOnTint,
+                  ),
+                  label: Text(
+                    'invite.share_entry'.tr(),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: context.accentOnTint,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: Emerald.base.withOpacity(0.15),
+                    side: BorderSide(color: Emerald.base.withOpacity(0.45)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
 
               // Devam et butonu
               SizedBox(
