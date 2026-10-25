@@ -345,7 +345,10 @@
     "view_map": "Map",
     "filter_all": "All",
     "venue_count": "{count} venues",
-    "directions": "Directions"
+    "directions": "Directions",
+    "type_tile_label": "Your personality type · share your card",
+    "type_tile_empty_label": "Discover your personality type",
+    "type_tile_empty_title": "Take the personality quiz"
   },
   "safety": {
     "report": "Report",

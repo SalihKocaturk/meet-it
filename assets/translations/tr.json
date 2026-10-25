@@ -345,7 +345,10 @@
     "view_map": "Harita",
     "filter_all": "Tümü",
     "venue_count": "{count} mekan",
-    "directions": "Tarif Al"
+    "directions": "Tarif Al",
+    "type_tile_label": "Kişilik tipin · kartını paylaş",
+    "type_tile_empty_label": "Kişilik tipini keşfet",
+    "type_tile_empty_title": "Kişilik testini çöz"
   },
   "safety": {
     "report": "Şikâyet Et",
