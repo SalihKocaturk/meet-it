@@ -343,7 +343,11 @@ class _FindVenueButtonBarState extends ConsumerState<FindVenueButtonBar>
                     disabledBackgroundColor: Emerald.base.withOpacity(0.35),
                     minimumSize: const Size.fromHeight(54),
                     padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: const StadiumBorder(),
+                    // Alt barın köşesiyle (28 / 64 yükseklik) aynı oranda
+                    // yuvarlak — 54 yükseklikte ≈ 24.
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
                     elevation: 6,
                     shadowColor: Emerald.deep.withOpacity(0.45),
                   ),
@@ -361,7 +365,7 @@ class _FindVenueButtonBarState extends ConsumerState<FindVenueButtonBar>
                         return CustomPaint(
                           painter: _LoadingBorderPainter(
                             progress: _borderController.value,
-                            radius: 27,
+                            radius: 24,
                             color: Emerald.pale,
                           ),
                         );
