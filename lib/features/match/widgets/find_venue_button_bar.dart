@@ -2,7 +2,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/services/analytics_service.dart';
 import 'package:meetit/core/constants/emerald_palette.dart';
 import 'package:meetit/core/utils/important_action_guard.dart';
@@ -50,7 +49,10 @@ class _LoadingBorderPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final rrect = RRect.fromRectAndRadius(
       Rect.fromLTWH(1.5, 1.5, size.width - 3, size.height - 3),
-      Radius.circular(radius),
+      // Kapsül butonda yarıçap yüksekliğin yarısını geçmesin.
+      Radius.circular(
+        radius > size.height / 2 ? size.height / 2 : radius,
+      ),
     );
     final fullPath = Path()..addRRect(rrect);
     final metrics = fullPath.computeMetrics().toList();
@@ -196,20 +198,12 @@ class _FindVenueButtonBarState extends ConsumerState<FindVenueButtonBar>
     // her zaman aktif.
     const isEnabled = true;
 
-    // Arkadaki kayan içerik (chip'ler vb.) butonun altından görünmesin diye
-    // şeffaftan sayfa arka planına geçen bir degrade zemin.
-    final scaffold = context.colors.scaffold;
+    // Alttaki cam navigasyon barıyla aynı dil: aynı kenar boşluğu, kapsül
+    // şekli, arkasında zemin bandı yok — içerik ikisinin de arkasından akar.
     return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [scaffold.withOpacity(0), scaffold],
-          stops: const [0.0, 0.45],
-        ),
-      ),
+      decoration: const BoxDecoration(),
       child: Padding(
-      padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
+      padding: const EdgeInsets.fromLTRB(22, 0, 22, 10),
       // Alt boşluğu MatchPage veriyor (cam navigasyon barının hemen
       // üstüne konumlanıyor) — burada ayrıca alt SafeArea eklenirse
       // buton ile bar arasında koca bir boşluk kalıyordu.
@@ -347,12 +341,11 @@ class _FindVenueButtonBarState extends ConsumerState<FindVenueButtonBar>
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Emerald.base,
                     disabledBackgroundColor: Emerald.base.withOpacity(0.35),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 4,
-                    shadowColor: Colors.black.withOpacity(0.25),
+                    minimumSize: const Size.fromHeight(54),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: const StadiumBorder(),
+                    elevation: 6,
+                    shadowColor: Emerald.deep.withOpacity(0.45),
                   ),
                 ),
               ),
@@ -368,7 +361,7 @@ class _FindVenueButtonBarState extends ConsumerState<FindVenueButtonBar>
                         return CustomPaint(
                           painter: _LoadingBorderPainter(
                             progress: _borderController.value,
-                            radius: 14,
+                            radius: 27,
                             color: Emerald.pale,
                           ),
                         );
