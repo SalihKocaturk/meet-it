@@ -138,6 +138,9 @@ class _SideRail extends ConsumerWidget {
 const _kNavHeight = 64.0;
 const _kNavRadius = 32.0;
 const _kNavSideInset = 22.0;
+/// Aktif sekme ikonunun arkasındaki yuvarlak (ana sayfadaki ikon
+/// rozetleriyle aynı dil).
+const _kChip = 46.0;
 
 class _NavSpec {
   final IconData icon;
@@ -147,10 +150,11 @@ class _NavSpec {
 }
 
 const _navItems = <_NavSpec>[
-  _NavSpec(Icons.home_outlined, Icons.home_rounded, 'nav.home'),
-  _NavSpec(Icons.location_on_outlined, Icons.location_on_rounded, 'nav.meetup'),
-  _NavSpec(Icons.people_alt_outlined, Icons.people_alt_rounded, 'nav.friends'),
-  _NavSpec(Icons.person_outline_rounded, Icons.person_rounded, 'nav.profile'),
+  // Uygulamanın geri kalanıyla aynı ikon seti (Iconsax)
+  _NavSpec(Iconsax.home_2, Iconsax.home, 'nav.home'),
+  _NavSpec(Iconsax.location, Iconsax.location, 'nav.meetup'),
+  _NavSpec(Iconsax.people, Iconsax.people, 'nav.friends'),
+  _NavSpec(Iconsax.user, Iconsax.user, 'nav.profile'),
 ];
 
 class _MainBottomNavBar extends ConsumerWidget {
@@ -187,14 +191,14 @@ class _MainBottomNavBar extends ConsumerWidget {
           // cam çamurlu görünürdü.
           painter: _OuterShadowPainter(
             radius: _kNavRadius,
-            color: Colors.black.withOpacity(isDark ? 0.45 : 0.16),
+            color: Colors.black.withOpacity(isDark ? 0.30 : 0.10),
           ),
           child: ClipRRect(
             borderRadius: radius,
             child: BackdropFilter(
               filter: ImageFilter.compose(
                 outer: const ColorFilter.matrix(_kSaturate),
-                inner: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                inner: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
               ),
               child: CustomPaint(
                 foregroundPainter: _GlassRimPainter(
@@ -209,13 +213,16 @@ class _MainBottomNavBar extends ConsumerWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: isDark
+                          // Uygulamanın kart rengi (#161B22) çok hafif
+                          // tonlanıyor — arka plan net seçilsin diye düşük
+                          // opaklık.
                           ? [
-                              const Color(0xFF2A302D).withOpacity(0.50),
-                              const Color(0xFF0B0F0D).withOpacity(0.66),
+                              const Color(0xFF161B22).withOpacity(0.28),
+                              const Color(0xFF0D1117).withOpacity(0.38),
                             ]
                           : [
-                              Colors.white.withOpacity(0.72),
-                              Colors.white.withOpacity(0.56),
+                              Colors.white.withOpacity(0.42),
+                              Colors.white.withOpacity(0.32),
                             ],
                     ),
                   ),
@@ -238,7 +245,7 @@ class _MainBottomNavBar extends ConsumerWidget {
                                     end: Alignment.bottomCenter,
                                     colors: [
                                       Colors.white
-                                          .withOpacity(isDark ? 0.09 : 0.45),
+                                          .withOpacity(isDark ? 0.06 : 0.35),
                                       Colors.white.withOpacity(0),
                                     ],
                                   ),
@@ -248,12 +255,12 @@ class _MainBottomNavBar extends ConsumerWidget {
                           ),
                           // Aktif sekmenin arkasında kayan cam damla
                           AnimatedPositioned(
-                            duration: const Duration(milliseconds: 380),
-                            curve: Curves.easeOutBack,
-                            left: cellW * currentIndex + 6,
-                            top: 7,
-                            width: cellW - 12,
-                            height: _kNavHeight - 14,
+                            duration: const Duration(milliseconds: 340),
+                            curve: Curves.easeOutCubic,
+                            left: cellW * currentIndex + (cellW - _kChip) / 2,
+                            top: (_kNavHeight - _kChip) / 2,
+                            width: _kChip,
+                            height: _kChip,
                             child: IgnorePointer(
                               child: _ActiveBlob(isDark: isDark),
                             ),
@@ -297,35 +304,16 @@ class _ActiveBlob extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Ana sayfadaki "Kişiliğini Yönet" kartlarının ikon rozetiyle aynı:
+    // zümrüt tonlu daire, ince zümrüt kenar.
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(_kNavRadius),
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: isDark
-              ? [
-                  Colors.white.withOpacity(0.16),
-                  Emerald.base.withOpacity(0.14),
-                ]
-              : [
-                  Colors.white.withOpacity(0.95),
-                  Emerald.pale.withOpacity(0.35),
-                ],
-        ),
+        shape: BoxShape.circle,
+        color: Emerald.base.withOpacity(isDark ? 0.20 : 0.16),
         border: Border.all(
-          color: isDark
-              ? Colors.white.withOpacity(0.14)
-              : Colors.white.withOpacity(0.9),
+          color: Emerald.base.withOpacity(isDark ? 0.35 : 0.30),
           width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Emerald.base.withOpacity(isDark ? 0.22 : 0.18),
-            blurRadius: 14,
-            spreadRadius: -2,
-          ),
-        ],
       ),
     );
   }
@@ -363,13 +351,13 @@ class _NavItem extends StatelessWidget {
             child: AnimatedScale(
               duration: const Duration(milliseconds: 260),
               curve: Curves.easeOutBack,
-              scale: isSelected ? 1.08 : 1.0,
+              scale: isSelected ? 1.0 : 0.94,
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
                 child: Icon(
                   isSelected ? spec.activeIcon : spec.icon,
                   key: ValueKey(isSelected),
-                  size: 27,
+                  size: 24,
                   color: isSelected ? active : idle,
                 ),
               ),
@@ -436,9 +424,9 @@ class _GlassRimPainter extends CustomPainter {
         end: Alignment.bottomRight,
         colors: isDark
             ? [
-                Colors.white.withOpacity(0.30),
-                Colors.white.withOpacity(0.05),
-                Colors.white.withOpacity(0.14),
+                Colors.white.withOpacity(0.16),
+                Colors.white.withOpacity(0.04),
+                Colors.white.withOpacity(0.08),
               ]
             : [
                 Colors.white,
