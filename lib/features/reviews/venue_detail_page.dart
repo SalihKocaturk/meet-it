@@ -10,6 +10,9 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:meetit/features/auth/widgets/guest_upgrade.dart';
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/constants/emerald_palette.dart';
+import 'package:meetit/features/share_links/web_links.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:meetit/core/widgets/app_alert.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
@@ -188,6 +191,32 @@ class VenueDetailPage extends ConsumerWidget {
                 ),
               ),
             ),
+            // Paylaş: geri butonuyla aynı yuvarlak stil, sağ üstte.
+            actions: [
+              Builder(
+                builder: (btnContext) => GestureDetector(
+                  onTap: () => _shareVenue(btnContext, place),
+                  child: Container(
+                    width: 40,
+                    margin: const EdgeInsets.fromLTRB(0, 8, 12, 8),
+                    decoration: BoxDecoration(
+                      color: hasPhotos
+                          ? Colors.black.withOpacity(0.35)
+                          : Colors.transparent,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Iconsax.export_2,
+                      color: hasPhotos
+                          ? Colors.white
+                          : context.colors.textPrimary,
+                      size: 18,
+                      semanticLabel: 'venue_detail.share'.tr(),
+                    ),
+                  ),
+                ),
+              ),
+            ],
             flexibleSpace: hasPhotos
                 ? FlexibleSpaceBar(
                     background: _VenuePhotoGallery(photos: galleryPhotos),
@@ -218,27 +247,17 @@ class VenueDetailPage extends ConsumerWidget {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
+                  // Ana eylem "Yol tarifi" (dolu zümrüt, geniş); "Kaydet"
+                  // ikincil (kart rengi, kayıtlıyken zümrüt tonlu).
                   Row(
                     children: [
                       Expanded(
-                        child: _VenueActionButton(
-                          icon: isSaved ? Iconsax.save_add : Iconsax.save_add,
-                          label: isSaved
-                              ? 'venue_detail.saved'.tr()
-                              : 'venue_detail.save'.tr(),
-                          filled: isSaved,
-                          onTap: () => ref
-                              .read(savedVenuesProvider.notifier)
-                              .toggle(place),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
+                        flex: 3,
                         child: _VenueActionButton(
                           icon: Iconsax.routing,
                           label: 'venue_detail.get_directions'.tr(),
-                          filled: false,
+                          style: _ActionStyle.primary,
                           onTap: () async {
                             unawaited(
                               ref
@@ -253,6 +272,22 @@ class VenueDetailPage extends ConsumerWidget {
                               );
                             }
                           },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        flex: 2,
+                        child: _VenueActionButton(
+                          icon: isSaved ? Iconsax.save_2 : Iconsax.save_add,
+                          label: isSaved
+                              ? 'venue_detail.saved'.tr()
+                              : 'venue_detail.save'.tr(),
+                          style: isSaved
+                              ? _ActionStyle.tinted
+                              : _ActionStyle.neutral,
+                          onTap: () => ref
+                              .read(savedVenuesProvider.notifier)
+                              .toggle(place),
                         ),
                       ),
                     ],
@@ -390,10 +425,11 @@ class VenueDetailPage extends ConsumerWidget {
                       text: 'venue_detail.already_reviewed'.tr(),
                     )
                   : hasVisited
-                  ? SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () => showAddReviewSheet(
+                  ? _VenueActionButton(
+                      icon: Iconsax.message_add_1,
+                      label: 'venue_detail.add_review'.tr(),
+                      style: _ActionStyle.neutral,
+                      onTap: () => showAddReviewSheet(
                           context,
                           ref,
                           PlaceResult(
@@ -411,26 +447,6 @@ class VenueDetailPage extends ConsumerWidget {
                           ),
                           overridePhotoUrl: venuePhotoUrl,
                         ),
-                        icon: const Icon(
-                          Iconsax.message_add_1,
-                          color: Colors.white,
-                        ),
-                        label: Text(
-                          'venue_detail.add_review'.tr(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: context.colors.primary,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                      ),
                     )
                   : _InfoNote(
                       icon: Iconsax.info_circle,
@@ -444,51 +460,91 @@ class VenueDetailPage extends ConsumerWidget {
   }
 }
 
-// ── Mekan Aksiyon Butonu (Kaydet / Tarif Al) ──────────────────────────────────
+// ── Mekan paylaşma ───────────────────────────────────────────────────────────
 //
-// Mekan detay sayfasının üst kısmında "Kaydet" ve "Tarif Al" için kullanılan
-// ortak pill buton. [filled] true ise (mekan kayıtlıysa) dolu/primary
-// renkte, değilse outline şeklinde gösterilir.
+// Mekan adı + adres + Google Maps linki + uygulama indirme linki. [context]
+// paylaş butonunun kendi context'i — iPad'de paylaşım penceresi oradan açılır.
+Future<void> _shareVenue(BuildContext context, PlaceResult place) async {
+  final box = context.findRenderObject() as RenderBox?;
+  final origin = box == null ? null : box.localToGlobal(Offset.zero) & box.size;
+  final address = place.vicinity == null ? '' : '\n${place.vicinity}';
+  await SharePlus.instance.share(ShareParams(
+    text: 'venue_detail.share_text'.tr(namedArgs: {
+      'name': place.name,
+      'address': address,
+      'maps': place.googleMapsUrl,
+      'app': WebLinks.download().toString(),
+    }),
+    sharePositionOrigin: origin,
+  ));
+}
+
+// ── Mekan Aksiyon Butonu ─────────────────────────────────────────────────────
+//
+// Mekan detayındaki tüm butonlar (Yol tarifi / Kaydet / Yorum Ekle) aynı
+// şekil dilinde: 50 yükseklik, 16 köşe, çerçevesiz.
+//  • primary — dolu zümrüt (ana eylem)
+//  • tinted  — zümrüt tonlu (aktif durum, ör. kayıtlı)
+//  • neutral — uygulamanın kart rengi, zümrüt ikon
+enum _ActionStyle { primary, tinted, neutral }
+
 class _VenueActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
-  final bool filled;
+  final _ActionStyle style;
   final VoidCallback onTap;
 
   const _VenueActionButton({
     required this.icon,
     required this.label,
-    required this.filled,
+    required this.style,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = context.colors.primary;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: filled ? color : color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: filled ? null : Border.all(color: color.withOpacity(0.3)),
+    final isDark = context.isDarkTheme;
+    final (Color bg, Color iconColor, Color textColor) = switch (style) {
+      _ActionStyle.primary => (Emerald.base, Colors.white, Colors.white),
+      _ActionStyle.tinted => (
+          Emerald.base.withOpacity(isDark ? 0.20 : 0.16),
+          context.accentStrong,
+          context.accentStrong,
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 17, color: filled ? Colors.white : color),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: filled ? Colors.white : color,
+      _ActionStyle.neutral => (
+          context.colors.card,
+          context.accentStrong,
+          context.colors.textPrimary,
+        ),
+    };
+
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: SizedBox(
+          height: 50,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 19, color: iconColor),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: textColor,
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

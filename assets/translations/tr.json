@@ -518,7 +518,9 @@
     "rating_count": "{count} değerlendirme",
     "save": "Kaydet",
     "saved": "Kaydedildi",
-    "get_directions": "Tarif Al"
+    "get_directions": "Yol Tarifi",
+    "share": "Paylaş",
+    "share_text": "📍 {name}{address}\n{maps}\n\nBirlikte gidelim mi? MeetIt ile ortadaki en iyi mekanları bul: {app}"
   },
   "review": {
     "add_title": "Yorum Ekle",

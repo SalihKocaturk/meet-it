@@ -518,7 +518,9 @@
     "rating_count": "{count} reviews",
     "save": "Save",
     "saved": "Saved",
-    "get_directions": "Get Directions"
+    "get_directions": "Directions",
+    "share": "Share",
+    "share_text": "📍 {name}{address}\n{maps}\n\nShall we go together? Find the best spots in between with MeetIt: {app}"
   },
   "review": {
     "add_title": "Add Review",
