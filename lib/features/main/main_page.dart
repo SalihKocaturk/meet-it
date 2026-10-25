@@ -196,58 +196,22 @@ class _MainBottomNavBar extends ConsumerWidget {
           child: ClipRRect(
             borderRadius: radius,
             child: BackdropFilter(
-              filter: ImageFilter.compose(
-                outer: const ColorFilter.matrix(_kSaturate),
-                inner: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              ),
+              // Sadece bulanıklık — renk/doygunluk filtresi yok.
+              filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
               child: DecoratedBox(
+                  // Düz, renksiz cam: degrade yok, renk tonu yok; yalnızca
+                  // ikonlar okunabilsin diye çok hafif nötr bir katman.
                   decoration: BoxDecoration(
                     borderRadius: radius,
-                    // Cam gövdesi: koyu temada dumanlı, açıkta sütlü
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: isDark
-                          // Uygulamanın kart rengi (#161B22) çok hafif
-                          // tonlanıyor — arka plan net seçilsin diye düşük
-                          // opaklık.
-                          ? [
-                              const Color(0xFF161B22).withOpacity(0.28),
-                              const Color(0xFF0D1117).withOpacity(0.38),
-                            ]
-                          : [
-                              Colors.white.withOpacity(0.42),
-                              Colors.white.withOpacity(0.32),
-                            ],
-                    ),
+                    color: isDark
+                        ? Colors.white.withOpacity(0.04)
+                        : Colors.white.withOpacity(0.30),
                   ),
                   child: LayoutBuilder(
                     builder: (context, c) {
                       final cellW = c.maxWidth / _navItems.length;
                       return Stack(
                         children: [
-                          // Üst parlama (ışığın cama vurduğu kısım)
-                          Positioned(
-                            left: 0,
-                            right: 0,
-                            top: 0,
-                            height: _kNavHeight * 0.5,
-                            child: IgnorePointer(
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Colors.white
-                                          .withOpacity(isDark ? 0.06 : 0.35),
-                                      Colors.white.withOpacity(0),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
                           // Aktif sekmenin arkasında kayan cam damla
                           AnimatedPositioned(
                             duration: const Duration(milliseconds: 340),
@@ -283,14 +247,6 @@ class _MainBottomNavBar extends ConsumerWidget {
     );
   }
 }
-
-/// Arka planı hafifçe canlandıran doygunluk matrisi (s = 1.5, Rec.709).
-const _kSaturate = <double>[
-  1.4063, -0.3576, -0.0361, 0, 0, //
-  -0.1063, 1.1424, -0.0361, 0, 0, //
-  -0.1063, -0.3576, 1.4639, 0, 0, //
-  0, 0, 0, 1, 0,
-];
 
 class _ActiveBlob extends StatelessWidget {
   final bool isDark;
