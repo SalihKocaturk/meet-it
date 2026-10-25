@@ -200,12 +200,7 @@ class _MainBottomNavBar extends ConsumerWidget {
                 outer: const ColorFilter.matrix(_kSaturate),
                 inner: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
               ),
-              child: CustomPaint(
-                foregroundPainter: _GlassRimPainter(
-                  radius: _kNavRadius,
-                  isDark: isDark,
-                ),
-                child: DecoratedBox(
+              child: DecoratedBox(
                   decoration: BoxDecoration(
                     borderRadius: radius,
                     // Cam gövdesi: koyu temada dumanlı, açıkta sütlü
@@ -280,7 +275,6 @@ class _MainBottomNavBar extends ConsumerWidget {
                       );
                     },
                   ),
-                ),
               ),
             ),
           ),
@@ -305,15 +299,11 @@ class _ActiveBlob extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Ana sayfadaki "Kişiliğini Yönet" kartlarının ikon rozetiyle aynı:
-    // zümrüt tonlu daire, ince zümrüt kenar.
+    // kenarsız, zümrüt tonlu daire.
     return DecoratedBox(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: Emerald.base.withOpacity(isDark ? 0.20 : 0.16),
-        border: Border.all(
-          color: Emerald.base.withOpacity(isDark ? 0.35 : 0.30),
-          width: 1,
-        ),
       ),
     );
   }
@@ -400,44 +390,4 @@ class _OuterShadowPainter extends CustomPainter {
   @override
   bool shouldRepaint(_OuterShadowPainter old) =>
       old.color != color || old.radius != radius;
-}
-
-/// Camın kenar ışığı: üst-solda parlak, ortada sönük, alt-sağda hafif
-/// geri yansıma — düz tek renk kenarlıktan çok daha "cam" durur.
-class _GlassRimPainter extends CustomPainter {
-  final double radius;
-  final bool isDark;
-  const _GlassRimPainter({required this.radius, required this.isDark});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final rrect = RRect.fromRectAndRadius(
-      rect.deflate(0.6),
-      Radius.circular(radius),
-    );
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: isDark
-            ? [
-                Colors.white.withOpacity(0.16),
-                Colors.white.withOpacity(0.04),
-                Colors.white.withOpacity(0.08),
-              ]
-            : [
-                Colors.white,
-                Colors.black.withOpacity(0.05),
-                Colors.white.withOpacity(0.8),
-              ],
-        stops: const [0, 0.55, 1],
-      ).createShader(rect);
-    canvas.drawRRect(rrect, paint);
-  }
-
-  @override
-  bool shouldRepaint(_GlassRimPainter old) => old.isDark != isDark;
 }

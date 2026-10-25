@@ -210,8 +210,12 @@ class _FindVenueButtonBarState extends ConsumerState<FindVenueButtonBar>
       ),
       child: Padding(
       padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
+      // Alt boşluğu MatchPage veriyor (cam navigasyon barının hemen
+      // üstüne konumlanıyor) — burada ayrıca alt SafeArea eklenirse
+      // buton ile bar arasında koca bir boşluk kalıyordu.
       child: SafeArea(
         top: false,
+        bottom: false,
         child: SizedBox(
           width: double.infinity,
           child: Stack(
