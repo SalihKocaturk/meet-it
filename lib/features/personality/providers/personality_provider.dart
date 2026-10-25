@@ -3,10 +3,6 @@ import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/personality/notifiers/personality_notifier.dart';
 
 // Ana quiz notifier provider
-/// Kullanıcı bu oturumda testi "şimdilik atla" dediyse true — mekan
-/// aramadan önce test tekrar tekrar sorulmaz (bkz. ensurePersonalityReady).
-final quizSkippedProvider = StateProvider<bool>((ref) => false);
-
 final quizProvider = NotifierProvider<QuizNotifier, QuizState>(
   QuizNotifier.new,
 );

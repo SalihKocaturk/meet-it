@@ -49,9 +49,12 @@ class FriendsPage extends ConsumerWidget {
       );
     }
 
+    // Alt kısım cam navigasyon barının arkasına kayar; listeler kendi alt
+    // boşluklarını bırakır (bkz. _listPadding).
     return Scaffold(
       backgroundColor: context.colors.scaffold,
       body: SafeArea(
+        bottom: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -338,7 +341,7 @@ class _SuggestionsTab extends ConsumerWidget {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: _listPadding(context),
       children: [
         _SectionHeader(title: 'friends.suggestions_section'.tr(namedArgs: {'count': '${suggestions.length}'})),
         ...suggestions.map((f) => _SuggestionTile(friend: f)),
@@ -412,7 +415,7 @@ class _RequestsTab extends ConsumerWidget {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: _listPadding(context),
       children: [
         // Gelen istekler
         if (incoming.isNotEmpty) ...[
@@ -444,7 +447,7 @@ class _ConnectionsTab extends ConsumerWidget {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: _listPadding(context),
       children: [
         _SectionHeader(title: 'friends.my_friends_section'.tr(namedArgs: {'count': '$connectionsCount'})),
         ...connections.map((f) => _ConnectionTile(friend: f)),
@@ -913,3 +916,11 @@ class _ConnectionTile extends ConsumerWidget {
     );
   }
 }
+
+/// Liste kenar boşluğu — altta yüzen cam navigasyon barı kadar ek boşluk.
+EdgeInsets _listPadding(BuildContext context) => EdgeInsets.fromLTRB(
+      20,
+      0,
+      20,
+      MediaQuery.paddingOf(context).bottom + 16,
+    );

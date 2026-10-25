@@ -47,9 +47,8 @@ abstract final class AnalyticsService {
   static Future<void> quizComplete(String dominantType) =>
       _log('quiz_complete', {'type': dominantType});
 
-  static Future<void> quizSkipped() => _log('quiz_skipped');
 
-  /// mode: solo | friend | location_link
+  /// mode: solo | friend
   static Future<void> venueSearch(String mode) =>
       _log('venue_search', {'mode': mode});
 
@@ -60,10 +59,9 @@ abstract final class AnalyticsService {
   static Future<void> shareDuoCard() => _log('share_duo_card');
   static Future<void> inviteAccepted() => _log('invite_accepted');
 
-  static Future<void> locationRequestCreated() =>
-      _log('location_request_created');
-  static Future<void> locationRequestShared() =>
-      _log('location_request_shared');
+  /// Test önerisi pop-up'ı: shown | accepted | dismissed
+  static Future<void> quizNudge(String action) =>
+      _log('quiz_nudge', {'action': action});
 
   static Future<void> pollCreated(int options) =>
       _log('poll_created', {'options': options});

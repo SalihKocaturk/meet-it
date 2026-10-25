@@ -310,10 +310,6 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
     // bloğu) — arkadaşın ayrı bir mesafe sınırı YOKTUR, kullanıcının
     // talebi üzerine bilinçli olarak basit tutuldu.
     double? maxVenueDistanceKm,
-    // Uygulaması olmayan arkadaşın konum linkinden gelen konumu (bkz.
-    // LocationRequestService). Verilirse friendUid yerine bu kullanılır.
-    double? friendLatOverride,
-    double? friendLngOverride,
   }) async {
     // Önceki bekleyen timer varsa iptal et (peş peşe arama senaryosu)
     _searchTimer?.cancel();
@@ -354,11 +350,9 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
     }
 
     // ── Arkadaşın konumunu Firestore'dan çek ──────────────────────────────
-    double? friendLat = friendLatOverride;
-    double? friendLng = friendLngOverride;
-    final hasFriend =
-        friendUid != null || (friendLat != null && friendLng != null);
-    if (friendUid != null && friendLat == null) {
+    double? friendLat;
+    double? friendLng;
+    if (friendUid != null) {
       try {
         final doc = await FirebaseFirestore.instance
             .collection('users')
@@ -379,7 +373,7 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
 
     const maxDistanceKm = 200.0;
 
-    if (hasFriend) {
+    if (friendUid != null) {
       if (friendLat != null && friendLng != null) {
         final dist = _haversineKm(myLat, myLng, friendLat, friendLng);
         if (dist < maxDistanceKm) {

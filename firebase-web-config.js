@@ -1,4 +1,4 @@
-// MeetIt web sayfaları (davet/, konum/, oylama/) için Firebase ayarı.
+// MeetIt web sayfaları (davet/, oylama/) için Firebase ayarı.
 //
 // DOLDURMA: Firebase Console → Proje ayarları → Genel → "Uygulamalarınız"
 // → meetit (web) → SDK kurulumu → "Yapılandırma". apiKey ve appId'yi

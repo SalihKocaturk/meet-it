@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/constants/emerald_palette.dart';
 
 // ── Dil bayrakları — emoji ile, asset gerektirmez ─────────────────────────────
 const _trFlag = '🇹🇷';
@@ -79,7 +80,7 @@ class LanguageSwitcherCard extends StatelessWidget {
               // Dil değiştir ikonu
               Icon(
                 Iconsax.global,
-                color: context.colors.primary,
+                color: Emerald.base,
                 size: 17,
               ),
             ],
@@ -126,12 +127,12 @@ void showLanguagePickerSheet(BuildContext context) {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: context.colors.primary.withOpacity(0.1),
+                    color: Emerald.base.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     Iconsax.global,
-                    color: context.colors.primary,
+                    color: Emerald.base,
                     size: 18,
                   ),
                 ),
@@ -207,11 +208,11 @@ class _LangTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: isSelected
-              ? context.colors.primary.withOpacity(0.08)
+              ? Emerald.base.withOpacity(0.08)
               : context.colors.scaffold,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? context.colors.primary : context.colors.border,
+            color: isSelected ? Emerald.base : context.colors.border,
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -233,7 +234,7 @@ class _LangTile extends StatelessWidget {
                       fontWeight:
                           isSelected ? FontWeight.w700 : FontWeight.w500,
                       color: isSelected
-                          ? context.colors.primary
+                          ? context.accentStrong
                           : context.colors.textPrimary,
                     ),
                   ),
@@ -247,25 +248,56 @@ class _LangTile extends StatelessWidget {
                 ],
               ),
             ),
-            // Seçim göstergesi
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: isSelected
-                  ? Icon(
-                      Iconsax.check,
-                      key: const ValueKey('check'),
-                      color: context.colors.primary,
-                      size: 22,
-                    )
-                  : Icon(
-                      Icons.radio_button_unchecked,
-                      key: const ValueKey('empty'),
-                      color: context.colors.border,
-                      size: 22,
-                    ),
-            ),
+            // Seçim göstergesi — dolu yeşil daire + beyaz tik / boş halka
+            _SelectDot(selected: isSelected),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SelectDot extends StatelessWidget {
+  final bool selected;
+  const _SelectDot({required this.selected});
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Emerald.base;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      width: 24,
+      height: 24,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: selected ? accent : Colors.transparent,
+        border: Border.all(
+          color: selected ? accent : context.colors.border,
+          width: selected ? 0 : 1.8,
+        ),
+        boxShadow: selected
+            ? [
+                BoxShadow(
+                  color: accent.withOpacity(0.35),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : null,
+      ),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 180),
+        transitionBuilder: (child, anim) =>
+            ScaleTransition(scale: anim, child: child),
+        child: selected
+            ? const Icon(
+                Icons.check_rounded,
+                key: ValueKey('on'),
+                size: 16,
+                color: Colors.white,
+              )
+            : const SizedBox.shrink(key: ValueKey('off')),
       ),
     );
   }

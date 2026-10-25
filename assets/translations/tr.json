@@ -465,7 +465,6 @@
     "finish_quiz": "Testi Bitir"
   },
   "quiz_intro": {
-    "skip_btn": "Testsiz devam et",
     "title": "Önce Seni Tanıyalım",
     "desc": "Sana ve buluşacağın kişiye en uygun mekanları önerebilmemiz için kısa bir kişilik testi yapman gerekiyor. Sadece birkaç soru, çok sürmez.",
     "start_btn": "Teste Başla",
@@ -576,14 +575,14 @@
   "legal": {
     "terms_title": "Kullanım Koşulları",
     "privacy_title": "Gizlilik Politikası",
-    "terms_last_updated": "Son güncelleme: 28 Eylül 2026",
-    "privacy_last_updated": "Son güncelleme: 28 Eylül 2026",
+    "terms_last_updated": "Son güncelleme: 26 Ekim 2026",
+    "privacy_last_updated": "Son güncelleme: 26 Ekim 2026",
     "terms_s1_title": "1. Taraflar ve Kabul",
     "terms_s1_body": "Bu Kullanım Koşulları, MeetIt mobil uygulamasını (\"Uygulama\") geliştiren ve işleten Ahmet Salih Kocatürk (\"MeetIt\", \"biz\") ile Uygulamayı kullanan sen arasındaki ilişkiyi düzenler. Hesap oluşturarak veya Uygulamayı kullanarak bu Koşulları ve Gizlilik Politikası'nı kabul etmiş olursun. Kabul etmiyorsan Uygulamayı kullanmamalısın.",
     "terms_s2_title": "2. Yaş Sınırı ve Hesap",
-    "terms_s2_body": "Uygulama yalnızca 18 yaşını doldurmuş kişiler içindir; 18 yaşından küçükler Uygulamayı kullanamaz ve hesap açamaz. Kayıt sırasında doğru bilgi vermekten, hesabının ve giriş bilgilerinin güvenliğinden sen sorumlusun. Başkası adına veya sahte bir kimlikle hesap açılamaz.",
+    "terms_s2_body": "Uygulama yalnızca 18 yaşını doldurmuş kişiler içindir; 18 yaşından küçükler Uygulamayı kullanamaz ve hesap açamaz. Kayıt sırasında doğru bilgi vermekten, hesabının ve giriş bilgilerinin güvenliğinden sen sorumlusun. Başkası adına veya sahte bir kimlikle hesap açılamaz.\nUygulamayı hesap açmadan, misafir olarak da deneyebilirsin; misafir kullanımda da yaş sınırı ve bu Koşullar aynen geçerlidir. Arkadaş ekleme, yorum yazma ve kişilik kartını paylaşma gibi bazı özellikler hesap gerektirir. Misafir olarak başladıktan sonra hesap açarsan test sonucun ve konumun yeni hesabına taşınır.",
     "terms_s3_title": "3. Hizmetin Kapsamı",
-    "terms_s3_body": "MeetIt; arkadaşlarınla aranızdaki orta noktaya yakın mekanlar önermeyi, kişilik profiline göre öneriler sunmayı, mekanlara yorum ve puan bırakmayı ve arkadaş eklemeyi sağlar. Mekan bilgileri (ad, adres, puan, fotoğraf, çalışma saatleri vb.) büyük ölçüde Google gibi üçüncü taraf kaynaklardan gelir; doğruluğu, güncelliği ve mekanların uygunluğu garanti edilmez. Uygulamanın özellikleri değiştirilebilir veya sonlandırılabilir.",
+    "terms_s3_body": "MeetIt; arkadaşlarınla aranızdaki orta noktaya yakın mekanlar önermeyi, kişilik profiline göre öneriler sunmayı, mekanlara yorum ve puan bırakmayı, arkadaş eklemeyi, arkadaşlarını davet linkiyle çağırmayı ve bulunan mekanlar için grup oylaması başlatmayı sağlar. Davet ve grup oylaması linkleri, uygulaması olmayan kişilerin de tarayıcıdan açabileceği web sayfalarına yönlendirir; bu linkleri kiminle paylaşacağına sen karar verirsin. Oylamaya katılırken girilen adlar da 4. maddedeki kurallara tabidir. Mekan bilgileri (ad, adres, puan, fotoğraf, çalışma saatleri vb.) büyük ölçüde Google gibi üçüncü taraf kaynaklardan gelir; doğruluğu, güncelliği ve mekanların uygunluğu garanti edilmez. Uygulamanın özellikleri değiştirilebilir veya sonlandırılabilir.",
     "terms_s4_title": "4. Kullanıcı İçeriği ve Yasak Davranışlar",
     "terms_s4_body": "Uygulamada paylaştığın ad, profil fotoğrafı, yorum, puan ve fotoğraflardan sen sorumlusun. Aşağıdakiler kesinlikle yasaktır:\n• yasa dışı içerik\n• taciz, zorbalık, tehdit, hakaret, nefret söylemi veya ayrımcılık\n• müstehcen, cinsel veya şiddet içeren içerik\n• başkalarının kişisel bilgilerini izinsiz paylaşmak\n• sahte profil veya kimlik taklidi\n• spam, dolandırıcılık, oltalama veya zararlı yazılım\n• başkalarının fikri mülkiyet haklarını ihlal etmek\n• Uygulamanın güvenliğini veya işleyişini bozmaya çalışmak",
     "terms_s5_title": "5. Sıfır Tolerans, Şikâyet ve Engelleme",
@@ -609,21 +608,21 @@
     "privacy_s1_title": "1. Veri Sorumlusu",
     "privacy_s1_body": "Bu Gizlilik Politikası, MeetIt mobil uygulamasını kullanırken kişisel verilerinin nasıl işlendiğini açıklar ve 6698 sayılı Kişisel Verilerin Korunması Kanunu (\"KVKK\") kapsamında aydınlatma metni niteliğindedir.\nVeri sorumlusu: Ahmet Salih Kocatürk\nİletişim: hafifsaglam61@gmail.com",
     "privacy_s2_title": "2. Topladığımız Veriler",
-    "privacy_s2_body": "• Hesap bilgileri: ad soyad, e-posta adresi, profil fotoğrafı; Google veya Apple ile girişte bu hizmetlerin paylaştığı ad ve e-posta.\n• İsteğe bağlı profil bilgileri: yaş, cinsiyet, şehir/ilçe ve kayıtlı konumunun koordinatları. Bu alanları doldurmak zorunlu değildir.\n• 18 yaş teyidi ile Kullanım Koşulları ve Gizlilik Politikası onayların.\n• Kişilik testi sonucun, buna göre oluşan kişilik profilin ve bu profilin zaman içindeki değişimi.\n• Sosyal veriler: arkadaşların, arkadaşlık istekleri ve arkadaş kodun.\n• Paylaştığın içerikler: mekan yorumları, puanlar, yorum fotoğrafları ve beğeniler.\n• Kullanım verileri: kaydettiğin mekanlar, yol tarifi aldığın mekanlar, buluşma aramaların ve buluşma geçmişin.\n• Güvenlik verileri: yaptığın veya hakkında yapılan şikâyetler (şikâyet eden, şikâyet edilen, sebep, tarih) ve engellemeler.\n• Teknik veriler: bildirim (push) token'ı, cihaz ve işletim sistemi bilgileri, IP adresi, uygulama bütünlüğü doğrulaması (Firebase App Check) ve izin verdiysen reklam kimliği.",
+    "privacy_s2_body": "• Hesap bilgileri: ad soyad, e-posta adresi, profil fotoğrafı; Google veya Apple ile girişte bu hizmetlerin paylaştığı ad ve e-posta.\n• Misafir kullanım: hesap açmadan denediğinde senin için anonim bir kullanıcı kimliği oluşturulur; ad veya e-posta istenmez. Bu kimliğe bağlı olarak test sonucun ve konumun saklanır.\n• İsteğe bağlı profil bilgileri: yaş, cinsiyet, şehir/ilçe ve kayıtlı konumunun koordinatları. Bu alanları doldurmak zorunlu değildir.\n• 18 yaş teyidi ile Kullanım Koşulları ve Gizlilik Politikası onayların.\n• Kişilik testi sonucun, buna göre oluşan kişilik profilin ve bu profilin zaman içindeki değişimi.\n• Sosyal veriler: arkadaşların, arkadaşlık istekleri, arkadaş kodun ve davet linkiyle eklenen arkadaşlıklar.\n• Grup oylamaları: oluşturduğun oylamadaki mekan seçenekleri ve adın; oylamaya katılanların girdiği adlar ve verdikleri oylar.\n• Paylaştığın içerikler: mekan yorumları, puanlar, yorum fotoğrafları ve beğeniler.\n• Kullanım verileri: kaydettiğin mekanlar, yol tarifi aldığın mekanlar, buluşma aramaların ve buluşma geçmişin.\n• Uygulama içi etkinlik verileri (Firebase Analytics): uygulamayı nasıl kullandığına dair olaylar (ör. kayıt, kişilik testini tamamlama, mekan arama, paylaşım, oylama oluşturma), kullanıcı kimliğine bağlı olarak.\n• Güvenlik verileri: yaptığın veya hakkında yapılan şikâyetler (şikâyet eden, şikâyet edilen, sebep, tarih) ve engellemeler.\n• Teknik veriler: bildirim (push) token'ı, cihaz ve işletim sistemi bilgileri, IP adresi, uygulama bütünlüğü doğrulaması (Firebase App Check) ve izin verdiysen reklam kimliği.",
     "privacy_s3_title": "3. Toplama Yöntemi, Amaçlar ve Hukuki Sebepler",
-    "privacy_s3_body": "Verilerin; uygulamaya girdiğin bilgilerden, Google ve Apple giriş hizmetlerinden ve uygulamanın çalışması sırasında otomatik olarak toplanır. Bu verileri şu amaçlarla işleriz:\n• hesabını oluşturmak ve yönetmek\n• arkadaşlarınla aranızdaki orta noktaya yakın mekanları önermek\n• kişilik profiline göre kişiselleştirilmiş öneriler sunmak (kişilik profilin, yorumlarına göre otomatik olarak güncellenir)\n• arkadaşlık istekleri ve buluşma davetleri için bildirim göndermek\n• şikâyetleri incelemek, kötüye kullanımı ve dolandırıcılığı önlemek, uygulamanın güvenliğini sağlamak\n• reklam göstermek ve yasal yükümlülükleri yerine getirmek\nHukuki sebepler (KVKK md. 5): sözleşmenin kurulması ve ifası, meşru menfaat (güvenlik ve moderasyon), hukuki yükümlülüklerin yerine getirilmesi ve gerekli hâllerde açık rızan (kişiselleştirilmiş reklamlar ve yurt dışına aktarım).",
+    "privacy_s3_body": "Verilerin; uygulamaya girdiğin bilgilerden, Google ve Apple giriş hizmetlerinden ve uygulamanın çalışması sırasında otomatik olarak toplanır. Bu verileri şu amaçlarla işleriz:\n• hesabını oluşturmak ve yönetmek\n• arkadaşlarınla aranızdaki orta noktaya yakın mekanları önermek\n• kişilik profiline göre kişiselleştirilmiş öneriler sunmak (kişilik profilin, yorumlarına göre otomatik olarak güncellenir)\n• arkadaşlık istekleri ve buluşma davetleri için bildirim göndermek\n• şikâyetleri incelemek, kötüye kullanımı ve dolandırıcılığı önlemek, uygulamanın güvenliğini sağlamak\n• uygulamanın nasıl kullanıldığını ölçmek ve uygulamayı geliştirmek (istatistik)\n• davet linkleri ve grup oylamalarını çalıştırmak\n• reklam göstermek ve yasal yükümlülükleri yerine getirmek\nHukuki sebepler (KVKK md. 5): sözleşmenin kurulması ve ifası, meşru menfaat (güvenlik, moderasyon ve ürün geliştirme), hukuki yükümlülüklerin yerine getirilmesi ve gerekli hâllerde açık rızan (kişiselleştirilmiş reklamlar ve yurt dışına aktarım).",
     "privacy_s4_title": "4. Konum Verisi",
     "privacy_s4_body": "Konum yalnızca uygulama açıkken ve iznin varsa kullanılır; arka planda konum takibi yapılmaz. Konumunu haritadan seçebilir veya cihazının konumunu kullanabilirsin. Kayıtlı konumun, arkadaşlarınla aranızdaki orta noktayı hesaplamak ve yakındaki mekanları listelemek için kullanılır. Konum izni vermek zorunlu değildir; vermezsen konumunu haritadan elle seçebilirsin.",
     "privacy_s5_title": "5. Diğer Kullanıcıların Görebildikleri",
-    "privacy_s5_body": "• Adın, profil fotoğrafın ve kişilik tipin arkadaşlarına görünür; arkadaş önerilerinde ve arkadaş koduyla yapılan aramalarda diğer kullanıcılara da görünebilir.\n• Kayıtlı konumun, bir arkadaşınla buluşma noktası aranırken o arkadaşınla paylaşılır ve haritada gösterilebilir.\n• Mekan yorumların, puanların ve yorum fotoğrafların; adın ve profil fotoğrafınla birlikte tüm kullanıcılara görünür.\n• E-posta adresin diğer kullanıcılarla paylaşılmaz.",
+    "privacy_s5_body": "• Adın, profil fotoğrafın ve kişilik tipin arkadaşlarına görünür; arkadaş önerilerinde ve arkadaş koduyla yapılan aramalarda diğer kullanıcılara da görünebilir.\n• Kayıtlı konumun, bir arkadaşınla buluşma noktası aranırken o arkadaşınla paylaşılır ve haritada gösterilebilir.\n• Mekan yorumların, puanların ve yorum fotoğrafların; adın ve profil fotoğrafınla birlikte tüm kullanıcılara görünür.\n• Davet linki ve kişilik kartı: paylaştığın davet linki adını ve kullanıcı kimliğini içerir, kişilik kartında kişilik tipin de yer alır; linki veya kartı alan herkes bunları görebilir. Linkle uygulamaya katılan kişiyle otomatik olarak arkadaş olursunuz.\n• Grup oylaması: oylama linkine sahip herkes oylamayı oluşturanın adını, mekan seçeneklerini, katılanların adlarını ve oylarını görebilir. Oy verirken girdiğin ad diğer katılımcılara görünür.\n• E-posta adresin diğer kullanıcılarla paylaşılmaz.",
     "privacy_s6_title": "6. Hizmet Sağlayıcılar",
-    "privacy_s6_body": "Verilerin satılmaz veya kiralanmaz. Uygulamanın çalışması için yalnızca şu hizmet sağlayıcılarla paylaşılır:\n• Google Firebase (Authentication, Cloud Firestore, Cloud Storage, Cloud Functions, Cloud Messaging, App Check): hesap, veri depolama, bildirimler ve güvenlik.\n• Google Maps Platform (Maps SDK, Places API): harita ve mekan bilgileri; mekan aramalarında konum koordinatları Google'a iletilir.\n• Google ile Giriş ve Apple ile Giriş: kimlik doğrulama.\n• Google AdMob: reklam gösterimi.\n• Apple Push Notification service: iOS'ta bildirimlerin iletilmesi.\nAyrıca yasal zorunluluk hâlinde yetkili kamu kurum ve kuruluşlarıyla paylaşılabilir.",
+    "privacy_s6_body": "Verilerin satılmaz veya kiralanmaz. Uygulamanın çalışması için yalnızca şu hizmet sağlayıcılarla paylaşılır:\n• Google Firebase (Authentication, Cloud Firestore, Cloud Storage, Cloud Functions, Cloud Messaging, App Check, Analytics): hesap, veri depolama, bildirimler, güvenlik ve kullanım istatistikleri.\n• GitHub Pages: davet ve grup oylaması web sayfalarının barındırılması; bu sayfaları açanların IP adresi gibi teknik bağlantı verileri GitHub tarafından işlenir.\n• Google Maps Platform (Maps SDK, Places API): harita ve mekan bilgileri; mekan aramalarında konum koordinatları Google'a iletilir.\n• Google ile Giriş ve Apple ile Giriş: kimlik doğrulama.\n• Google AdMob: reklam gösterimi.\n• Apple Push Notification service: iOS'ta bildirimlerin iletilmesi.\nAyrıca yasal zorunluluk hâlinde yetkili kamu kurum ve kuruluşlarıyla paylaşılabilir.",
     "privacy_s7_title": "7. Yurt Dışına Aktarım",
     "privacy_s7_body": "Yukarıdaki hizmet sağlayıcıların sunucuları başta ABD olmak üzere yurt dışında bulunduğundan kişisel verilerin yurt dışına aktarılır. Bu aktarım, KVKK'nın 9. maddesine uygun olarak ve gerekli hâllerde açık rızana dayanılarak yapılır.",
     "privacy_s8_title": "8. Reklamlar ve Takip",
     "privacy_s8_body": "MeetIt, Google AdMob üzerinden reklam gösterir. iOS'ta uygulama ilk açılışta uygulamalar arası takip için izin ister (App Tracking Transparency). İzin verirsen reklam kimliğin kişiselleştirilmiş reklamlar için kullanılabilir; vermezsen kişiselleştirilmemiş reklamlar gösterilir ve tüm özellikler çalışmaya devam eder. Bu tercihi cihazının ayarlarından istediğin zaman değiştirebilirsin. Uygulama içi satın alma yoktur.",
     "privacy_s9_title": "9. Saklama Süresi ve Hesap Silme",
-    "privacy_s9_body": "Verilerin, hesabın açık olduğu sürece saklanır. Hesabını Ayarlar > Hesabı Sil yoluyla istediğin zaman silebilirsin. Hesabını sildiğinde profilin, kayıtlı konumun, kişilik profilin, arkadaşlıkların, yorumların ve yorum fotoğrafların, beğenilerin, kaydettiğin mekanlar, buluşma geçmişin, engellemelerin ve bildirim verilerin kalıcı olarak silinir. Şikâyet kayıtları, moderasyon ve olası hukuki talepler için gerekli olan süre boyunca, en fazla 2 yıl saklanır. Silme talebini hafifsaglam61@gmail.com adresine de iletebilirsin.",
+    "privacy_s9_body": "Verilerin, hesabın açık olduğu sürece saklanır. Hesabını Ayarlar > Hesabı Sil yoluyla istediğin zaman silebilirsin. Hesabını sildiğinde profilin, kayıtlı konumun, kişilik profilin, arkadaşlıkların, yorumların ve yorum fotoğrafların, beğenilerin, kaydettiğin mekanlar, buluşma geçmişin, engellemelerin ve bildirim verilerin kalıcı olarak silinir. Misafir olarak kullanıyorsan aynı yoldan misafir oturumunu ve ona bağlı verileri silebilirsin. Grup oylamaları oluşturulduktan 7 gün sonra otomatik olarak silinir. Firebase Analytics olay verileri en fazla 14 ay saklanır. Şikâyet kayıtları, moderasyon ve olası hukuki talepler için gerekli olan süre boyunca, en fazla 2 yıl saklanır. Silme talebini hafifsaglam61@gmail.com adresine de iletebilirsin.",
     "privacy_s10_title": "10. Güvenlik",
     "privacy_s10_body": "Verilerin, Google altyapısında aktarım sırasında ve depolamada şifrelenir; erişim, veritabanı güvenlik kuralları ve uygulama bütünlüğü doğrulamasıyla sınırlandırılır. Hiçbir yöntem tam güvenlik sağlayamasa da verilerini korumak için makul teknik ve idari tedbirleri alırız. Bir veri ihlali olursa, mevzuatın öngördüğü şekilde seni ve Kişisel Verileri Koruma Kurulu'nu bilgilendiririz.",
     "privacy_s11_title": "11. Çocuklar",
@@ -686,23 +685,6 @@
     "friends_title": "Arkadaşlar hesabınla gelir",
     "friends_desc": "Hesap açarak arkadaşlarını ekleyebilir, uyumunuzu görebilir ve birlikte mekan bulabilirsin. Hesapsız da bir arkadaşınla buluşmak için Buluşma ekranındaki konum linkini kullanabilirsin."
   },
-  "location_link": {
-    "cta_title": "Uygulaması olmayan biriyle mi buluşuyorsun?",
-    "cta_desc": "Konum linki gönder, arkadaşın tek dokunuşla konumunu paylaşsın — ortadaki mekanları bulalım.",
-    "share_text": "Nerede buluşalım? 📍 Konumunu tek dokunuşla paylaş, MeetIt ikimizin ortasındaki en iyi mekanları bulsun (uygulama indirmen gerekmiyor): {link}",
-    "create_failed": "Link oluşturulamadı, tekrar dene.",
-    "your_friend": "Arkadaşın",
-    "waiting_title": "Arkadaşının konumu bekleniyor…",
-    "waiting_desc": "Linki açıp konumunu paylaşınca burada haber vereceğiz.",
-    "share_again": "Linki tekrar paylaş",
-    "shared_title": "{name} konumunu paylaştı 🎉",
-    "shared_desc": "İkinizin ortasındaki mekanları bulalım; öneriler ona da gösterilecek.",
-    "find_midpoint": "Ortadaki mekanları bul",
-    "done_title": "Öneriler {name} ile paylaşıldı ✓",
-    "done_desc": "Arkadaşın önerileri linkteki sayfada görüyor.",
-    "search_again": "Tekrar ara",
-    "new_request": "Yeni link"
-  },
   "poll": {
     "ask_group": "Gruba sor",
     "share_text": "Nerede buluşalım? 🗳️ MeetIt ortadaki en iyi yerleri buldu:\n{list}\n\nOyunu ver (uygulama gerekmez): {link}",
@@ -715,7 +697,6 @@
     "card_cta": "Sen de arkadaşınla uyumunu test et · MeetIt"
   },
   "notifications": {
-    "location_shared": "{name} konumunu paylaştı. Ortadaki mekanları bul!",
     "invite_joined": "{name} davetinle MeetIt'e katıldı, artık arkadaşsınız!",
     "invite_joined_compat": "{name} testi çözdü: %{value} uyumlusunuz! Hadi bir yer bulun.",
     "title": "Bildirimler",
@@ -730,7 +711,6 @@
     "minutes_ago": "{n} dakika önce",
     "hours_ago": "{n} saat önce",
     "titles": {
-      "location_shared": "Konum geldi 📍",
       "invite_joined": "Davetin kabul edildi 🎉",
       "meetup_invite": "Buluşma daveti 📍",
       "venue_found": "Mekan bulundu 🗺️",
@@ -829,5 +809,14 @@
       "c": "Gezebileceğimiz bir kitapçı, sergi ya da müze",
       "d": "Daha önce gitmediğimiz yeni bir semtteki herhangi bir restoran"
     }
+  },
+  "quiz_nudge": {
+    "title": "Sana daha iyi yerler önerelim mi?",
+    "desc": "Kişilik testi isteğe bağlı — çözmesen de uygulamayı tam kullanabilirsin. Ama çözersen öneriler gerçekten sana göre olur.",
+    "reason_venues": "Mekanlar senin tarzına göre sıralanır: sakin mi, kalabalık mı, maceracı mı?",
+    "reason_compat": "Arkadaşlarınla uyumunu görür, ikinize de uyan yerleri bulursun.",
+    "reason_time": "10 kısa soru, yaklaşık 2 dakika. Sonucu istediğin zaman yenileyebilirsin.",
+    "start": "Testi çöz",
+    "later": "Şimdi değil"
   }
 }

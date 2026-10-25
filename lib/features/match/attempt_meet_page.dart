@@ -193,6 +193,11 @@ class AttemptMeetPage extends ConsumerWidget {
               myLocationButtonEnabled: false,
               zoomControlsEnabled: false,
               mapToolbarEnabled: false,
+              // Harita alttaki cam navigasyon barının arkasına uzanır;
+              // Google logosu/telif yazısı barın altında kalmasın.
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.paddingOf(context).bottom,
+              ),
             ),
 
             if (!markersReady || distanceWarning != null)

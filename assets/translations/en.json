@@ -465,7 +465,6 @@
     "finish_quiz": "Finish Test"
   },
   "quiz_intro": {
-    "skip_btn": "Continue without the test",
     "title": "Let's Get to Know You First",
     "desc": "To recommend the best places for you and the person you're meeting, we need a short personality test. Just a few questions, won't take long.",
     "start_btn": "Start the Test",
@@ -576,14 +575,14 @@
   "legal": {
     "terms_title": "Terms of Use",
     "privacy_title": "Privacy Policy",
-    "terms_last_updated": "Last updated: September 28, 2026",
-    "privacy_last_updated": "Last updated: September 28, 2026",
+    "terms_last_updated": "Last updated: October 26, 2026",
+    "privacy_last_updated": "Last updated: October 26, 2026",
     "terms_s1_title": "1. Parties and Acceptance",
     "terms_s1_body": "These Terms of Use govern the relationship between you and Ahmet Salih Kocatürk (\"MeetIt\", \"we\"), who develops and operates the MeetIt mobile application (the \"App\"). By creating an account or using the App, you accept these Terms and the Privacy Policy. If you do not accept them, do not use the App.",
     "terms_s2_title": "2. Age Requirement and Account",
-    "terms_s2_body": "The App is only for people who are 18 years of age or older; anyone under 18 may not use the App or create an account. You are responsible for providing accurate information and for the security of your account and sign-in credentials. You may not create an account on behalf of someone else or under a false identity.",
+    "terms_s2_body": "The App is only for people who are 18 years of age or older; anyone under 18 may not use the App or create an account. You are responsible for providing accurate information and for the security of your account and sign-in credentials. You may not create an account on behalf of someone else or under a false identity.\nYou can also try the App without an account, as a guest; the age requirement and these Terms apply to guest use as well. Some features, such as adding friends, writing reviews and sharing your personality card, require an account. If you create an account after starting as a guest, your test result and location are carried over to the new account.",
     "terms_s3_title": "3. The Service",
-    "terms_s3_body": "MeetIt suggests venues near the midpoint between you and your friends, offers recommendations based on your personality profile, lets you review and rate venues, and lets you add friends. Venue information (name, address, rating, photos, opening hours, etc.) largely comes from third-party sources such as Google; its accuracy, timeliness and the suitability of venues are not guaranteed. Features of the App may change or be discontinued.",
+    "terms_s3_body": "MeetIt suggests venues near the midpoint between you and your friends, offers recommendations based on your personality profile, lets you review and rate venues, add friends, invite friends with an invite link and start a group poll for the venues found. Invite and group poll links open web pages that people without the App can view in a browser; you decide who you share these links with. Names entered when voting in a poll are also subject to the rules in section 4. Venue information (name, address, rating, photos, opening hours, etc.) largely comes from third-party sources such as Google; its accuracy, timeliness and the suitability of venues are not guaranteed. Features of the App may change or be discontinued.",
     "terms_s4_title": "4. User Content and Prohibited Conduct",
     "terms_s4_body": "You are responsible for the name, profile photo, reviews, ratings and photos you share in the App. The following are strictly prohibited:\n• illegal content\n• harassment, bullying, threats, insults, hate speech or discrimination\n• obscene, sexual or violent content\n• sharing other people's personal information without permission\n• fake profiles or impersonation\n• spam, fraud, phishing or malware\n• infringing others' intellectual property rights\n• attempting to compromise the security or operation of the App",
     "terms_s5_title": "5. Zero Tolerance, Reporting and Blocking",
@@ -609,21 +608,21 @@
     "privacy_s1_title": "1. Data Controller",
     "privacy_s1_body": "This Privacy Policy explains how your personal data is processed when you use the MeetIt mobile application. For users in Türkiye, it also serves as the information notice under the Personal Data Protection Law No. 6698 (\"KVKK\").\nData controller: Ahmet Salih Kocatürk\nContact: hafifsaglam61@gmail.com",
     "privacy_s2_title": "2. Data We Collect",
-    "privacy_s2_body": "• Account data: full name, email address, profile photo; when you sign in with Google or Apple, the name and email shared by those services.\n• Optional profile data: age, gender, city/district and the coordinates of your saved location. Filling in these fields is not required.\n• Your 18+ confirmation and your acceptance of the Terms of Use and the Privacy Policy.\n• Your personality test result, the resulting personality profile and how it changes over time.\n• Social data: your friends, friend requests and your friend code.\n• Content you share: venue reviews, ratings, review photos and likes.\n• Usage data: venues you save, venues you get directions to, your meetup searches and meetup history.\n• Safety data: reports you make or that are made about you (reporter, reported user, reason, date) and blocks.\n• Technical data: push notification token, device and operating system information, IP address, app integrity checks (Firebase App Check) and, if you allow it, your advertising identifier.",
+    "privacy_s2_body": "• Account data: full name, email address, profile photo; when you sign in with Google or Apple, the name and email shared by those services.\n• Guest use: when you try the app without an account, an anonymous user ID is created for you; no name or email is requested. Your test result and location are stored under this ID.\n• Optional profile data: age, gender, city/district and the coordinates of your saved location. Filling in these fields is not required.\n• Your 18+ confirmation and your acceptance of the Terms of Use and the Privacy Policy.\n• Your personality test result, the resulting personality profile and how it changes over time.\n• Social data: your friends, friend requests, your friend code and friendships created through invite links.\n• Group polls: the venue options and your name in polls you create; the names entered by participants and their votes.\n• Content you share: venue reviews, ratings, review photos and likes.\n• Usage data: venues you save, venues you get directions to, your meetup searches and meetup history.\n• In-app activity data (Firebase Analytics): events about how you use the app (e.g. sign-up, completing the personality test, venue searches, sharing, creating polls), linked to your user ID.\n• Safety data: reports you make or that are made about you (reporter, reported user, reason, date) and blocks.\n• Technical data: push notification token, device and operating system information, IP address, app integrity checks (Firebase App Check) and, if you allow it, your advertising identifier.",
     "privacy_s3_title": "3. How We Collect Data, Purposes and Legal Bases",
-    "privacy_s3_body": "Your data is collected from the information you enter in the app, from the Google and Apple sign-in services, and automatically while the app runs. We process it to:\n• create and manage your account\n• suggest venues near the midpoint between you and your friends\n• provide personalized recommendations based on your personality profile (your profile is updated automatically based on your reviews)\n• send notifications for friend requests and meetup invitations\n• review reports, prevent abuse and fraud, and keep the app secure\n• show ads and comply with legal obligations\nLegal bases (KVKK art. 5): performance of a contract, legitimate interest (security and moderation), compliance with legal obligations and, where required, your explicit consent (personalized ads and international transfers).",
+    "privacy_s3_body": "Your data is collected from the information you enter in the app, from the Google and Apple sign-in services, and automatically while the app runs. We process it to:\n• create and manage your account\n• suggest venues near the midpoint between you and your friends\n• provide personalized recommendations based on your personality profile (your profile is updated automatically based on your reviews)\n• send notifications for friend requests and meetup invitations\n• review reports, prevent abuse and fraud, and keep the app secure\n• measure how the app is used and improve it (statistics)\n• run invite links and group polls\n• show ads and comply with legal obligations\nLegal bases (KVKK art. 5): performance of a contract, legitimate interest (security, moderation and product improvement), compliance with legal obligations and, where required, your explicit consent (personalized ads and international transfers).",
     "privacy_s4_title": "4. Location Data",
     "privacy_s4_body": "Location is used only while the app is open and only with your permission; there is no background location tracking. You can pick your location on the map or use your device location. Your saved location is used to compute the midpoint between you and your friends and to list nearby venues. Granting location permission is optional; if you decline, you can pick your location on the map manually.",
     "privacy_s5_title": "5. What Other Users Can See",
-    "privacy_s5_body": "• Your name, profile photo and personality type are visible to your friends and may be visible to other users in friend suggestions and friend-code searches.\n• Your saved location is shared with a friend when you search for a meeting spot with that friend and may be shown on the map.\n• Your venue reviews, ratings and review photos are visible to all users together with your name and profile photo.\n• Your email address is not shared with other users.",
+    "privacy_s5_body": "• Your name, profile photo and personality type are visible to your friends and may be visible to other users in friend suggestions and friend-code searches.\n• Your saved location is shared with a friend when you search for a meeting spot with that friend and may be shown on the map.\n• Your venue reviews, ratings and review photos are visible to all users together with your name and profile photo.\n• Invite link and personality card: an invite link you share contains your name and user ID, and your personality card also shows your personality type; anyone who receives the link or card can see these. You automatically become friends with someone who joins the app through your link.\n• Group polls: anyone with a poll link can see the poll creator's name, the venue options, and participants' names and votes. The name you enter when voting is visible to other participants.\n• Your email address is not shared with other users.",
     "privacy_s6_title": "6. Service Providers",
-    "privacy_s6_body": "Your data is never sold or rented. It is shared only with the following service providers so the app can work:\n• Google Firebase (Authentication, Cloud Firestore, Cloud Storage, Cloud Functions, Cloud Messaging, App Check): accounts, data storage, notifications and security.\n• Google Maps Platform (Maps SDK, Places API): maps and venue information; location coordinates are sent to Google in venue searches.\n• Sign in with Google and Sign in with Apple: authentication.\n• Google AdMob: ads.\n• Apple Push Notification service: delivering notifications on iOS.\nData may also be disclosed to competent public authorities where required by law.",
+    "privacy_s6_body": "Your data is never sold or rented. It is shared only with the following service providers so the app can work:\n• Google Firebase (Authentication, Cloud Firestore, Cloud Storage, Cloud Functions, Cloud Messaging, App Check, Analytics): accounts, data storage, notifications, security and usage statistics.\n• GitHub Pages: hosting the invite and group poll web pages; technical connection data such as the IP address of people who open these pages is processed by GitHub.\n• Google Maps Platform (Maps SDK, Places API): maps and venue information; location coordinates are sent to Google in venue searches.\n• Sign in with Google and Sign in with Apple: authentication.\n• Google AdMob: ads.\n• Apple Push Notification service: delivering notifications on iOS.\nData may also be disclosed to competent public authorities where required by law.",
     "privacy_s7_title": "7. International Transfers",
     "privacy_s7_body": "Because the servers of the service providers above are located abroad, primarily in the United States, your personal data is transferred outside Türkiye. These transfers are carried out in accordance with Article 9 of the KVKK and, where required, on the basis of your explicit consent.",
     "privacy_s8_title": "8. Ads and Tracking",
     "privacy_s8_body": "MeetIt shows ads through Google AdMob. On iOS, the app asks for permission to track across apps (App Tracking Transparency) on first launch. If you allow it, your advertising identifier may be used for personalized ads; if you decline, non-personalized ads are shown and every feature keeps working. You can change this choice at any time in your device settings. There are no in-app purchases.",
     "privacy_s9_title": "9. Retention and Account Deletion",
-    "privacy_s9_body": "Your data is kept while your account is active. You can delete your account at any time via Settings > Delete Account (Ayarlar > Hesabı Sil). When you delete your account, your profile, saved location, personality profile, friendships, reviews and review photos, likes, saved venues, meetup history, blocks and notification data are permanently deleted. Report records are kept for as long as necessary for moderation and possible legal claims, for at most 2 years. You can also send a deletion request to hafifsaglam61@gmail.com.",
+    "privacy_s9_body": "Your data is kept while your account is active. You can delete your account at any time via Settings > Delete Account (Ayarlar > Hesabı Sil). When you delete your account, your profile, saved location, personality profile, friendships, reviews and review photos, likes, saved venues, meetup history, blocks and notification data are permanently deleted. If you use the app as a guest, you can delete your guest session and its data the same way. Group polls are deleted automatically 7 days after they are created. Firebase Analytics event data is kept for at most 14 months. Report records are kept for as long as necessary for moderation and possible legal claims, for at most 2 years. You can also send a deletion request to hafifsaglam61@gmail.com.",
     "privacy_s10_title": "10. Security",
     "privacy_s10_body": "Your data is encrypted in transit and at rest on Google's infrastructure, and access is restricted by database security rules and app integrity checks. No method is completely secure, but we take reasonable technical and organizational measures to protect your data. If a data breach occurs, we will notify you and the relevant authority as required by law.",
     "privacy_s11_title": "11. Children",
@@ -686,23 +685,6 @@
     "friends_title": "Friends come with an account",
     "friends_desc": "Create an account to add friends, see your match and find places together. Without an account you can still meet a friend using the location link on the Meetup screen."
   },
-  "location_link": {
-    "cta_title": "Meeting someone without the app?",
-    "cta_desc": "Send a location link — your friend shares their location in one tap and we find places in between.",
-    "share_text": "Where should we meet? 📍 Share your location in one tap and MeetIt will find the best places between us (no app needed): {link}",
-    "create_failed": "Couldn't create the link, try again.",
-    "your_friend": "Your friend",
-    "waiting_title": "Waiting for your friend's location…",
-    "waiting_desc": "We'll let you know here once they open the link and share it.",
-    "share_again": "Share link again",
-    "shared_title": "{name} shared their location 🎉",
-    "shared_desc": "Let's find places between you; they'll see the suggestions too.",
-    "find_midpoint": "Find places in between",
-    "done_title": "Suggestions shared with {name} ✓",
-    "done_desc": "Your friend sees them on the link's page.",
-    "search_again": "Search again",
-    "new_request": "New link"
-  },
   "poll": {
     "ask_group": "Ask the group",
     "share_text": "Where should we meet? 🗳️ MeetIt found the best places in between:\n{list}\n\nCast your vote (no app needed): {link}",
@@ -715,7 +697,6 @@
     "card_cta": "Test your match with a friend · MeetIt"
   },
   "notifications": {
-    "location_shared": "{name} shared their location. Find places in between!",
     "invite_joined": "{name} joined MeetIt with your invite — you're now friends!",
     "invite_joined_compat": "{name} took the test: you're a {value}% match! Find a place together.",
     "title": "Notifications",
@@ -730,7 +711,6 @@
     "minutes_ago": "{n}m ago",
     "hours_ago": "{n}h ago",
     "titles": {
-      "location_shared": "Location received 📍",
       "invite_joined": "Invite accepted 🎉",
       "meetup_invite": "Meetup invite 📍",
       "venue_found": "Venue found 🗺️",
@@ -829,5 +809,14 @@
       "c": "A bookshop, a gallery or a museum",
       "d": "Exploring a new neighborhood, whatever we eat is fine"
     }
+  },
+  "quiz_nudge": {
+    "title": "Want better spots picked for you?",
+    "desc": "The personality quiz is optional — you can use the whole app without it. But if you take it, suggestions are actually tailored to you.",
+    "reason_venues": "Places get ranked for your style: calm, lively or adventurous?",
+    "reason_compat": "See how you match with friends and find places that suit you both.",
+    "reason_time": "10 short questions, about 2 minutes. You can retake it any time.",
+    "start": "Take the quiz",
+    "later": "Not now"
   }
 }

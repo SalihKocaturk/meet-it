@@ -179,9 +179,15 @@ class _HomePageState extends ConsumerState<HomePage> {
     final sortedConnections = [...connections]
       ..sort((a, b) => b.meetCount.compareTo(a.meetCount));
 
+    // Alt cam navigasyon barı içeriğin üstünde yüzer (extendBody) —
+    // içerik arkasından kayabilsin diye alt SafeArea kapalı, son boşluk
+    // barın yüksekliği kadar.
+    final navInset = MediaQuery.paddingOf(context).bottom;
+
     return Scaffold(
       backgroundColor: context.colors.scaffold,
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             const NetworkStatusBanner(),
@@ -498,7 +504,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                     ),
 
-                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                    SliverToBoxAdapter(
+                      child: SizedBox(height: navInset + 24),
+                    ),
                   ],
                 ),
               ),

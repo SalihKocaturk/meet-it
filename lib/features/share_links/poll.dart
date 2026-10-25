@@ -15,6 +15,10 @@ import 'package:share_plus/share_plus.dart';
 // mekanlardan ilk 3-4'ü bir oylamaya dönüşür; link gruba atılır, herkes
 // web'den (oylama/) uygulama indirmeden oy verir, sonuçlar canlı güncellenir.
 // Firestore: polls/{id} — votes: {voterUid: seçenekIndex}.
+// Oylamalar 7 gün sonra Firestore TTL politikasıyla (alan: expireAt)
+// otomatik silinir — gizlilik politikası bu süreyi taahhüt ediyor.
+
+const _kPollLifetime = Duration(days: 7);
 
 abstract final class PollService {
   static final _col = FirebaseFirestore.instance.collection('polls');
@@ -28,6 +32,7 @@ abstract final class PollService {
       'ownerUid': ownerUid,
       'ownerName': ownerName,
       'createdAt': FieldValue.serverTimestamp(),
+      'expireAt': Timestamp.fromDate(DateTime.now().add(_kPollLifetime)),
       'options': [
         for (final v in venues)
           {

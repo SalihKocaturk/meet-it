@@ -1,8 +1,12 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/constants/emerald_palette.dart';
 import 'package:meetit/core/providers/network_provider.dart';
 import 'package:meetit/features/friends/friends_page.dart';
 import 'package:meetit/features/home/home_page.dart';
@@ -55,9 +59,11 @@ class MainPage extends ConsumerWidget {
       );
     }
 
-    // ── Telefon düzeni: altta BottomNavBar ──────────────────────────────
+    // ── Telefon düzeni: altta yüzen cam kapsül ──────────────────────────
+    // extendBody: içerik barın arkasına kayar (bulanıklık için şart).
     return Scaffold(
       backgroundColor: context.colors.scaffold,
+      extendBody: true,
       body: pageContent,
       bottomNavigationBar: _MainBottomNavBar(currentIndex: currentIndex),
     );
@@ -120,7 +126,32 @@ class _SideRail extends ConsumerWidget {
   }
 }
 
-// ── Telefon: altta özel navigasyon barı ─────────────────────────────────────
+// ── Telefon: altta yüzen "liquid glass" kapsül ──────────────────────────────
+//
+// Kick tarzı: ekranın altından ve kenarlarından içeride duran, yazısız,
+// buzlu cam bir kapsül. Scaffold.extendBody: true sayesinde sayfa içeriği
+// barın ARKASINA kayar; BackdropFilter onu bulanıklaştırıp hafif doygunluk
+// ekler (iOS "liquid glass" hissi). Sayfalar alt boşluğu
+// MediaQuery.paddingOf(context).bottom ile bırakır — extendBody bu değeri
+// barın toplam yüksekliğine eşitler.
+
+const _kNavHeight = 64.0;
+const _kNavRadius = 32.0;
+const _kNavSideInset = 22.0;
+
+class _NavSpec {
+  final IconData icon;
+  final IconData activeIcon;
+  final String labelKey;
+  const _NavSpec(this.icon, this.activeIcon, this.labelKey);
+}
+
+const _navItems = <_NavSpec>[
+  _NavSpec(Icons.home_outlined, Icons.home_rounded, 'nav.home'),
+  _NavSpec(Icons.location_on_outlined, Icons.location_on_rounded, 'nav.meetup'),
+  _NavSpec(Icons.people_alt_outlined, Icons.people_alt_rounded, 'nav.friends'),
+  _NavSpec(Icons.person_outline_rounded, Icons.person_rounded, 'nav.profile'),
+];
 
 class _MainBottomNavBar extends ConsumerWidget {
   final int currentIndex;
@@ -129,66 +160,122 @@ class _MainBottomNavBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.colors.card,
-        // İçerikten temiz ayrım için 1 px çok hafif üst çizgi
-        border: Border(
-          top: BorderSide(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withOpacity(0.07)
-                : Colors.black.withOpacity(0.06),
-            width: 1,
-          ),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, -2),
-          ),
-        ],
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final safeBottom = MediaQuery.paddingOf(context).bottom;
+    // Home indicator'ı olan cihazlarda kapsül biraz aşağı oturur; düz
+    // altlı cihazlarda sabit bir boşluk kalır.
+    final bottomGap = safeBottom > 0 ? safeBottom * 0.6 + 4 : 14.0;
+    final radius = BorderRadius.circular(_kNavRadius);
+
+    void select(int i) {
+      if (i == currentIndex) return;
+      HapticFeedback.selectionClick();
+      ref.read(mainTabIndexProvider.notifier).state = i;
+    }
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        _kNavSideInset,
+        0,
+        _kNavSideInset,
+        bottomGap,
       ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 60,
-          child: Row(
-            children: [
-              // Ana Sayfa
-              _NavItem(
-                icon: Iconsax.home_2,
-                activeIcon: Iconsax.home,
-                label: 'nav.home'.tr(),
-                isSelected: currentIndex == 0,
-                onTap: () => ref.read(mainTabIndexProvider.notifier).state = 0,
+      child: SizedBox(
+        height: _kNavHeight,
+        child: CustomPaint(
+          // Gölge yalnızca kapsülün DIŞINA çizilir; içeri sızsa yarı saydam
+          // cam çamurlu görünürdü.
+          painter: _OuterShadowPainter(
+            radius: _kNavRadius,
+            color: Colors.black.withOpacity(isDark ? 0.45 : 0.16),
+          ),
+          child: ClipRRect(
+            borderRadius: radius,
+            child: BackdropFilter(
+              filter: ImageFilter.compose(
+                outer: const ColorFilter.matrix(_kSaturate),
+                inner: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
               ),
-              // Buluşma
-              _NavItem(
-                icon: Iconsax.location,
-                activeIcon: Iconsax.location,
-                label: 'nav.meetup'.tr(),
-                isSelected: currentIndex == 1,
-                onTap: () => ref.read(mainTabIndexProvider.notifier).state = 1,
+              child: CustomPaint(
+                foregroundPainter: _GlassRimPainter(
+                  radius: _kNavRadius,
+                  isDark: isDark,
+                ),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: radius,
+                    // Cam gövdesi: koyu temada dumanlı, açıkta sütlü
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: isDark
+                          ? [
+                              const Color(0xFF2A302D).withOpacity(0.50),
+                              const Color(0xFF0B0F0D).withOpacity(0.66),
+                            ]
+                          : [
+                              Colors.white.withOpacity(0.72),
+                              Colors.white.withOpacity(0.56),
+                            ],
+                    ),
+                  ),
+                  child: LayoutBuilder(
+                    builder: (context, c) {
+                      final cellW = c.maxWidth / _navItems.length;
+                      return Stack(
+                        children: [
+                          // Üst parlama (ışığın cama vurduğu kısım)
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            top: 0,
+                            height: _kNavHeight * 0.5,
+                            child: IgnorePointer(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.white
+                                          .withOpacity(isDark ? 0.09 : 0.45),
+                                      Colors.white.withOpacity(0),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Aktif sekmenin arkasında kayan cam damla
+                          AnimatedPositioned(
+                            duration: const Duration(milliseconds: 380),
+                            curve: Curves.easeOutBack,
+                            left: cellW * currentIndex + 6,
+                            top: 7,
+                            width: cellW - 12,
+                            height: _kNavHeight - 14,
+                            child: IgnorePointer(
+                              child: _ActiveBlob(isDark: isDark),
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              for (var i = 0; i < _navItems.length; i++)
+                                _NavItem(
+                                  spec: _navItems[i],
+                                  isSelected: currentIndex == i,
+                                  isDark: isDark,
+                                  onTap: () => select(i),
+                                ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
               ),
-              // Arkadaşlar
-              _NavItem(
-                icon: Iconsax.people,
-                activeIcon: Iconsax.people,
-                label: 'nav.friends'.tr(),
-                isSelected: currentIndex == 2,
-                onTap: () => ref.read(mainTabIndexProvider.notifier).state = 2,
-              ),
-              // Profil — diğer sekmelerle aynı ikon dili (fotoğraf zaten
-              // ana sayfanın sağ üstünde gösteriliyor)
-              _NavItem(
-                icon: Iconsax.user,
-                activeIcon: Iconsax.user,
-                label: 'nav.profile'.tr(),
-                isSelected: currentIndex == 3,
-                onTap: () => ref.read(mainTabIndexProvider.notifier).state = 3,
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -196,49 +283,173 @@ class _MainBottomNavBar extends ConsumerWidget {
   }
 }
 
+/// Arka planı hafifçe canlandıran doygunluk matrisi (s = 1.5, Rec.709).
+const _kSaturate = <double>[
+  1.4063, -0.3576, -0.0361, 0, 0, //
+  -0.1063, 1.1424, -0.0361, 0, 0, //
+  -0.1063, -0.3576, 1.4639, 0, 0, //
+  0, 0, 0, 1, 0,
+];
+
+class _ActiveBlob extends StatelessWidget {
+  final bool isDark;
+  const _ActiveBlob({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(_kNavRadius),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: isDark
+              ? [
+                  Colors.white.withOpacity(0.16),
+                  Emerald.base.withOpacity(0.14),
+                ]
+              : [
+                  Colors.white.withOpacity(0.95),
+                  Emerald.pale.withOpacity(0.35),
+                ],
+        ),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.14)
+              : Colors.white.withOpacity(0.9),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Emerald.base.withOpacity(isDark ? 0.22 : 0.18),
+            blurRadius: 14,
+            spreadRadius: -2,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
+  final _NavSpec spec;
   final bool isSelected;
+  final bool isDark;
   final VoidCallback onTap;
 
   const _NavItem({
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
+    required this.spec,
     required this.isSelected,
+    required this.isDark,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final active = isDark ? Emerald.light : Emerald.deep;
+    final idle = isDark
+        ? Colors.white.withOpacity(0.72)
+        : Colors.black.withOpacity(0.55);
+
     return Expanded(
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isSelected ? activeIcon : icon,
-              color: isSelected ? context.colors.primary : context.colors.hint,
-              size: 24,
-            ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                color: isSelected
-                    ? context.colors.primary
-                    : context.colors.hint,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+      child: Semantics(
+        button: true,
+        selected: isSelected,
+        label: spec.labelKey.tr(),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Center(
+            child: AnimatedScale(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutBack,
+              scale: isSelected ? 1.08 : 1.0,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: Icon(
+                  isSelected ? spec.activeIcon : spec.icon,
+                  key: ValueKey(isSelected),
+                  size: 27,
+                  color: isSelected ? active : idle,
+                ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
+}
+
+/// Kapsülün yalnızca dışına yumuşak gölge çizer.
+class _OuterShadowPainter extends CustomPainter {
+  final double radius;
+  final Color color;
+  const _OuterShadowPainter({required this.radius, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rrect = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      Radius.circular(radius),
+    );
+    final outside = Path.combine(
+      PathOperation.difference,
+      Path()..addRect((Offset.zero & size).inflate(60)),
+      Path()..addRRect(rrect),
+    );
+    canvas.save();
+    canvas.clipPath(outside);
+    canvas.drawRRect(
+      rrect.shift(const Offset(0, 8)),
+      Paint()
+        ..color = color
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16),
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_OuterShadowPainter old) =>
+      old.color != color || old.radius != radius;
+}
+
+/// Camın kenar ışığı: üst-solda parlak, ortada sönük, alt-sağda hafif
+/// geri yansıma — düz tek renk kenarlıktan çok daha "cam" durur.
+class _GlassRimPainter extends CustomPainter {
+  final double radius;
+  final bool isDark;
+  const _GlassRimPainter({required this.radius, required this.isDark});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(
+      rect.deflate(0.6),
+      Radius.circular(radius),
+    );
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: isDark
+            ? [
+                Colors.white.withOpacity(0.30),
+                Colors.white.withOpacity(0.05),
+                Colors.white.withOpacity(0.14),
+              ]
+            : [
+                Colors.white,
+                Colors.black.withOpacity(0.05),
+                Colors.white.withOpacity(0.8),
+              ],
+        stops: const [0, 0.55, 1],
+      ).createShader(rect);
+    canvas.drawRRect(rrect, paint);
+  }
+
+  @override
+  bool shouldRepaint(_GlassRimPainter old) => old.isDark != isDark;
 }

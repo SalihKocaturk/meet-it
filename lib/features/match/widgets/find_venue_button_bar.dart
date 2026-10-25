@@ -11,6 +11,7 @@ import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/match/providers/venue_search_provider.dart';
 import 'package:meetit/features/match/pages/venue_search_loading_page.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
+import 'package:meetit/features/personality/quiz_nudge.dart';
 
 // ── "Mekan Bul" Sabit (Asılı) Alt Bar ────────────────────────────────────────
 //
@@ -231,11 +232,13 @@ class _FindVenueButtonBarState extends ConsumerState<FindVenueButtonBar>
                   onPressed: isEnabled && !isSearchLoading
                       ? () async {
                           // Önemli işlem koruması: e-posta doğrulanmamışsa
-                          // veya kişilik testi tamamlanmamışsa burada
-                          // engellenir (bkz. important_action_guard.dart).
+                          // burada engellenir (bkz. important_action_guard.dart).
+                          // Kişilik testi artık ZORUNLU DEĞİL — çözülmemişse
+                          // sonuçlardan sonra ara sıra öneri çıkar
+                          // (bkz. quiz_nudge.dart).
+                          final container = ProviderScope.containerOf(context);
                           final canProceed =
-                              await ensureEmailVerified(context, ref) &&
-                              await ensurePersonalityReady(context, ref);
+                              await ensureEmailVerified(context, ref);
                           if (!canProceed) return;
 
                           final currentUser = ref.read(currentUserProvider);
@@ -314,6 +317,9 @@ class _FindVenueButtonBarState extends ConsumerState<FindVenueButtonBar>
                                 result.midpointVenues.length,
                             searchMode,
                           ).ignore();
+                          // Bu widget sonuç görünümünde kapanır; container
+                          // önceden alındığı için güvenle kullanılır.
+                          maybeShowQuizNudge(container).ignore();
                         }
                       : null,
                   icon: isSearchLoading

@@ -20,7 +20,6 @@ import 'package:meetit/features/match/widgets/friend_chip.dart';
 import 'package:meetit/features/match/widgets/location_field.dart';
 import 'package:meetit/features/match/widgets/price_filter.dart';
 import 'package:meetit/features/match/widgets/venue_results_view.dart';
-import 'package:meetit/features/share_links/location_request_card.dart';
 
 // Bu dosya artık SADECE MatchPage'i içeriyor — tüm alt widget'lar ve
 // MapLocationPickerPage feature klasör yapısına bölündü:
@@ -90,9 +89,13 @@ class MatchPage extends ConsumerWidget {
           : const SizedBox.shrink();
     }
 
+    // Alt cam navigasyon barı için boşluk (bkz. main_page.dart extendBody).
+    final navInset = MediaQuery.paddingOf(context).bottom;
+
     return Scaffold(
       backgroundColor: context.colors.scaffold,
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             const NetworkStatusBanner(),
@@ -225,10 +228,6 @@ class MatchPage extends ConsumerWidget {
                                           },
                                         ),
                                       ),
-                                    // Uygulaması olmayan biriyle buluşma:
-                                    // konum linki → ortadaki mekanlar.
-                                    const SizedBox(height: 12),
-                                    const LocationRequestCard(),
                                   ],
                                 ),
                               ),
@@ -333,16 +332,16 @@ class MatchPage extends ConsumerWidget {
                             // scroll içeriğinin sonuna onun yüksekliğine yakın bir
                             // boşluk ekleniyor (bkz. FindVenueButtonBar — Stack
                             // içinde Positioned(bottom: 0) ile sabitlendi).
-                            const SliverToBoxAdapter(
-                              child: SizedBox(height: 128),
+                            SliverToBoxAdapter(
+                              child: SizedBox(height: 128 + navInset),
                             ),
                           ],
                         ),
-                        const Positioned(
+                        Positioned(
                           left: 0,
                           right: 0,
-                          bottom: 0,
-                          child: FindVenueButtonBar(),
+                          bottom: navInset,
+                          child: const FindVenueButtonBar(),
                         ),
                       ],
                     ),

@@ -454,7 +454,12 @@ class VenueResultsView extends ConsumerWidget {
               ),
             ),
 
-          const SliverToBoxAdapter(child: SizedBox(height: 32)),
+          // + alt cam navigasyon barının yüksekliği
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 32 + MediaQuery.paddingOf(context).bottom,
+            ),
+          ),
         ],
       ],
     );

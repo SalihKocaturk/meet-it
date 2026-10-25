@@ -78,10 +78,6 @@ exports.sendPushNotification = onDocumentCreated(
           : `${data.fromName} davetinle MeetIt'e katıldı, artık arkadaşsınız!`;
         break;
       }
-      case "location_shared":
-        title = "Konum geldi 📍";
-        body = `${data.fromName} konumunu paylaştı. Ortadaki mekanları bul!`;
-        break;
       case "review_liked":
         title = "Yorumun Beğenildi ❤️";
         body = `${data.fromName}, "${data.extra?.venueName ?? "bir mekan"}" yorumunu beğendi.`;

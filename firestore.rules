@@ -8,7 +8,7 @@ service cloud.firestore {
     }
 
     // Anonim oturum: uygulamadaki misafir ya da web sayfalarındaki
-    // (konum/, oylama/) hesapsız ziyaretçi. Kullanıcı listesi ve
+    // (oylama/) hesapsız ziyaretçi. Kullanıcı listesi ve
     // arkadaşlıklar gibi kişisel verilere erişemez.
     function isFullUser() {
       return isSignedIn() &&
@@ -55,30 +55,6 @@ service cloud.firestore {
         resource.data.fromUid == request.auth.uid ||
         resource.data.toUid == request.auth.uid
       );
-    }
-
-    // Konum isteği: uygulaması olmayan arkadaş web'den (konum/) yalnızca
-    // kendi konumunu bir kez yazabilir; sonuçları sahibi yazar.
-    match /locationRequests/{id} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
-      allow create: if isSignedIn() &&
-        request.resource.data.ownerUid == request.auth.uid &&
-        request.resource.data.status == 'waiting';
-      allow update: if isSignedIn() && (
-        resource.data.ownerUid == request.auth.uid ||
-        (
-          resource.data.status == 'waiting' &&
-          request.resource.data.status == 'shared' &&
-          request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['friendName', 'friendLat', 'friendLng', 'status', 'sharedAt']) &&
-          request.resource.data.friendLat is number &&
-          request.resource.data.friendLng is number &&
-          request.resource.data.friendName is string &&
-          request.resource.data.friendName.size() <= 30
-        )
-      );
-      allow delete: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
     }
 
     // Grup oylaması: herkes (web'den anonim de) yalnızca KENDİ oyunu ve
