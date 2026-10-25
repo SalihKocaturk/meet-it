@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:meetit/features/auth/widgets/guest_upgrade.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/widgets/app_alert.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
@@ -1110,7 +1111,10 @@ Future<void> showAddReviewSheet(
   WidgetRef ref,
   PlaceResult venue, {
   String? overridePhotoUrl,
-}) {
+}) async {
+  // Yorum herkese açık içerik → misafirden önce hesap açması istenir.
+  if (!await ensureFullAccount(context, ref)) return;
+  if (!context.mounted) return;
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,

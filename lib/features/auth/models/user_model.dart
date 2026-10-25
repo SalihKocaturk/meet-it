@@ -43,6 +43,12 @@ class UserModel {
   /// yaş teyidi (onay kutusu) kabul ediliyor.
   final bool adultConfirmed;
 
+  /// Hesap açmadan "Misafir olarak dene" ile giren kullanıcı (Firebase
+  /// anonim oturumu). Sosyal özellikler (arkadaşlar, yorum, davet kartı)
+  /// hesap gerektirir; Google/Apple/e-posta ile hesap açınca aynı uid'e
+  /// bağlanır, veriler korunur (bkz. AuthNotifier._signInOrLink).
+  final bool isGuest;
+
   /// Eski kullanıcılar kayıtta zorunlu olarak 18+ yaş girmişti — onları
   /// tekrar onay ekranına düşürmemek için yaşları da teyit sayılır.
   bool get isAdultConfirmed =>
@@ -63,6 +69,7 @@ class UserModel {
     this.lng,
     this.isPremium = false,
     this.adultConfirmed = false,
+    this.isGuest = false,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -92,6 +99,7 @@ class UserModel {
       lng: (map['lng'] as num?)?.toDouble(),
       isPremium: map['isPremium'] as bool? ?? false,
       adultConfirmed: map['adultConfirmed'] as bool? ?? false,
+      isGuest: map['isGuest'] as bool? ?? false,
     );
   }
 
@@ -114,6 +122,8 @@ class UserModel {
       if (lng != null) 'lng': lng,
       if (isPremium) 'isPremium': isPremium,
       if (adultConfirmed) 'adultConfirmed': true,
+      // Misafirlikten çıkınca alan false yazılır (set/merge ile silinsin).
+      'isGuest': isGuest,
     };
   }
 
@@ -135,6 +145,7 @@ class UserModel {
     double? lng,
     bool? isPremium,
     bool? adultConfirmed,
+    bool? isGuest,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -152,6 +163,7 @@ class UserModel {
       lng: lng ?? this.lng,
       isPremium: isPremium ?? this.isPremium,
       adultConfirmed: adultConfirmed ?? this.adultConfirmed,
+      isGuest: isGuest ?? this.isGuest,
     );
   }
 }

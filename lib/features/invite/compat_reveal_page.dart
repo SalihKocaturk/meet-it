@@ -6,6 +6,7 @@ import 'package:meetit/core/utils/text_utils.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
 import 'package:meetit/features/auth/models/user_model.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
+import 'package:meetit/features/invite/duo_share_card.dart';
 import 'package:meetit/features/main/main_page.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
@@ -161,6 +162,41 @@ class CompatRevealPage extends ConsumerWidget {
                   ),
                 ),
               ),
+              if (me != null) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => showDuoShareSheet(
+                      context,
+                      me: me,
+                      friend: inviter,
+                      compat: compat,
+                    ),
+                    icon: const Icon(
+                      Icons.ios_share_rounded,
+                      size: 18,
+                      color: Emerald.pale,
+                    ),
+                    label: Text(
+                      'duo.share_entry'.tr(),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Emerald.pale,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Emerald.base.withOpacity(0.15),
+                      side: BorderSide(color: Emerald.base.withOpacity(0.45)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
                 child: Text(

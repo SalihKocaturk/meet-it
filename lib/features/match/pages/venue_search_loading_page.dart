@@ -46,6 +46,11 @@ class VenueSearchLoadingPage extends ConsumerStatefulWidget {
   final double? userLng;
   final double? maxVenueDistanceKm;
 
+  /// Konum linkiyle gelen (uygulaması olmayan) arkadaşın konumu ve adı.
+  final double? friendLat;
+  final double? friendLng;
+  final String? friendName;
+
   /// true → API çağrısı yapılmaz, animasyon simüle edilir (önizleme).
   final bool simulationMode;
 
@@ -59,6 +64,9 @@ class VenueSearchLoadingPage extends ConsumerStatefulWidget {
     this.userLat,
     this.userLng,
     this.maxVenueDistanceKm,
+    this.friendLat,
+    this.friendLng,
+    this.friendName,
     this.simulationMode = false,
   });
 
@@ -275,6 +283,8 @@ class _VenueSearchLoadingPageState
       userLat: widget.userLat,
       userLng: widget.userLng,
       maxVenueDistanceKm: widget.maxVenueDistanceKm,
+      friendLatOverride: widget.friendLat,
+      friendLngOverride: widget.friendLng,
     );
 
     if (!mounted) return;
@@ -438,7 +448,7 @@ class _VenueSearchLoadingPageState
     final me        = ref.watch(currentUserProvider);
     final friend    = ref.watch(selectedFriendProvider);
     // final isPremium = ref.watch(isPremiumProvider); // Reklamlar devre dışı — kullanılmıyor
-    final isSolo = widget.friendUid == null;
+    final isSolo = widget.friendUid == null && widget.friendLat == null;
 
     final myType     = widget.userProfile.dominantType;
     final friendType = widget.friendProfile.dominantType;
@@ -543,7 +553,11 @@ class _VenueSearchLoadingPageState
                             if (!isSolo) ...[
                               const SizedBox(width: 20),
                               _PersonalityChip(
-                                name: (friend?.name ?? '').split(' ').first,
+                                name: ((friend?.name as String?) ??
+                                        widget.friendName ??
+                                        '')
+                                    .split(' ')
+                                    .first,
                                 type: friendType,
                                 color: primary,
                               ),
@@ -563,6 +577,7 @@ class _VenueSearchLoadingPageState
                 child: _SearchStage(
                   me: me,
                   friend: friend,
+                  friendNameFallback: widget.friendName,
                   isSolo: isSolo,
                   myType: myType,
                   friendType: friendType,
@@ -735,6 +750,7 @@ class _WalkSample {
 class _SearchStage extends StatelessWidget {
   final dynamic me;
   final dynamic friend;
+  final String? friendNameFallback;
   final bool isSolo;
   final PersonalityType myType;
   final PersonalityType friendType;
@@ -757,6 +773,7 @@ class _SearchStage extends StatelessWidget {
   const _SearchStage({
     required this.me,
     required this.friend,
+    this.friendNameFallback,
     required this.isSolo,
     required this.myType,
     required this.friendType,
@@ -912,7 +929,11 @@ class _SearchStage extends StatelessWidget {
                           celebrate: celebrate),
                         const SizedBox(height: 3),
                         _nameLabel(
-                            ((friend?.name ?? '') as String).split(' ').first),
+                            ((friend?.name as String?) ??
+                                    friendNameFallback ??
+                                    '')
+                                .split(' ')
+                                .first),
                       ]),
                     ),
                   ),

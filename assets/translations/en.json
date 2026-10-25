@@ -33,6 +33,8 @@
     "profile": "Profile"
   },
   "auth": {
+    "continue_as_guest": "Try without an account",
+    "guest_name": "Guest",
     "email": "Email",
     "email_hint": "example@email.com",
     "password": "Password",
@@ -463,6 +465,7 @@
     "finish_quiz": "Finish Test"
   },
   "quiz_intro": {
+    "skip_btn": "Continue without the test",
     "title": "Let's Get to Know You First",
     "desc": "To recommend the best places for you and the person you're meeting, we need a short personality test. Just a few questions, won't take long.",
     "start_btn": "Start the Test",
@@ -674,7 +677,45 @@
     "reveal_cta": "Find a place together",
     "reveal_later": "Later"
   },
+  "guest": {
+    "upgrade_title": "You'll need an account for this",
+    "upgrade_desc": "Your test result and location are kept when you create an account; then you can add friends, write reviews and share your invite card.",
+    "sign_up_email": "Sign up with email",
+    "have_account": "I already have an account, sign in",
+    "create_account": "Create account",
+    "friends_title": "Friends come with an account",
+    "friends_desc": "Create an account to add friends, see your match and find places together. Without an account you can still meet a friend using the location link on the Meetup screen."
+  },
+  "location_link": {
+    "cta_title": "Meeting someone without the app?",
+    "cta_desc": "Send a location link — your friend shares their location in one tap and we find places in between.",
+    "share_text": "Where should we meet? 📍 Share your location in one tap and MeetIt will find the best places between us (no app needed): {link}",
+    "create_failed": "Couldn't create the link, try again.",
+    "your_friend": "Your friend",
+    "waiting_title": "Waiting for your friend's location…",
+    "waiting_desc": "We'll let you know here once they open the link and share it.",
+    "share_again": "Share link again",
+    "shared_title": "{name} shared their location 🎉",
+    "shared_desc": "Let's find places between you; they'll see the suggestions too.",
+    "find_midpoint": "Find places in between",
+    "done_title": "Suggestions shared with {name} ✓",
+    "done_desc": "Your friend sees them on the link's page.",
+    "search_again": "Search again",
+    "new_request": "New link"
+  },
+  "poll": {
+    "ask_group": "Ask the group",
+    "share_text": "Where should we meet? 🗳️ MeetIt found the best places in between:\n{list}\n\nCast your vote (no app needed): {link}",
+    "create_failed": "Couldn't create the poll, try again."
+  },
+  "duo": {
+    "share_entry": "Share our match",
+    "share_text": "MeetIt says we're a {value}% match! 🤝 Test your match with a friend: {link}",
+    "card_caption": "match! 🎉",
+    "card_cta": "Test your match with a friend · MeetIt"
+  },
   "notifications": {
+    "location_shared": "{name} shared their location. Find places in between!",
     "invite_joined": "{name} joined MeetIt with your invite — you're now friends!",
     "invite_joined_compat": "{name} took the test: you're a {value}% match! Find a place together.",
     "title": "Notifications",
@@ -689,6 +730,7 @@
     "minutes_ago": "{n}m ago",
     "hours_ago": "{n}h ago",
     "titles": {
+      "location_shared": "Location received 📍",
       "invite_joined": "Invite accepted 🎉",
       "meetup_invite": "Meetup invite 📍",
       "venue_found": "Venue found 🗺️",

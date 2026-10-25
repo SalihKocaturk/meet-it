@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:meetit/core/services/analytics_service.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/auth/verification_page.dart';
+import 'package:meetit/features/personality/providers/personality_provider.dart';
 import 'package:meetit/features/personality/quiz_intro_page.dart';
 
 // ── Önemli İşlem Kapıları (Email Doğrulama / Kişilik Testi) ─────────────────
@@ -47,9 +49,20 @@ Future<bool> ensureEmailVerified(BuildContext context, WidgetRef ref) async {
 Future<bool> ensurePersonalityReady(BuildContext context, WidgetRef ref) async {
   final hasPersonality = ref.read(authProvider).hasPersonality;
   if (hasPersonality) return true;
+  // Test zorunlu değil: bu oturumda atlandıysa tekrar sorma.
+  if (ref.read(quizSkippedProvider)) return true;
 
   final completed = await Navigator.of(context).push<bool>(
-    MaterialPageRoute(builder: (_) => const QuizIntroPage()),
+    MaterialPageRoute(
+      builder: (_) => QuizIntroPage(
+        // "Testsiz devam et": tarafsız profille aranır, sonra istenirse
+        // test çözülüp öneriler kişiselleştirilir.
+        onSkip: () {
+          ref.read(quizSkippedProvider.notifier).state = true;
+          AnalyticsService.quizSkipped().ignore();
+        },
+      ),
+    ),
   );
 
   if (!context.mounted) return false;

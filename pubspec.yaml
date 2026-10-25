@@ -58,6 +58,7 @@ dependencies:
   cloud_firestore: ^5.5.1
   firebase_storage: ^12.3.7
   firebase_app_check: ^0.3.2+2
+  firebase_analytics: ^11.3.6
 
   # Network / Connectivity
   connectivity_plus: ^6.0.0

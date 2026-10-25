@@ -134,6 +134,7 @@ IconData notificationIcon(String type) {
       return Iconsax.profile_tick;
     case 'meetup_invite':
     case 'venue_found':
+    case 'location_shared':
       return Iconsax.location;
     default:
       return Iconsax.notification;
@@ -150,6 +151,7 @@ Color notificationColor(BuildContext context, String type) {
       return context.colors.primary;
     case 'meetup_invite':
     case 'venue_found':
+    case 'location_shared':
       return const Color(0xFF43A047);
     default:
       return context.colors.textSecondary;
@@ -165,6 +167,7 @@ String notificationTitle(String type) {
     case 'meetup_invite':
     case 'venue_found':
     case 'invite_joined':
+    case 'location_shared':
       return 'notifications.titles.$type'.tr();
     default:
       return 'MeetIt';
@@ -188,6 +191,9 @@ String notificationText(NotificationItem item) {
           .tr(namedArgs: {'name': item.fromName});
     case 'venue_found':
       return 'notifications.venue_found'
+          .tr(namedArgs: {'name': item.fromName});
+    case 'location_shared':
+      return 'notifications.location_shared'
           .tr(namedArgs: {'name': item.fromName});
     case 'invite_joined':
       final compat = item.extra['compat'];
@@ -220,6 +226,13 @@ Future<void> openNotificationTarget(
       nav.popUntil((route) => route.isFirst);
       ref.read(mainTabIndexProvider.notifier).state = 2;
       ref.read(friendsTabIndexProvider.notifier).state = 2; // Bağlantılarım
+      break;
+
+    case 'location_shared':
+      // Konum linkiyle gelen arkadaş: Buluşma ekranındaki kart aramayı başlatır.
+      nav.popUntil((route) => route.isFirst);
+      ref.read(showVenuesProvider.notifier).state = false;
+      ref.read(mainTabIndexProvider.notifier).state = 1;
       break;
 
     case 'invite_joined':

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/services/analytics_service.dart';
 import 'package:meetit/core/constants/emerald_palette.dart';
 import 'package:meetit/core/utils/important_action_guard.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
@@ -241,11 +242,11 @@ class _FindVenueButtonBarState extends ConsumerState<FindVenueButtonBar>
                           final activities = ref.read(
                             selectedActivitiesProvider,
                           );
+                          // Test çözülmemişse (misafir / testi atlayan)
+                          // tarafsız profil — öneriler tek tipe kaymaz.
                           final userProfile =
                               currentUser?.personalityProfile ??
-                              PersonalityProfile.mock(
-                                PersonalityType.sosyalKelebek,
-                              );
+                              PersonalityProfile.neutral();
                           // Arkadaş seçilmediyse kendi profili kullanılır
                           // (tek başına buluşma modu).
                           final friendProfile =
@@ -257,6 +258,10 @@ class _FindVenueButtonBarState extends ConsumerState<FindVenueButtonBar>
                           final maxDistanceKm = ref.read(
                             selectedMaxDistanceKmProvider,
                           );
+
+                          final searchMode =
+                              selectedFriend != null ? 'friend' : 'solo';
+                          AnalyticsService.venueSearch(searchMode).ignore();
 
                           // Loading sayfasını aç — arama kendi içinde yapılır,
                           // tamamlanınca otomatik pop olur.
@@ -304,6 +309,11 @@ class _FindVenueButtonBarState extends ConsumerState<FindVenueButtonBar>
 
                           ref.read(showMapViewProvider.notifier).state = true;
                           ref.read(showVenuesProvider.notifier).state = true;
+                          AnalyticsService.venuesShown(
+                            result.allVenues.length +
+                                result.midpointVenues.length,
+                            searchMode,
+                          ).ignore();
                         }
                       : null,
                   icon: isSearchLoading

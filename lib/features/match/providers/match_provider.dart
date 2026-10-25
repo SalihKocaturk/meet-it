@@ -110,11 +110,11 @@ final venueRecommendationsProvider =
   final selectedFriend = ref.watch(selectedFriendProvider);
   final selectedActivities = ref.watch(selectedActivitiesProvider);
 
-  // Profil yoksa fallback: sosyalKelebek dominant mock
-  final userProfile = currentUser?.personalityProfile ??
-      PersonalityProfile.mock(PersonalityType.sosyalKelebek);
-  final friendProfile = selectedFriend?.personalityProfile ??
-      PersonalityProfile.mock(PersonalityType.sosyalKelebek);
+  // Profil yoksa (test çözülmemiş) tarafsız profil — tek tipe kaymasın.
+  final userProfile =
+      currentUser?.personalityProfile ?? PersonalityProfile.neutral();
+  final friendProfile =
+      selectedFriend?.personalityProfile ?? PersonalityProfile.neutral();
 
   return getVenueRecommendations(
     userProfile: userProfile,

@@ -12,6 +12,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
+import 'package:meetit/core/services/analytics_service.dart';
 import 'package:meetit/core/services/notification_service.dart';
 import 'package:meetit/features/auth/models/user_model.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
@@ -77,6 +78,9 @@ class AuthState {
   bool get isAuthenticated => user != null;
   bool get hasPersonality => user?.personalityProfile != null;
 
+  /// Hesap açmadan "Misafir olarak dene" ile girildi mi?
+  bool get isGuest => user?.isGuest ?? false;
+
   /// Google ile ilk kez giriş yapan bir kullanıcının profili eksik kalır:
   /// `signInWithGoogle()` sadece uid/isim/email/foto ile minimal bir
   /// UserModel oluşturur — konum, yaş ve cinsiyet alanları boş kalır (bkz.
@@ -87,6 +91,9 @@ class AuthState {
   bool get needsProfileCompletion {
     final u = user;
     if (u == null) return false;
+    // Misafirde isim / 18+ onayı istenmez: sosyal özellikler (arkadaş,
+    // yorum, davet) hesap açmayı gerektirdiği için onay o adımda alınır.
+    if (u.isGuest) return false;
     // App Store 5.1.1: konum, yaş ve cinsiyet ZORUNLU tutulamaz. Profil
     // tamamlamaya yalnızca gerçekten zorunlu olanlar için düşülür:
     //  - isim (Apple ile girişte ilk izinden sonra bir daha gelmiyor)
@@ -387,9 +394,79 @@ class AuthNotifier extends Notifier<AuthState> {
     if (!snap.exists) {
       await doc.set(user.toMap());
       return user;
-    } else {
-      // Mevcut kullanıcı — Firestore'daki veriyi döner (personality korunur)
-      return UserModel.fromMap(snap.data()!);
+    }
+    final existing = UserModel.fromMap(snap.data()!);
+    if (existing.isGuest && !user.isGuest) {
+      // Misafir hesabı Google/Apple'a bağlandı (aynı uid): misafirken
+      // yapılan test, konum vb. korunur; kimlik alanları yenilenir.
+      final merged = existing.copyWith(
+        name: user.name.trim().isNotEmpty ? user.name : null,
+        email: user.email,
+        photoUrl: user.photoUrl,
+        isGuest: false,
+      );
+      await doc.set(merged.toMap(), SetOptions(merge: true));
+      return merged;
+    }
+    // Mevcut kullanıcı — Firestore'daki veriyi döner (personality korunur)
+    return existing;
+  }
+
+  /// Misafir (anonim) oturum açıksa kimlik bilgisini o hesaba BAĞLAR —
+  /// uid ve veriler korunur. Bilgi zaten başka bir hesaba aitse misafir
+  /// oturumu bırakılıp o hesaba giriş yapılır.
+  Future<UserCredential> _signInOrLink(AuthCredential credential) async {
+    final current = _auth.currentUser;
+    if (current != null && current.isAnonymous) {
+      try {
+        final linked = await current.linkWithCredential(credential);
+        AnalyticsService.guestUpgrade(credential.providerId).ignore();
+        return linked;
+      } on FirebaseAuthException catch (e) {
+        const takeOver = {
+          'credential-already-in-use',
+          'email-already-in-use',
+          'account-exists-with-different-credential',
+          'provider-already-linked',
+        };
+        if (!takeOver.contains(e.code)) rethrow;
+        return _auth.signInWithCredential(e.credential ?? credential);
+      }
+    }
+    return _auth.signInWithCredential(credential);
+  }
+
+  // ── Misafir ───────────────────────────────────────────────────────────────
+
+  /// Hesap açmadan uygulamayı denemek için anonim oturum.
+  Future<void> signInAsGuest() async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final cred = await _auth.signInAnonymously();
+      final user = UserModel(
+        uid: cred.user!.uid,
+        name: 'auth.guest_name'.tr(),
+        email: '',
+        createdAt: DateTime.now(),
+        isGuest: true,
+      );
+      final saved = await _upsertFirestoreUser(user);
+      await _saveSession(saved);
+      NotificationService.saveFcmToken(saved.uid).ignore();
+      AnalyticsService.guestStart().ignore();
+      state = state.copyWith(user: saved, isLoading: false);
+    } on FirebaseAuthException catch (e) {
+      debugPrint('[GuestSignIn] ${e.code} | ${e.message}');
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'auth.sign_in_failed',
+      );
+    } catch (e) {
+      debugPrint('[GuestSignIn] $e');
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'auth.sign_in_failed',
+      );
     }
   }
 
@@ -475,9 +552,25 @@ class AuthNotifier extends Notifier<AuthState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      final cred = await _auth.createUserWithEmailAndPassword(
-          email: email, password: password);
+      // Misafir hesap açıyorsa yeni hesap yerine misafir oturumuna e-posta
+      // bağlanır: aynı uid, misafirken yapılan test ve konum korunur.
+      final guest = state.user?.isGuest == true &&
+              (_auth.currentUser?.isAnonymous ?? false)
+          ? state.user
+          : null;
+      final UserCredential cred;
+      if (guest != null) {
+        cred = await _auth.currentUser!.linkWithCredential(
+          EmailAuthProvider.credential(email: email, password: password),
+        );
+      } else {
+        cred = await _auth.createUserWithEmailAndPassword(
+            email: email, password: password);
+      }
       await cred.user!.updateDisplayName(name);
+      guest != null
+          ? AnalyticsService.guestUpgrade('email').ignore()
+          : AnalyticsService.signUp('email').ignore();
 
       // Hesaba onay (doğrulama) maili gönder. Bu çağrı Firebase Auth
       // tarafından otomatik olarak gerçek bir email gönderir — ekstra bir
@@ -501,9 +594,11 @@ class AuthNotifier extends Notifier<AuthState> {
         gender: gender,
         photoUrl: photoUrl,
         createdAt: DateTime.now(),
-        lat: lat,
-        lng: lng,
+        lat: lat ?? guest?.lat,
+        lng: lng ?? guest?.lng,
         adultConfirmed: adultConfirmed,
+        personalityProfile: guest?.personalityProfile,
+        personalityHistory: guest?.personalityHistory ?? const [],
       );
 
       await _firestore.collection('users').doc(user.uid).set(user.toMap());
@@ -547,8 +642,11 @@ class AuthNotifier extends Notifier<AuthState> {
         idToken: googleAuth.idToken,
       );
 
-      final cred = await _auth.signInWithCredential(credential);
+      final cred = await _signInOrLink(credential);
       final fbUser = cred.user!;
+      (cred.additionalUserInfo?.isNewUser ?? false)
+          ? AnalyticsService.signUp('google').ignore()
+          : AnalyticsService.login('google').ignore();
 
       final userModel = UserModel(
         uid: fbUser.uid,
@@ -634,7 +732,7 @@ class AuthNotifier extends Notifier<AuthState> {
       FirebaseAuthException? lastError;
       for (final c in candidates) {
         try {
-          cred = await _auth.signInWithCredential(c);
+          cred = await _signInOrLink(c);
           break;
         } on FirebaseAuthException catch (e) {
           lastError = e;
@@ -834,6 +932,7 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<void> setPersonalityProfile(PersonalityProfile profile) async {
     final user = state.user;
     if (user == null) return;
+    AnalyticsService.quizComplete(profile.dominantType.name).ignore();
 
     final updatedHistory = [...user.personalityHistory, profile];
     // En eski kayıtları kırp — sınırsız büyümesin.

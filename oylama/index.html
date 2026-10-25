@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nerede buluşalım? · MeetIt oylaması</title>
+<meta name="description" content="Grup için önerilen mekanlara oy ver, en çok oyu alan yerde buluşalım.">
+<meta property="og:title" content="Nerede buluşalım? Oy ver 🗳️">
+<meta property="og:description" content="MeetIt ortadaki en iyi mekanları buldu. Tek dokunuşla oyunu ver, uygulama indirmene gerek yok.">
+<meta property="og:image" content="https://salihkocaturk.github.io/meet-it/indir/logo.png">
+<link rel="icon" href="../indir/logo.png">
+<style>
+  :root { --bg:#0B1512; --card:#12201B; --ink:#F0F6FC; --muted:#9FB3AA; --green:#10B981; --green-l:#34D399; --line:rgba(255,255,255,.08); }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; display:flex; justify-content:center;
+         background:radial-gradient(120% 70% at 50% 0%, #133528 0%, var(--bg) 60%); color:var(--ink);
+         font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding:28px 16px; }
+  main { width:100%; max-width:420px; }
+  .head { text-align:center; }
+  .logo { width:64px; height:64px; border-radius:16px; }
+  h1 { margin:16px 0 6px; font-size:24px; letter-spacing:-.3px; }
+  p { margin:0 0 18px; color:var(--muted); font-size:14.5px; line-height:1.5; }
+  label { display:block; font-size:13px; color:var(--muted); margin:0 0 6px; }
+  input { width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--line); background:var(--card);
+          color:var(--ink); font-size:16px; outline:none; margin-bottom:14px; }
+  input:focus { border-color:var(--green); }
+  .opt { position:relative; overflow:hidden; background:var(--card); border:1px solid var(--line); border-radius:14px;
+         padding:14px; margin-bottom:10px; cursor:pointer; transition:border-color .15s; }
+  .opt.mine { border-color:var(--green); }
+  .opt.lead::after { content:"🏆 Önde"; position:absolute; top:12px; right:12px; font-size:11.5px; font-weight:700;
+                      color:#FCD34D; }
+  .bar { position:absolute; inset:0 auto 0 0; background:rgba(16,185,129,.14); transition:width .4s ease; }
+  .row { position:relative; display:flex; gap:12px; align-items:center; }
+  .radio { flex:0 0 22px; height:22px; border-radius:50%; border:2px solid var(--muted); display:flex; align-items:center; justify-content:center; }
+  .opt.mine .radio { border-color:var(--green-l); }
+  .opt.mine .radio::after { content:""; width:10px; height:10px; border-radius:50%; background:var(--green-l); }
+  .info { flex:1; min-width:0; padding-right:52px; }
+  .info b { display:block; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .info span { font-size:12.5px; color:var(--muted); }
+  .info a { color:var(--green-l); font-size:12.5px; text-decoration:none; }
+  .count { position:relative; font-weight:800; font-size:15px; min-width:36px; text-align:right; }
+  .meta { text-align:center; color:var(--muted); font-size:13px; margin:6px 0 18px; }
+  .btn { display:block; width:100%; padding:14px; border-radius:14px; text-align:center; text-decoration:none;
+         font-weight:700; font-size:15px; background:rgba(16,185,129,.15); border:1px solid rgba(16,185,129,.45); color:#6EE7B7; }
+  .err { color:#FCA5A5; text-align:center; font-size:14px; line-height:1.5; margin:16px 0; }
+  .hidden { display:none; }
+</style>
+<script src="../firebase-web-config.js"></script>
+</head>
+<body>
+<main>
+  <div class="head">
+    <img class="logo" src="../indir/logo.png" alt="MeetIt">
+    <h1 id="title">Nerede buluşalım? 🗳️</h1>
+    <p id="desc">MeetIt ortadaki en iyi mekanları buldu. Birine dokunarak oyunu ver, sonuçlar canlı güncellenir.</p>
+  </div>
+  <div class="err hidden" id="err"></div>
+  <section id="poll" class="hidden">
+    <label for="name">Adın (grupta kimin oy verdiği görünsün)</label>
+    <input id="name" maxlength="30" autocomplete="given-name" placeholder="Örn. Ece">
+    <div id="options"></div>
+    <div class="meta" id="meta"></div>
+  </section>
+  <a class="btn" id="store" href="#">MeetIt'i indir · ikinize uyan mekanı bul</a>
+</main>
+
+<script type="module">
+  import { boot, configReady, storeLink, esc } from "../web-firebase.js";
+  import { doc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const $ = (id) => document.getElementById(id);
+  const pid = (new URLSearchParams(location.search).get("p") || "").trim();
+  $("store").href = storeLink();
+  $("name").value = localStorage.getItem("meetit_name") || "";
+
+  function showErr(msg) { $("err").textContent = msg; $("err").classList.remove("hidden"); }
+
+  if (!/^[A-Za-z0-9]{10,40}$/.test(pid)) showErr("Bu oylama linki geçersiz görünüyor.");
+  else if (!configReady()) showErr("Sayfa henüz yapılandırılmadı. Lütfen biraz sonra tekrar dene.");
+  else start().catch((e) => { console.error(e); showErr("Bağlantı kurulamadı. Sayfayı yenileyip tekrar dene."); });
+
+  async function start() {
+    const { db, uid } = await boot();
+    const ref = doc(db, "polls", pid);
+    let options = [];
+
+    onSnapshot(ref, (s) => {
+      if (!s.exists()) { showErr("Bu oylama artık mevcut değil."); $("poll").classList.add("hidden"); return; }
+      const d = s.data();
+      options = Array.isArray(d.options) ? d.options : [];
+      const votes = d.votes || {};
+      const names = d.voterNames || {};
+      const counts = options.map(() => 0);
+      Object.values(votes).forEach((i) => { if (counts[i] !== undefined) counts[i]++; });
+      const total = counts.reduce((a, b) => a + b, 0);
+      const max = Math.max(0, ...counts);
+      const mine = votes[uid];
+      if (d.ownerName) $("title").textContent = d.ownerName + " soruyor: nerede buluşalım? 🗳️";
+
+      $("options").innerHTML = options.map((o, i) => {
+        const pct = total ? Math.round(counts[i] * 100 / total) : 0;
+        const lead = total > 0 && counts[i] === max && max > 0;
+        return `
+        <div class="opt ${mine === i ? "mine" : ""} ${lead ? "lead" : ""}" data-i="${i}">
+          <div class="bar" style="width:${pct}%"></div>
+          <div class="row">
+            <div class="radio"></div>
+            <div class="info">
+              <b>${esc(o.name)}</b>
+              <span>${o.rating ? "★ " + Number(o.rating).toFixed(1) + (o.ratingCount ? " (" + o.ratingCount + ")" : "") + " · " : ""}${esc(o.address || "")}</span><br>
+              <a href="${esc(o.mapsUrl || "#")}" target="_blank" rel="noopener" data-link="1">Haritada aç ↗</a>
+            </div>
+            <div class="count">${counts[i]}</div>
+          </div>
+        </div>`;
+      }).join("");
+
+      const voters = Object.keys(votes).map((k) => names[k]).filter(Boolean);
+      $("meta").textContent = total === 0
+        ? "Henüz oy yok — ilk oyu sen ver!"
+        : total + " oy" + (voters.length ? " · " + voters.slice(0, 6).join(", ") + (voters.length > 6 ? "…" : "") : "");
+      $("poll").classList.remove("hidden");
+    }, (e) => { console.error(e); showErr("Oylama yüklenemedi."); });
+
+    $("options").addEventListener("click", async (ev) => {
+      if (ev.target.closest("[data-link]")) return; // harita linki
+      const el = ev.target.closest(".opt");
+      if (!el) return;
+      const i = Number(el.dataset.i);
+      const name = $("name").value.trim().slice(0, 30);
+      if (name) localStorage.setItem("meetit_name", name);
+      try {
+        await updateDoc(ref, {
+          ["votes." + uid]: i,
+          ["voterNames." + uid]: name || "Biri",
+        });
+      } catch (e) {
+        console.error(e);
+        showErr("Oyun kaydedilemedi, tekrar dene.");
+      }
+    });
+  }
+</script>
+</body>
+</html>

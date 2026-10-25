@@ -117,8 +117,12 @@ class FriendsNotifier extends Notifier<FriendsState> {
 
   @override
   FriendsState build() {
-    final currentUid = ref.watch(authProvider).user?.uid;
+    final auth = ref.watch(authProvider);
+    final currentUid = auth.user?.uid;
     ref.onDispose(() => _friendshipSub?.cancel());
+    // Misafirin arkadaş listesi yok (kurallar da kullanıcı listesini
+    // okumasına izin vermez) — hesap açınca bu provider yeniden kurulur.
+    if (auth.isGuest) return const FriendsState(isLoading: false);
     if (currentUid != null) {
       Future(() => _listenFriendships(currentUid));
     }
@@ -135,7 +139,9 @@ class FriendsNotifier extends Notifier<FriendsState> {
     final everyone =
         usersSnap.docs.map((d) => UserModel.fromMap(d.data())).toList();
     final me = everyone.where((u) => u.uid == currentUid).firstOrNull;
-    final allUsers = everyone.where((u) => u.uid != currentUid).toList();
+    // Misafir (hesapsız) kullanıcılar öneri/listelerde görünmez.
+    final allUsers =
+        everyone.where((u) => u.uid != currentUid && !u.isGuest).toList();
 
     // Friendships'i realtime dinle
     _friendshipSub?.cancel();

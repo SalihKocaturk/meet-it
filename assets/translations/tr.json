@@ -33,6 +33,8 @@
     "profile": "Profil"
   },
   "auth": {
+    "continue_as_guest": "Hesap açmadan dene",
+    "guest_name": "Misafir",
     "email": "Email",
     "email_hint": "ornek@email.com",
     "password": "Şifre",
@@ -463,6 +465,7 @@
     "finish_quiz": "Testi Bitir"
   },
   "quiz_intro": {
+    "skip_btn": "Testsiz devam et",
     "title": "Önce Seni Tanıyalım",
     "desc": "Sana ve buluşacağın kişiye en uygun mekanları önerebilmemiz için kısa bir kişilik testi yapman gerekiyor. Sadece birkaç soru, çok sürmez.",
     "start_btn": "Teste Başla",
@@ -674,7 +677,45 @@
     "reveal_cta": "Hemen ortak mekan bulun",
     "reveal_later": "Daha sonra"
   },
+  "guest": {
+    "upgrade_title": "Bunun için hesabın olmalı",
+    "upgrade_desc": "Hesap açınca test sonucun ve konumun korunur; arkadaş ekleyebilir, yorum yazabilir ve davet kartını paylaşabilirsin.",
+    "sign_up_email": "E-posta ile kayıt ol",
+    "have_account": "Zaten hesabım var, giriş yap",
+    "create_account": "Hesap oluştur",
+    "friends_title": "Arkadaşlar hesabınla gelir",
+    "friends_desc": "Hesap açarak arkadaşlarını ekleyebilir, uyumunuzu görebilir ve birlikte mekan bulabilirsin. Hesapsız da bir arkadaşınla buluşmak için Buluşma ekranındaki konum linkini kullanabilirsin."
+  },
+  "location_link": {
+    "cta_title": "Uygulaması olmayan biriyle mi buluşuyorsun?",
+    "cta_desc": "Konum linki gönder, arkadaşın tek dokunuşla konumunu paylaşsın — ortadaki mekanları bulalım.",
+    "share_text": "Nerede buluşalım? 📍 Konumunu tek dokunuşla paylaş, MeetIt ikimizin ortasındaki en iyi mekanları bulsun (uygulama indirmen gerekmiyor): {link}",
+    "create_failed": "Link oluşturulamadı, tekrar dene.",
+    "your_friend": "Arkadaşın",
+    "waiting_title": "Arkadaşının konumu bekleniyor…",
+    "waiting_desc": "Linki açıp konumunu paylaşınca burada haber vereceğiz.",
+    "share_again": "Linki tekrar paylaş",
+    "shared_title": "{name} konumunu paylaştı 🎉",
+    "shared_desc": "İkinizin ortasındaki mekanları bulalım; öneriler ona da gösterilecek.",
+    "find_midpoint": "Ortadaki mekanları bul",
+    "done_title": "Öneriler {name} ile paylaşıldı ✓",
+    "done_desc": "Arkadaşın önerileri linkteki sayfada görüyor.",
+    "search_again": "Tekrar ara",
+    "new_request": "Yeni link"
+  },
+  "poll": {
+    "ask_group": "Gruba sor",
+    "share_text": "Nerede buluşalım? 🗳️ MeetIt ortadaki en iyi yerleri buldu:\n{list}\n\nOyunu ver (uygulama gerekmez): {link}",
+    "create_failed": "Oylama oluşturulamadı, tekrar dene."
+  },
+  "duo": {
+    "share_entry": "Uyumumuzu paylaş",
+    "share_text": "MeetIt'e göre %{value} uyumluyuz! 🤝 Sen de arkadaşınla uyumunu test et: {link}",
+    "card_caption": "uyumluyuz! 🎉",
+    "card_cta": "Sen de arkadaşınla uyumunu test et · MeetIt"
+  },
   "notifications": {
+    "location_shared": "{name} konumunu paylaştı. Ortadaki mekanları bul!",
     "invite_joined": "{name} davetinle MeetIt'e katıldı, artık arkadaşsınız!",
     "invite_joined_compat": "{name} testi çözdü: %{value} uyumlusunuz! Hadi bir yer bulun.",
     "title": "Bildirimler",
@@ -689,6 +730,7 @@
     "minutes_ago": "{n} dakika önce",
     "hours_ago": "{n} saat önce",
     "titles": {
+      "location_shared": "Konum geldi 📍",
       "invite_joined": "Davetin kabul edildi 🎉",
       "meetup_invite": "Buluşma daveti 📍",
       "venue_found": "Mekan bulundu 🗺️",

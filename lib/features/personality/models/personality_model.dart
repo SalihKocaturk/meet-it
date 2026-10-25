@@ -371,6 +371,16 @@ class PersonalityProfile {
     }
     return PersonalityProfile(scores: scores, lastUpdated: DateTime.now());
   }
+
+  /// Testi henüz çözmemiş (misafir / testi atlayan) kullanıcı için tarafsız
+  /// profil: tüm tipler eşit — öneriler tek bir tipe kaymaz, çeşitli olur.
+  factory PersonalityProfile.neutral() {
+    final share = 1 / PersonalityType.values.length;
+    return PersonalityProfile(
+      scores: {for (final t in PersonalityType.values) t: share},
+      lastUpdated: DateTime.now(),
+    );
+  }
 }
 
 // ── Quiz Modelleri ────────────────────────────────────────────────────────────

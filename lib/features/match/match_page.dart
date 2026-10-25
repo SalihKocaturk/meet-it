@@ -20,6 +20,7 @@ import 'package:meetit/features/match/widgets/friend_chip.dart';
 import 'package:meetit/features/match/widgets/location_field.dart';
 import 'package:meetit/features/match/widgets/price_filter.dart';
 import 'package:meetit/features/match/widgets/venue_results_view.dart';
+import 'package:meetit/features/share_links/location_request_card.dart';
 
 // Bu dosya artık SADECE MatchPage'i içeriyor — tüm alt widget'lar ve
 // MapLocationPickerPage feature klasör yapısına bölündü:
@@ -224,6 +225,10 @@ class MatchPage extends ConsumerWidget {
                                           },
                                         ),
                                       ),
+                                    // Uygulaması olmayan biriyle buluşma:
+                                    // konum linki → ortadaki mekanlar.
+                                    const SizedBox(height: 12),
+                                    const LocationRequestCard(),
                                   ],
                                 ),
                               ),

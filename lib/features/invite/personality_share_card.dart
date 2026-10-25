@@ -8,8 +8,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/constants/emerald_palette.dart';
+import 'package:meetit/core/services/analytics_service.dart';
 import 'package:meetit/core/utils/text_utils.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
+import 'package:meetit/features/auth/widgets/guest_upgrade.dart';
 import 'package:meetit/features/invite/invite_link.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/personality/widgets/personality_character.dart';
@@ -28,10 +30,13 @@ Future<void> showPersonalityShareSheet(
   BuildContext context,
   WidgetRef ref, {
   PersonalityProfile? profile,
-}) {
+}) async {
+  // Davet linki arkadaşlık kurar → misafirden önce hesap açması istenir.
+  if (!await ensureFullAccount(context, ref)) return;
+  if (!context.mounted) return;
   final user = ref.read(currentUserProvider);
   final p = profile ?? user?.personalityProfile;
-  if (user == null || p == null) return Future.value();
+  if (user == null || p == null) return;
 
   return showModalBottomSheet<void>(
     context: context,
@@ -98,6 +103,7 @@ class _ShareSheetState extends State<_ShareSheet> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
+      AnalyticsService.shareCard().ignore();
       final png = await _capture();
       final box = context.findRenderObject() as RenderBox?;
       await SharePlus.instance.share(ShareParams(

@@ -7,6 +7,14 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Anonim oturum: uygulamadaki misafir ya da web sayfalarındaki
+    // (konum/, oylama/) hesapsız ziyaretçi. Kullanıcı listesi ve
+    // arkadaşlıklar gibi kişisel verilere erişemez.
+    function isFullUser() {
+      return isSignedIn() &&
+        request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
     // İki kullanıcıdan biri diğerini engellediyse true. Engelleme kayıtları
     // deterministik ID ile tutulur: blocks/{engelleyen}_{engellenen}.
     function isBlockedPair(a, b) {
@@ -15,7 +23,9 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow read: if isSignedIn();
+      // Kendi dokümanı herkes için; başkalarınınki yalnızca hesaplılara.
+      allow read: if isSignedIn() &&
+        (request.auth.uid == uid || isFullUser());
       allow create, update, delete: if isSignedIn() && request.auth.uid == uid;
 
       match /saved_venues/{placeId} {
@@ -28,11 +38,11 @@ service cloud.firestore {
     }
 
     match /friendships/{docId} {
-      allow read: if isSignedIn();
+      allow read: if isFullUser();
 
       // Engellenmiş iki kişi arasında istek oluşturulamaz / güncellenemez
       // (yeniden istek, kabul). Silme serbest — engellerken arkadaşlık silinir.
-      allow create: if isSignedIn() &&
+      allow create: if isFullUser() &&
         request.resource.data.fromUid == request.auth.uid &&
         !isBlockedPair(request.resource.data.fromUid, request.resource.data.toUid);
 
@@ -45,6 +55,56 @@ service cloud.firestore {
         resource.data.fromUid == request.auth.uid ||
         resource.data.toUid == request.auth.uid
       );
+    }
+
+    // Konum isteği: uygulaması olmayan arkadaş web'den (konum/) yalnızca
+    // kendi konumunu bir kez yazabilir; sonuçları sahibi yazar.
+    match /locationRequests/{id} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
+      allow create: if isSignedIn() &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.status == 'waiting';
+      allow update: if isSignedIn() && (
+        resource.data.ownerUid == request.auth.uid ||
+        (
+          resource.data.status == 'waiting' &&
+          request.resource.data.status == 'shared' &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['friendName', 'friendLat', 'friendLng', 'status', 'sharedAt']) &&
+          request.resource.data.friendLat is number &&
+          request.resource.data.friendLng is number &&
+          request.resource.data.friendName is string &&
+          request.resource.data.friendName.size() <= 30
+        )
+      );
+      allow delete: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // Grup oylaması: herkes (web'den anonim de) yalnızca KENDİ oyunu ve
+    // adını yazabilir; seçenekleri sahibi belirler.
+    match /polls/{id} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
+      allow create: if isSignedIn() &&
+        request.resource.data.ownerUid == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.ownerUid == request.auth.uid ||
+        (
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['votes', 'voterNames']) &&
+          request.resource.data.votes.diff(resource.data.votes).affectedKeys()
+            .hasOnly([request.auth.uid]) &&
+          request.resource.data.voterNames.diff(resource.data.voterNames).affectedKeys()
+            .hasOnly([request.auth.uid]) &&
+          request.resource.data.votes[request.auth.uid] is int &&
+          request.resource.data.votes[request.auth.uid] >= 0 &&
+          request.resource.data.votes[request.auth.uid] < resource.data.options.size() &&
+          request.resource.data.voterNames[request.auth.uid] is string &&
+          request.resource.data.voterNames[request.auth.uid].size() <= 30
+        )
+      );
+      allow delete: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
     }
 
     match /venue_reviews/{reviewId} {

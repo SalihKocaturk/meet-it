@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:meetit/core/constants/app_colors.dart';
+import 'package:meetit/core/constants/emerald_palette.dart';
 import 'package:meetit/core/constants/map_styles.dart';
 import 'package:meetit/core/providers/theme_provider.dart';
 import 'package:meetit/features/match/models/place_result.dart';
@@ -14,6 +15,7 @@ import 'package:meetit/features/match/providers/map_controller_provider.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/match/providers/venue_search_provider.dart';
 import 'package:meetit/features/match/widgets/venue_bottom_bar.dart';
+import 'package:meetit/features/share_links/poll.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'notifiers/attempt_meet_notifier.dart';
@@ -280,6 +282,56 @@ class AttemptMeetPage extends ConsumerWidget {
                             ),
                           ),
                       ],
+                    ),
+                  ),
+                ),
+              ),
+
+            // ── Üst sağ: gruba oylamaya aç ──────────────────────────────────
+            if (venues.length >= 2)
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Align(
+                    alignment: Alignment.topRight,
+                    child: Builder(
+                      builder: (btnContext) => GestureDetector(
+                        onTap: () =>
+                            createAndSharePoll(btnContext, ref, venues),
+                        child: Container(
+                          height: 40,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          decoration: BoxDecoration(
+                            color: Emerald.base,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.18),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Iconsax.people,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'poll.ask_group'.tr(),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/router/app_router.dart';
+import 'package:meetit/core/services/analytics_service.dart';
 import 'package:meetit/features/auth/models/user_model.dart';
 import 'package:meetit/features/auth/notifiers/auth_notifier.dart';
 import 'package:meetit/features/auth/providers/auth_provider.dart';
@@ -54,7 +55,10 @@ class _InviteHostState extends ConsumerState<InviteHost> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _process());
   }
 
+  // Misafirken davet bekletilir: arkadaşlık hesap ister. Hesap açılınca
+  // (aynı uid'e bağlanır) bekleyen davet otomatik işlenir.
   bool _isReady(AuthState auth) =>
+      !auth.isGuest &&
       !auth.isSessionLoading &&
       !auth.isAwaitingFirebaseRestore &&
       auth.isAuthenticated &&
@@ -84,6 +88,7 @@ class _InviteHostState extends ConsumerState<InviteHost> {
         final inviter = await InviteService.accept(ref, pending.uid);
         await ref.read(inviteProvider.notifier).clearPending();
         if (inviter != null) {
+          AnalyticsService.inviteAccepted().ignore();
           await ref
               .read(inviteProvider.notifier)
               .setReveal(InviteRef(inviter.uid, inviter.name));

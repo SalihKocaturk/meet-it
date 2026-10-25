@@ -286,6 +286,32 @@ class SignInPage extends ConsumerWidget {
                     ],
                   ),
 
+                  // Hesap açmadan dene: mekan arama, konum linki ve oylama
+                  // misafirken de çalışır.
+                  Center(
+                    child: TextButton.icon(
+                      onPressed: isLoading
+                          ? null
+                          : () => ref
+                              .read(authProvider.notifier)
+                              .signInAsGuest(),
+                      icon: Icon(
+                        Iconsax.user,
+                        size: 18,
+                        color: context.colors.textSecondary,
+                      ),
+                      label: Text(
+                        'auth.continue_as_guest'.tr(),
+                        style: TextStyle(
+                          color: context.colors.textSecondary,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                          decorationColor: context.colors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+
                   const Spacer(),
 
                   if (!isKeyboardOpen) ...[

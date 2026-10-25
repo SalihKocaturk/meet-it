@@ -15,7 +15,11 @@ import 'package:meetit/features/personality/quiz_page.dart';
 // `true` ile kapanır; geri tuşuyla/"Daha Sonra" ile çıkarsa `false` ile
 // kapanır (çağıran taraf işlemi — örn. mekan aramayı — gerçekleştirmez).
 class QuizIntroPage extends StatelessWidget {
-  const QuizIntroPage({super.key});
+  /// Verilirse "Testsiz devam et" butonu görünür: çağrılır ve sayfa `true`
+  /// ile kapanır (işlem — örn. mekan arama — tarafsız profille sürer).
+  final VoidCallback? onSkip;
+
+  const QuizIntroPage({super.key, this.onSkip});
 
   Future<void> _onStart(BuildContext context) async {
     final completed = await Navigator.of(context).push<bool>(
@@ -106,6 +110,33 @@ class QuizIntroPage extends StatelessWidget {
                   ),
                 ),
               ),
+              if (onSkip != null) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      onSkip!();
+                      Navigator.of(context).pop(true);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: BorderSide(color: context.colors.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      'quiz_intro.skip_btn'.tr(),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: context.colors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),

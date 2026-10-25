@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:meetit/features/auth/widgets/guest_upgrade.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/constants/emerald_palette.dart';
 import 'package:meetit/core/widgets/circular_avatar.dart';
@@ -33,6 +34,20 @@ class FriendsPage extends ConsumerWidget {
     final sentCount = ref.watch(sentRequestsProvider).length;
     final connectionsCount = ref.watch(connectionsCountProvider);
     final requestsBadge = invitationsCount + sentCount;
+
+    // Misafir: arkadaşlık hesap gerektirir.
+    if (ref.watch(authProvider).isGuest) {
+      return Scaffold(
+        backgroundColor: context.colors.scaffold,
+        body: SafeArea(
+          child: GuestLockedPanel(
+            icon: Iconsax.people,
+            title: 'guest.friends_title'.tr(),
+            description: 'guest.friends_desc'.tr(),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: context.colors.scaffold,
