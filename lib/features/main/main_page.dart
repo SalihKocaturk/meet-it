@@ -3,8 +3,8 @@ import 'dart:ui' show ImageFilter;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:iconsax/iconsax.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/constants/emerald_palette.dart';
 import 'package:meetit/core/providers/network_provider.dart';
@@ -37,7 +37,8 @@ class MainPage extends ConsumerWidget {
 
     // Bağlantı yoksa sayfa içi tüm dokunmalar engellenir;
     // nav bar/rail kapsam dışında kalır (tab geçişi yine çalışır).
-    final isOffline = netStatus == NetworkStatus.noConnection ||
+    final isOffline =
+        netStatus == NetworkStatus.noConnection ||
         netStatus == NetworkStatus.noInternet;
 
     final pageContent = AbsorbPointer(
@@ -85,10 +86,8 @@ class _SideRail extends ConsumerWidget {
       labelType: NavigationRailLabelType.all,
       backgroundColor: context.colors.card,
       minWidth: 72,
-      selectedIconTheme:
-          IconThemeData(color: context.colors.primary, size: 24),
-      unselectedIconTheme:
-          IconThemeData(color: context.colors.hint, size: 24),
+      selectedIconTheme: IconThemeData(color: context.colors.primary, size: 24),
+      unselectedIconTheme: IconThemeData(color: context.colors.hint, size: 24),
       selectedLabelTextStyle: TextStyle(
         color: context.colors.primary,
         fontSize: 11,
@@ -99,7 +98,7 @@ class _SideRail extends ConsumerWidget {
         fontSize: 11,
         fontWeight: FontWeight.w400,
       ),
-      indicatorColor: context.colors.primary.withOpacity(0.12),
+      indicatorColor: context.colors.primary.withValues(alpha: 0.12),
       destinations: [
         NavigationRailDestination(
           icon: const Icon(Iconsax.home_2),
@@ -136,8 +135,9 @@ class _SideRail extends ConsumerWidget {
 // barın toplam yüksekliğine eşitler.
 
 const _kNavHeight = 64.0;
-const _kNavRadius = 32.0;
+const _kNavRadius = 28.0;
 const _kNavSideInset = 22.0;
+
 /// Aktif sekme ikonunun arkasındaki yuvarlak (ana sayfadaki ikon
 /// rozetleriyle aynı dil).
 const _kChip = 46.0;
@@ -191,7 +191,7 @@ class _MainBottomNavBar extends ConsumerWidget {
           // cam çamurlu görünürdü.
           painter: _OuterShadowPainter(
             radius: _kNavRadius,
-            color: Colors.black.withOpacity(isDark ? 0.30 : 0.10),
+            color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.10),
           ),
           child: ClipRRect(
             borderRadius: radius,
@@ -199,46 +199,46 @@ class _MainBottomNavBar extends ConsumerWidget {
               // Sadece bulanıklık — renk/doygunluk filtresi yok.
               filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
               child: DecoratedBox(
-                  // Düz, renksiz cam: degrade yok, renk tonu yok; yalnızca
-                  // ikonlar okunabilsin diye çok hafif nötr bir katman.
-                  decoration: BoxDecoration(
-                    borderRadius: radius,
-                    color: isDark
-                        ? Colors.white.withOpacity(0.04)
-                        : Colors.white.withOpacity(0.30),
-                  ),
-                  child: LayoutBuilder(
-                    builder: (context, c) {
-                      final cellW = c.maxWidth / _navItems.length;
-                      return Stack(
-                        children: [
-                          // Aktif sekmenin arkasında kayan cam damla
-                          AnimatedPositioned(
-                            duration: const Duration(milliseconds: 340),
-                            curve: Curves.easeOutCubic,
-                            left: cellW * currentIndex + (cellW - _kChip) / 2,
-                            top: (_kNavHeight - _kChip) / 2,
-                            width: _kChip,
-                            height: _kChip,
-                            child: IgnorePointer(
-                              child: _ActiveBlob(isDark: isDark),
-                            ),
+                // Düz, renksiz cam: degrade yok, renk tonu yok; yalnızca
+                // ikonlar okunabilsin diye çok hafif nötr bir katman.
+                decoration: BoxDecoration(
+                  borderRadius: radius,
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.04)
+                      : Colors.white.withValues(alpha: 0.30),
+                ),
+                child: LayoutBuilder(
+                  builder: (context, c) {
+                    final cellW = c.maxWidth / _navItems.length;
+                    return Stack(
+                      children: [
+                        // Aktif sekmenin arkasında kayan cam damla
+                        AnimatedPositioned(
+                          duration: const Duration(milliseconds: 340),
+                          curve: Curves.easeOutCubic,
+                          left: cellW * currentIndex + (cellW - _kChip) / 2,
+                          top: (_kNavHeight - _kChip) / 2,
+                          width: _kChip,
+                          height: _kChip,
+                          child: IgnorePointer(
+                            child: _ActiveBlob(isDark: isDark),
                           ),
-                          Row(
-                            children: [
-                              for (var i = 0; i < _navItems.length; i++)
-                                _NavItem(
-                                  spec: _navItems[i],
-                                  isSelected: currentIndex == i,
-                                  isDark: isDark,
-                                  onTap: () => select(i),
-                                ),
-                            ],
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                        ),
+                        Row(
+                          children: [
+                            for (var i = 0; i < _navItems.length; i++)
+                              _NavItem(
+                                spec: _navItems[i],
+                                isSelected: currentIndex == i,
+                                isDark: isDark,
+                                onTap: () => select(i),
+                              ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -259,7 +259,7 @@ class _ActiveBlob extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Emerald.base.withOpacity(isDark ? 0.20 : 0.16),
+        color: Emerald.base.withValues(alpha: isDark ? 0.20 : 0.16),
       ),
     );
   }
@@ -282,8 +282,8 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final active = isDark ? Emerald.light : Emerald.deep;
     final idle = isDark
-        ? Colors.white.withOpacity(0.72)
-        : Colors.black.withOpacity(0.55);
+        ? Colors.white.withValues(alpha: 0.72)
+        : Colors.black.withValues(alpha: 0.55);
 
     return Expanded(
       child: Semantics(
