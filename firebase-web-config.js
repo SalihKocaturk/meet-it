@@ -9,12 +9,13 @@
 // "Anonim" sağlayıcısı AÇIK olmalı (web sayfaları hesapsız kullanıcıyı
 // anonim oturumla yazdırır).
 window.MEETIT_FIREBASE_CONFIG = {
-  apiKey: "WEB_API_KEY_BURAYA",
+  apiKey: "AIzaSyADW3zQTpNSEbep9VEOEZDiLpSL5S_nhnc",
   authDomain: "meetit-497814.firebaseapp.com",
   projectId: "meetit-497814",
   storageBucket: "meetit-497814.firebasestorage.app",
   messagingSenderId: "989610671267",
-  appId: "WEB_APP_ID_BURAYA",
+  appId: "1:989610671267:web:6583d4fd2c949a661ed316",
+  measurementId: "G-9XKFT67MDW",
 };
 
 // Firestore'da App Check zorunlu (enforce) ise web için reCAPTCHA v3 site
