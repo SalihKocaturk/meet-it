@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/constants/emerald_palette.dart';
+import 'package:meetit/core/widgets/line_icons.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 
 // ── Aktivite Grid (Çoklu Seçim) ───────────────────────────────────────────────
@@ -12,15 +13,17 @@ class ActivityGrid extends ConsumerWidget {
   const ActivityGrid({super.key});
 
   // (key used in provider, translation key, icon)
-  static const _activities = [
+  // İkon metinden önce taranır — her biri doğrudan ilişkili olmalı.
+  // icon == null → Iconsax'ta karşılığı yok, özel çizgi ikon (Bar → kokteyl).
+  static const _activities = <(String, String, IconData?)>[
     ('Kafe', 'match.activity_cafe', Iconsax.coffee),
-    ('Restoran', 'match.activity_restaurant', Iconsax.cake),
-    ('Park', 'match.activity_park', Iconsax.cloud_sunny),
+    ('Restoran', 'match.activity_restaurant', Iconsax.reserve), // servis kabı
+    ('Park', 'match.activity_park', Iconsax.tree),
     ('Sinema', 'match.activity_cinema', Iconsax.play_circle),
     ('Alışveriş', 'match.activity_shopping', Iconsax.bag),
-    ('Spor', 'match.activity_sports', Iconsax.activity),
+    ('Spor', 'match.activity_sports', Iconsax.weight), // dambıl
     ('Kültür/Müze', 'match.activity_culture', Iconsax.building_3),
-    ('Bar', 'match.activity_bar', Iconsax.cup),
+    ('Bar', 'match.activity_bar', null),
     ('Eğlence', 'match.activity_entertainment', Iconsax.music),
   ];
 
@@ -56,13 +59,21 @@ class ActivityGrid extends ConsumerWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  a.$3,
-                  size: 16,
-                  color: isSelected
-                      ? Colors.white
-                      : context.colors.textSecondary,
-                ),
+                if (a.$3 != null)
+                  Icon(
+                    a.$3,
+                    size: 16,
+                    color: isSelected
+                        ? Colors.white
+                        : context.colors.textSecondary,
+                  )
+                else
+                  CocktailIcon(
+                    size: 16,
+                    color: isSelected
+                        ? Colors.white
+                        : context.colors.textSecondary,
+                  ),
                 SizedBox(width: 6),
                 Text(
                   a.$2.tr(),

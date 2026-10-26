@@ -207,7 +207,10 @@
     "error_reject": "An error occurred while rejecting the request.",
     "error_cancel": "An error occurred while cancelling the request.",
     "invite_friends": "Invite Your Friends",
-    "my_code": "My Code"
+    "my_code": "My Code",
+    "add_short": "Add",
+    "suggestion_new": "New on MeetIt",
+    "dismiss_suggestion": "Dismiss suggestion"
   },
   "friend_code": {
     "title": "Add Friend with Code",
@@ -348,7 +351,10 @@
     "directions": "Directions",
     "type_tile_label": "Your personality type · share your card",
     "type_tile_empty_label": "Discover your personality type",
-    "type_tile_empty_title": "Take the personality quiz"
+    "type_tile_empty_title": "Take the personality quiz",
+    "grow_title": "Fill your profile with reviews",
+    "grow_desc": "Rate the places you've been and add photos; your friends will see where you went here.",
+    "grow_cta": "Places you've been"
   },
   "safety": {
     "report": "Report",

@@ -11,6 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:meetit/features/auth/widgets/guest_upgrade.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/constants/emerald_palette.dart';
+import 'package:meetit/core/utils/text_utils.dart';
 import 'package:meetit/features/share_links/web_links.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:meetit/core/widgets/app_alert.dart';
@@ -1027,7 +1028,7 @@ class _ReviewTileState extends ConsumerState<_ReviewTile>
                           GestureDetector(
                             onTap: friend != null ? openFriendProfile : null,
                             child: Text(
-                              review.authorName,
+                              titleCaseName(review.authorName),
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,

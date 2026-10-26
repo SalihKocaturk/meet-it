@@ -909,7 +909,7 @@ class _ReviewCarouselCard extends ConsumerWidget {
       ratingCount: googleRatingCount,
       distance: _distanceLabel(ref, review.lat, review.lng),
       category: review.venueType != null ? review.typeLabel : 'Mekan',
-      likerName: liker?.name ?? review.authorName,
+      likerName: liker?.name ?? titleCaseName(review.authorName),
       likerPhotoUrl: liker != null ? liker.photoUrl : review.authorPhotoUrl,
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
@@ -1219,7 +1219,8 @@ class _StarScore extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             '($count)',
-            style: TextStyle(fontSize: 11, color: context.colors.hint),
+            // hint tonu kart zemininde neredeyse görünmüyordu
+            style: TextStyle(fontSize: 11, color: context.colors.textSecondary),
           ),
         ],
       ],

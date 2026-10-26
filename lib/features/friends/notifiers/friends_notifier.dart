@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' show min;
 
 import 'package:flutter/foundation.dart';
+import 'package:meetit/core/utils/text_utils.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -215,7 +216,9 @@ class FriendsNotifier extends Notifier<FriendsState> {
         if (_blockedUids.contains(u.uid)) continue;
         final friend = UserFriendModel(
           uid: u.uid,
-          name: u.name,
+          // Kullanıcının küçük harfle girdiği adlar ("furkan emir", "ati")
+          // arayüzde her kelimesi büyük harfle başlayacak şekilde gösterilir.
+          name: titleCaseName(u.name),
           photoUrl: u.photoUrl,
           status: acceptedUids.contains(u.uid)
               ? FriendStatus.accepted

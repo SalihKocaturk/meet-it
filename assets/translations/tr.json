@@ -207,7 +207,10 @@
     "error_reject": "İstek reddedilirken hata oluştu.",
     "error_cancel": "İstek iptal edilirken hata oluştu.",
     "invite_friends": "Arkadaşlarını Davet Et",
-    "my_code": "Kodum"
+    "my_code": "Kodum",
+    "add_short": "Ekle",
+    "suggestion_new": "MeetIt'te yeni",
+    "dismiss_suggestion": "Öneriyi kaldır"
   },
   "friend_code": {
     "title": "Kodla Arkadaş Ekle",
@@ -348,7 +351,10 @@
     "directions": "Tarif Al",
     "type_tile_label": "Kişilik tipin · kartını paylaş",
     "type_tile_empty_label": "Kişilik tipini keşfet",
-    "type_tile_empty_title": "Kişilik testini çöz"
+    "type_tile_empty_title": "Kişilik testini çöz",
+    "grow_title": "Profilin yorumlarınla dolsun",
+    "grow_desc": "Gittiğin mekanlara puan ve fotoğraf bırak; arkadaşların nereye gittiğini burada görsün.",
+    "grow_cta": "Gittiğin mekanlar"
   },
   "safety": {
     "report": "Şikâyet Et",

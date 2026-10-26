@@ -43,7 +43,8 @@ class AppColors extends ThemeExtension<AppColors> {
     scaffold: Color(0xFF0D1117),
     textPrimary: Color(0xFFF0F6FC),
     textSecondary: Color(0xFF8B949E),
-    hint: Color(0xFF484F58),
+    // #484F58 koyu kart zemininde (#161B22) okunmuyordu — bir tık açıldı.
+    hint: Color(0xFF6E7681),
     border: Color(0xFF30363D),
     success: Color(0xFF3FB950),
     error: Color(0xFFF85149),

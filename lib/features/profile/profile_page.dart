@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
@@ -484,8 +486,15 @@ class _ReviewsGrid extends ConsumerWidget {
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(2),
+    // Az yorum varken ızgaranın altı bomboş kalmasın: 2 satırdan azsa
+    // altta kısa bir yönlendirme kartı gösterilir.
+    final showFooter = reviews.length < 6;
+
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.all(2),
+          sliver: SliverGrid.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
         crossAxisSpacing: 2,
@@ -549,6 +558,86 @@ class _ReviewsGrid extends ConsumerWidget {
           ],
         );
       },
+          ),
+        ),
+        if (showFooter)
+          SliverToBoxAdapter(
+            child: _ReviewsGrowHint(
+              onOpenVisited: () =>
+                  ref.read(profileTabProvider.notifier).state = 2,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Izgaranın altında: gittiği mekanlara yorum bırakmaya yönlendiren kart.
+class _ReviewsGrowHint extends StatelessWidget {
+  final VoidCallback onOpenVisited;
+  const _ReviewsGrowHint({required this.onOpenVisited});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = context.isDarkTheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
+      child: Column(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: Emerald.base.withValues(alpha: isDark ? 0.20 : 0.16),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Iconsax.message_add_1,
+              size: 24,
+              color: context.accentStrong,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'profile.grow_title'.tr(),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: context.colors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'profile.grow_desc'.tr(),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.4,
+              color: context.colors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextButton(
+            onPressed: onOpenVisited,
+            style: TextButton.styleFrom(
+              backgroundColor: Emerald.base.withValues(alpha: 0.16),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
+            child: Text(
+              'profile.grow_cta'.tr(),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: context.accentOnTint,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -560,37 +649,159 @@ class _ReviewPlaceholderTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDarkTheme;
+    // Fotoğrafsız yorum: düz yeşil zemin yerine çok hafif, stilize bir
+    // harita dokusu (sokaklar + bir nehir). Her mekan için desen biraz
+    // farklı (placeId'den türetilir) — yan yana kartlar kopya durmaz.
     return Container(
       decoration: BoxDecoration(
-        color: Emerald.base.withOpacity(0.08),
-        border: Border.all(
-          color: isDark ? Colors.white10 : Colors.black.withOpacity(0.06),
-        ),
+        color: isDark ? const Color(0xFF12201A) : const Color(0xFFE8F5EE),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Stack(
+        fit: StackFit.expand,
         children: [
-          Icon(Iconsax.location, color: context.accentStrong, size: 22),
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            child: Text(
-              review.venueName,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                // Sönük yeşil yerine okunaklı metin
-                color: isDark ? Colors.white : context.colors.textPrimary,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
+          CustomPaint(
+            painter: _MapPatternPainter(
+              seed: review.placeId.hashCode,
+              street: (isDark ? Colors.white : const Color(0xFF0B3D2A))
+                  .withValues(alpha: isDark ? 0.07 : 0.10),
+              water: Emerald.base.withValues(alpha: isDark ? 0.16 : 0.18),
             ),
+          ),
+          // Okunaklılık için alttan hafif koyulaşma
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  (isDark ? Colors.black : Colors.white)
+                      .withValues(alpha: isDark ? 0.45 : 0.55),
+                ],
+              ),
+            ),
+          ),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: Emerald.base,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Emerald.deep.withValues(alpha: 0.35),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Iconsax.location,
+                  color: Colors.white,
+                  size: 17,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  review.venueName,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : context.colors.textPrimary,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
+}
+
+/// Stilize harita dokusu: birkaç ana cadde, ara sokaklar ve kıvrımlı bir
+/// nehir. [seed] aynı kaldıkça desen aynı çizilir.
+class _MapPatternPainter extends CustomPainter {
+  final int seed;
+  final Color street;
+  final Color water;
+
+  const _MapPatternPainter({
+    required this.seed,
+    required this.street,
+    required this.water,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rnd = math.Random(seed);
+    final w = size.width, h = size.height;
+
+    // Nehir: köşeden köşeye geniş, yumuşak bir eğri
+    final river = Path();
+    final fromLeft = rnd.nextBool();
+    final y0 = h * (0.15 + rnd.nextDouble() * 0.3);
+    final y1 = h * (0.55 + rnd.nextDouble() * 0.35);
+    if (fromLeft) {
+      river.moveTo(-10, y0);
+      river.cubicTo(w * 0.35, y0 - h * 0.2, w * 0.6, y1 + h * 0.2, w + 10, y1);
+    } else {
+      river.moveTo(-10, y1);
+      river.cubicTo(w * 0.4, y1 + h * 0.2, w * 0.65, y0 - h * 0.2, w + 10, y0);
+    }
+    canvas.drawPath(
+      river,
+      Paint()
+        ..color = water
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w * 0.09
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // Caddeler: hafif eğik bir ızgara
+    final main = Paint()
+      ..color = street
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round;
+    final minor = Paint()
+      ..color = street
+      ..strokeWidth = 1;
+    final angle = (rnd.nextDouble() - 0.5) * 0.5;
+    canvas.save();
+    canvas.translate(w / 2, h / 2);
+    canvas.rotate(angle);
+    canvas.translate(-w / 2, -h / 2);
+    final step = w / (3 + rnd.nextInt(2));
+    for (var x = -w * 0.5 + rnd.nextDouble() * step; x < w * 1.5; x += step) {
+      canvas.drawLine(Offset(x, -h * 0.5), Offset(x, h * 1.5), main);
+      canvas.drawLine(
+        Offset(x + step / 2, -h * 0.5),
+        Offset(x + step / 2, h * 1.5),
+        minor,
+      );
+    }
+    for (var y = -h * 0.5 + rnd.nextDouble() * step; y < h * 1.5; y += step) {
+      canvas.drawLine(Offset(-w * 0.5, y), Offset(w * 1.5, y), main);
+      canvas.drawLine(
+        Offset(-w * 0.5, y + step / 2),
+        Offset(w * 1.5, y + step / 2),
+        minor,
+      );
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_MapPatternPainter old) =>
+      old.seed != seed || old.street != street || old.water != water;
 }
 
 // ── Kaydedilen Mekanlar ───────────────────────────────────────────────────────

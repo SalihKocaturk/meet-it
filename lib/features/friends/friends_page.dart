@@ -157,14 +157,17 @@ class FriendsPage extends ConsumerWidget {
               ),
             ),
 
-            // Tabs: Öneri / İstekler / Bağlantılarım
+            // Tabs: Öneri / İstekler / Bağlantılarım — tek kapsül içinde
+            // segmented control; kart rengindeki zemin, seçili olmayan
+            // sekmelerin de tıklanabilir olduğunu belli eder.
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
-                height: 42,
+                height: 46,
                 decoration: BoxDecoration(
-                  color: context.colors.scaffold,
-                  borderRadius: BorderRadius.circular(12),
+                  color: context.colors.card,
+                  borderRadius: BorderRadius.circular(23),
+                  border: Border.all(color: context.colors.border),
                 ),
                 child: Row(
                   children: [
@@ -287,7 +290,7 @@ class _TabButton extends StatelessWidget {
           margin: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             color: isSelected ? Emerald.base : Colors.transparent,
-            borderRadius: BorderRadius.circular(9),
+            borderRadius: BorderRadius.circular(19),
           ),
           alignment: Alignment.center,
           child: Stack(
@@ -295,12 +298,14 @@ class _TabButton extends StatelessWidget {
             children: [
               Text(
                 label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w600,
                   color: isSelected
                       ? Colors.white
-                      : context.colors.textSecondary,
+                      : context.colors.textPrimary.withValues(alpha: 0.75),
                 ),
               ),
               if (hasBadge && !isSelected)
@@ -523,13 +528,22 @@ class _SuggestionTile extends ConsumerWidget {
                   ),
                 ),
                 Builder(builder: (context) {
+                  // Her satırda aynı biçim: "Kişilik tipi · N ortak arkadaş"
+                  // (olanlar). Eskiden bazılarında ortak arkadaş, bazılarında
+                  // @kullaniciadi yazıyordu — dikey taramada dağınık duruyordu.
                   final mutual =
                       ref.watch(friendsProvider).mutualCounts[friend.uid] ?? 0;
+                  final parts = [
+                    if (friend.personalityProfile != null)
+                      friend.personalityProfile!.dominantType.displayName,
+                    if (mutual > 0)
+                      'friends.mutual_count'
+                          .tr(namedArgs: {'count': '$mutual'}),
+                  ];
                   return Text(
-                    mutual > 0
-                        ? 'friends.mutual_count'
-                            .tr(namedArgs: {'count': '$mutual'})
-                        : '@${friend.name.toLowerCase().replaceAll(' ', '')}',
+                    parts.isEmpty
+                        ? 'friends.suggestion_new'.tr()
+                        : parts.join(' · '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -541,41 +555,46 @@ class _SuggestionTile extends ConsumerWidget {
               ],
             ),
           ),
-          OutlinedButton.icon(
-            onPressed: () => ref
-                .read(friendsProvider.notifier)
-                .sendFriendRequest(friend.uid),
-            icon: Icon(
-              Iconsax.profile_add,
-              size: 14,
-              color: context.accentOnTint,
-            ),
-            label: Text(
-              'friends.add'.tr(),
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: context.accentOnTint,
+          // Sade, çerçevesiz "Ekle": alt alta sıralanınca sağ taraf
+          // ağırlaşmasın diye ikon ve çerçeve yok, yalnızca zümrüt ton.
+          Material(
+            color: Emerald.base.withValues(alpha: 0.16),
+            borderRadius: BorderRadius.circular(18),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: () => ref
+                  .read(friendsProvider.notifier)
+                  .sendFriendRequest(friend.uid),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Text(
+                  'friends.add_short'.tr(),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: context.accentOnTint,
+                  ),
+                ),
               ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-            style: OutlinedButton.styleFrom(
-              backgroundColor: Emerald.base.withOpacity(0.15),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              side: BorderSide(color: Emerald.base.withOpacity(0.45)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ),
-          SizedBox(width: 8),
-          GestureDetector(
-            onTap: () =>
-                ref.read(friendsProvider.notifier).dismissSuggestion(friend.uid),
-            child: Icon(Iconsax.close_circle, size: 18, color: context.colors.hint),
+          const SizedBox(width: 4),
+          // Kapat: 40×40 dokunma alanı (ikon küçük kalsa da kolay basılır).
+          SizedBox.square(
+            dimension: 40,
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              tooltip: 'friends.dismiss_suggestion'.tr(),
+              onPressed: () => ref
+                  .read(friendsProvider.notifier)
+                  .dismissSuggestion(friend.uid),
+              icon: Icon(
+                Iconsax.close_circle,
+                size: 20,
+                color: context.colors.textSecondary,
+              ),
+            ),
           ),
         ],
       ),
