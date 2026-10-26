@@ -90,3 +90,5 @@ ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
 ios/Runner.xcworkspace/xcshareddata/swiftpm/
 macos/Podfile
 macos/Podfile.lock
+# iOS Google Maps anahtarı (bkz. ios/Flutter/Secrets.example.xcconfig)
+ios/Flutter/Secrets.xcconfig
