@@ -40,12 +40,18 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
+    // key.properties yoksa (ör. yeni bir bilgisayarda) derleme çökmesin:
+    // release imzası atlanır ve debug anahtarıyla imzalanır. Mağazaya
+    // yüklenecek sürüm için key.properties + .jks mutlaka gerekli.
+    val hasReleaseKey = keystorePropertiesFile.exists()
     signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-            storePassword = keystoreProperties["storePassword"] as String
+        if (hasReleaseKey) {
+            create("release") {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = keystoreProperties["storeFile"]?.let { file(it) }
+                storePassword = keystoreProperties["storePassword"] as String
+            }
         }
     }
 
@@ -62,7 +68,15 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = if (hasReleaseKey) {
+                signingConfigs.getByName("release")
+            } else {
+                logger.warn(
+                    "android/key.properties bulunamadı — release derlemesi " +
+                        "debug anahtarıyla imzalanıyor (mağazaya yüklenemez)."
+                )
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }
