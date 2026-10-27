@@ -698,8 +698,26 @@
   },
   "poll": {
     "ask_group": "Gruba sor",
-    "share_text": "Nerede buluşalım? 🗳️ MeetIt ortadaki en iyi yerleri buldu:\n{list}\n\nOyunu ver (uygulama gerekmez): {link}",
-    "create_failed": "Oylama oluşturulamadı, tekrar dene."
+    "share_text": "Nerede buluşalım? 🗳️\n{list}\n\nOyunu ver (uygulama gerekmez): {link}",
+    "create_failed": "Oylama oluşturulamadı, tekrar dene.",
+    "compose_title": "Oylama hazırla",
+    "compose_desc": "Grubun oy vereceği 2-6 seçenek seç. Bulunan mekanlardan, kaydettiklerinden ya da aratarak ekleyebilirsin; aklındaki bir yeri de kendin yazabilirsin.",
+    "selected_title": "Seçenekler ({count}/{max})",
+    "empty_selected": "Henüz seçenek yok — aşağıdan ekle.",
+    "search_hint": "Mekan ara veya kendi seçeneğini yaz",
+    "add_custom": "“{text}” seçeneğini ekle",
+    "custom_label": "Kendi seçeneğin",
+    "tab_found": "Bulunanlar",
+    "tab_saved": "Kaydedilenler",
+    "tab_visited": "Gittiklerin",
+    "empty_found": "Bu aramada mekan yok.",
+    "empty_saved": "Henüz kaydettiğin mekan yok.",
+    "empty_visited": "Henüz yol tarifi aldığın mekan yok.",
+    "no_results": "Sonuç bulunamadı. Yazdığını seçenek olarak ekleyebilirsin.",
+    "max_reached": "En fazla 6 seçenek ekleyebilirsin.",
+    "share_btn": "Oylamayı paylaş",
+    "need_more": "En az 2 seçenek seç",
+    "remove": "Seçeneği çıkar"
   },
   "duo": {
     "share_entry": "Uyumumuzu paylaş",

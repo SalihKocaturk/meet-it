@@ -698,8 +698,26 @@
   },
   "poll": {
     "ask_group": "Ask the group",
-    "share_text": "Where should we meet? 🗳️ MeetIt found the best places in between:\n{list}\n\nCast your vote (no app needed): {link}",
-    "create_failed": "Couldn't create the poll, try again."
+    "share_text": "Where should we meet? 🗳️\n{list}\n\nCast your vote (no app needed): {link}",
+    "create_failed": "Couldn't create the poll, try again.",
+    "compose_title": "Create a poll",
+    "compose_desc": "Pick 2-6 options for your group to vote on. Add from the venues found, your saved places, or search; you can also type in a place you have in mind.",
+    "selected_title": "Options ({count}/{max})",
+    "empty_selected": "No options yet — add some below.",
+    "search_hint": "Search for a place or type your own option",
+    "add_custom": "Add “{text}” as an option",
+    "custom_label": "Your own option",
+    "tab_found": "Found",
+    "tab_saved": "Saved",
+    "tab_visited": "Visited",
+    "empty_found": "No venues in this search.",
+    "empty_saved": "You haven't saved any places yet.",
+    "empty_visited": "You haven't gotten directions to any place yet.",
+    "no_results": "No results. You can add what you typed as an option.",
+    "max_reached": "You can add up to 6 options.",
+    "share_btn": "Share poll",
+    "need_more": "Pick at least 2 options",
+    "remove": "Remove option"
   },
   "duo": {
     "share_entry": "Share our match",

@@ -1777,6 +1777,55 @@ class PlacesService {
     return pool;
   }
 
+  /// Metinle mekan arama (oylama hazırlarken "mekan ara"). Konum verilirse
+  /// sonuçlar o çevreye öncelik verir. Maliyet için alan maskesi dar ve
+  /// en fazla 8 sonuç; çağıran taraf yazarken debounce uygular.
+  static Future<List<PlaceResult>> searchText(
+    String query, {
+    double? lat,
+    double? lng,
+    String languageCode = 'tr',
+  }) async {
+    final q = query.trim();
+    if (q.length < 3) return const [];
+    final body = <String, dynamic>{
+      'textQuery': q,
+      'maxResultCount': 8,
+      'languageCode': languageCode,
+      if (lat != null && lng != null)
+        'locationBias': {
+          'circle': {
+            'center': {'latitude': lat, 'longitude': lng},
+            'radius': 30000.0,
+          },
+        },
+    };
+    try {
+      final response = await http
+          .post(
+            Uri.parse(AppConfig.placesTextSearchUrl),
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Goog-Api-Key': AppConfig.googleMapsApiKey,
+              'X-Goog-FieldMask':
+                  'places.id,places.displayName,places.formattedAddress,'
+                  'places.location,places.types,places.rating,'
+                  'places.userRatingCount',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) return const [];
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      return (decoded['places'] as List<dynamic>? ?? const [])
+          .map((p) => PlaceResult.fromJson(p as Map<String, dynamic>))
+          .where((p) => p.placeId.isNotEmpty && p.name.isNotEmpty)
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
   static Future<List<PlaceResult>> _fetchNearbyNew({
     required double lat,
     required double lng,

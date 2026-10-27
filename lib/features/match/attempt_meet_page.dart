@@ -15,7 +15,7 @@ import 'package:meetit/features/match/providers/map_controller_provider.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/match/providers/venue_search_provider.dart';
 import 'package:meetit/features/match/widgets/venue_bottom_bar.dart';
-import 'package:meetit/features/share_links/poll.dart';
+import 'package:meetit/features/share_links/poll_composer_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'notifiers/attempt_meet_notifier.dart';
@@ -292,8 +292,9 @@ class AttemptMeetPage extends ConsumerWidget {
                 ),
               ),
 
-            // ── Üst sağ: gruba oylamaya aç ──────────────────────────────────
-            if (venues.length >= 2)
+            // ── Üst sağ: gruba oylamaya aç → önce oylama hazırlama ekranı
+            // (seçenek ekle/çıkar, kaydedilenler, arama, serbest metin) ──
+            if (venues.isNotEmpty)
               SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.all(12),
@@ -301,8 +302,12 @@ class AttemptMeetPage extends ConsumerWidget {
                     alignment: Alignment.topRight,
                     child: Builder(
                       builder: (btnContext) => GestureDetector(
-                        onTap: () =>
-                            createAndSharePoll(btnContext, ref, venues),
+                        onTap: () => Navigator.of(btnContext).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) =>
+                                PollComposerPage(foundVenues: venues),
+                          ),
+                        ),
                         child: Container(
                           height: 40,
                           padding: const EdgeInsets.symmetric(horizontal: 14),

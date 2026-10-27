@@ -95,6 +95,10 @@ class AppConfig {
   static const String placesNearbySearchUrl =
       'https://places.googleapis.com/v1/places:searchNearby';
 
+  /// Places API (New) — metinle mekan arama (oylamaya elle mekan ekleme).
+  static const String placesTextSearchUrl =
+      'https://places.googleapis.com/v1/places:searchText';
+
   /// Places API (New) — tek bir mekanın detayını (burada sadece TÜM
   /// fotoğraflarını) çekmek için kullanılan endpoint'in öneki — sonuna
   /// `/{placeId}` eklenir (bkz. PlacesService.fetchPhotoUrls).

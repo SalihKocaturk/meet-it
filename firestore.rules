@@ -63,7 +63,10 @@ service cloud.firestore {
       allow get: if isSignedIn();
       allow list: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
       allow create: if isSignedIn() &&
-        request.resource.data.ownerUid == request.auth.uid;
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.options is list &&
+        request.resource.data.options.size() >= 2 &&
+        request.resource.data.options.size() <= 6;
       allow update: if isSignedIn() && (
         resource.data.ownerUid == request.auth.uid ||
         (

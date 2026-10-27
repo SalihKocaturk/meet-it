@@ -6,7 +6,7 @@
 <title>Nerede buluşalım? · MeetIt oylaması</title>
 <meta name="description" content="Grup için önerilen mekanlara oy ver, en çok oyu alan yerde buluşalım.">
 <meta property="og:title" content="Nerede buluşalım? Oy ver 🗳️">
-<meta property="og:description" content="MeetIt ortadaki en iyi mekanları buldu. Tek dokunuşla oyunu ver, uygulama indirmene gerek yok.">
+<meta property="og:description" content="Seçeneklerden birine tek dokunuşla oyunu ver, uygulama indirmene gerek yok.">
 <meta property="og:image" content="https://salihkocaturk.github.io/meet-it/indir/logo.png">
 <link rel="icon" href="../indir/logo.png">
 <style>
@@ -27,8 +27,6 @@
   .opt { position:relative; overflow:hidden; background:var(--card); border:1px solid var(--line); border-radius:14px;
          padding:14px; margin-bottom:10px; cursor:pointer; transition:border-color .15s; }
   .opt.mine { border-color:var(--green); }
-  .opt.lead::after { content:"🏆 Önde"; position:absolute; top:12px; right:12px; font-size:11.5px; font-weight:700;
-                      color:#FCD34D; }
   .bar { position:absolute; inset:0 auto 0 0; background:rgba(16,185,129,.14); transition:width .4s ease; }
   .row { position:relative; display:flex; gap:12px; align-items:center; }
   .radio { flex:0 0 22px; height:22px; border-radius:50%; border:2px solid var(--muted); display:flex; align-items:center; justify-content:center; }
@@ -52,7 +50,7 @@
   <div class="head">
     <img class="logo" src="../indir/logo.png" alt="MeetIt">
     <h1 id="title">Nerede buluşalım? 🗳️</h1>
-    <p id="desc">MeetIt ortadaki en iyi mekanları buldu. Birine dokunarak oyunu ver, sonuçlar canlı güncellenir.</p>
+    <p id="desc">Seçeneklerden birine dokunarak oyunu ver, sonuçlar canlı güncellenir.</p>
   </div>
   <div class="err hidden" id="err"></div>
   <section id="poll" class="hidden">
@@ -93,22 +91,22 @@
       const counts = options.map(() => 0);
       Object.values(votes).forEach((i) => { if (counts[i] !== undefined) counts[i]++; });
       const total = counts.reduce((a, b) => a + b, 0);
-      const max = Math.max(0, ...counts);
       const mine = votes[uid];
       if (d.ownerName) $("title").textContent = d.ownerName + " soruyor: nerede buluşalım? 🗳️";
 
       $("options").innerHTML = options.map((o, i) => {
         const pct = total ? Math.round(counts[i] * 100 / total) : 0;
-        const lead = total > 0 && counts[i] === max && max > 0;
+        const meta = (o.rating ? "★ " + Number(o.rating).toFixed(1) + (o.ratingCount ? " (" + o.ratingCount + ")" : "") : "")
+          + (o.rating && o.address ? " · " : "") + (o.address || "");
         return `
-        <div class="opt ${mine === i ? "mine" : ""} ${lead ? "lead" : ""}" data-i="${i}">
+        <div class="opt ${mine === i ? "mine" : ""}" data-i="${i}">
           <div class="bar" style="width:${pct}%"></div>
           <div class="row">
             <div class="radio"></div>
             <div class="info">
               <b>${esc(o.name)}</b>
-              <span>${o.rating ? "★ " + Number(o.rating).toFixed(1) + (o.ratingCount ? " (" + o.ratingCount + ")" : "") + " · " : ""}${esc(o.address || "")}</span><br>
-              <a href="${esc(o.mapsUrl || "#")}" target="_blank" rel="noopener" data-link="1">Haritada aç ↗</a>
+              ${meta ? `<span>${esc(meta)}</span><br>` : ""}
+              ${o.mapsUrl ? `<a href="${esc(o.mapsUrl)}" target="_blank" rel="noopener" data-link="1">Haritada aç ↗</a>` : ""}
             </div>
             <div class="count">${counts[i]}</div>
           </div>
