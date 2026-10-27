@@ -717,7 +717,8 @@
     "max_reached": "You can add up to 6 options.",
     "share_btn": "Share poll",
     "need_more": "Pick at least 2 options",
-    "remove": "Remove option"
+    "remove": "Remove option",
+    "past_searches": "From your previous searches"
   },
   "duo": {
     "share_entry": "Share our match",

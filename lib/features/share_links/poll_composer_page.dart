@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/constants/emerald_palette.dart';
+import 'package:meetit/features/history/providers/meeting_history_provider.dart';
 import 'package:meetit/features/match/models/place_result.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/match/providers/saved_venues_provider.dart';
@@ -123,8 +124,32 @@ class _PollComposerPageState extends ConsumerState<PollComposerPage> {
     final hasQuery = _query.text.trim().isNotEmpty;
     final canShare = _selected.length >= kPollMinOptions;
 
+    // "Bulunanlar": önce bu aramanın mekanları, sonra geçmiş aramalarda
+    // bulunanlar (en yeni arama önce, tekrarlar ayıklanır, en fazla 40).
+    final currentIds = {for (final v in widget.foundVenues) v.placeId};
+    final pastFound = <PlaceResult>[];
+    final seen = <String>{...currentIds};
+    final history = [...?ref.watch(meetingHistoryProvider).valueOrNull]
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    for (final record in history) {
+      for (final v in record.venues) {
+        if (v.placeId.isEmpty || !seen.add(v.placeId)) continue;
+        pastFound.add(PlaceResult(
+          placeId: v.placeId,
+          name: v.name,
+          vicinity: v.vicinity,
+          rating: v.rating,
+          lat: v.lat,
+          lng: v.lng,
+          types: v.types,
+          priceLevel: v.priceLevel,
+        ));
+      }
+      if (pastFound.length >= 40) break;
+    }
+
     final source = switch (_tab) {
-      0 => widget.foundVenues,
+      0 => [...widget.foundVenues, ...pastFound],
       1 => saved,
       _ => visited,
     };
@@ -284,12 +309,33 @@ class _PollComposerPageState extends ConsumerState<PollComposerPage> {
                   if (source.isEmpty)
                     _EmptyHint(emptyKey.tr())
                   else
-                    for (final p in source)
+                    for (var i = 0; i < source.length; i++) ...[
+                      // Bulunanlar sekmesinde geçmiş aramalar ayrı başlıkla
+                      if (_tab == 0 &&
+                          pastFound.isNotEmpty &&
+                          i == widget.foundVenues.length)
+                        Padding(
+                          padding: EdgeInsets.only(
+                            top: i == 0 ? 4 : 14,
+                            bottom: 4,
+                          ),
+                          child: Text(
+                            'poll.past_searches'.tr(),
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                              color: context.colors.textSecondary,
+                            ),
+                          ),
+                        ),
                       _PlaceTile(
-                        place: p,
-                        selected: _isSelected(PollOption.fromPlace(p).key),
-                        onTap: () => _toggle(PollOption.fromPlace(p)),
+                        place: source[i],
+                        selected:
+                            _isSelected(PollOption.fromPlace(source[i]).key),
+                        onTap: () =>
+                            _toggle(PollOption.fromPlace(source[i])),
                       ),
+                    ],
                 ],
               ],
             ),

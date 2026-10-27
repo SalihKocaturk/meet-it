@@ -717,7 +717,8 @@
     "max_reached": "En fazla 6 seçenek ekleyebilirsin.",
     "share_btn": "Oylamayı paylaş",
     "need_more": "En az 2 seçenek seç",
-    "remove": "Seçeneği çıkar"
+    "remove": "Seçeneği çıkar",
+    "past_searches": "Önceki aramalarda bulunanlar"
   },
   "duo": {
     "share_entry": "Uyumumuzu paylaş",
