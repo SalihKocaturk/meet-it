@@ -293,19 +293,24 @@ class _TabButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(19),
           ),
           alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: isSelected
-                      ? Colors.white
-                      : context.colors.textPrimary.withValues(alpha: 0.75),
+              // Dar ekranda "Arkadaşlarım (4)" kesilmesin: sığmazsa metin
+              // biraz küçülür, asla taşmaz.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected
+                        ? Colors.white
+                        : context.colors.textPrimary.withValues(alpha: 0.75),
+                  ),
                 ),
               ),
               if (hasBadge && !isSelected)
@@ -534,11 +539,11 @@ class _SuggestionTile extends ConsumerWidget {
                   final mutual =
                       ref.watch(friendsProvider).mutualCounts[friend.uid] ?? 0;
                   final parts = [
-                    if (friend.personalityProfile != null)
-                      friend.personalityProfile!.dominantType.displayName,
                     if (mutual > 0)
                       'friends.mutual_count'
                           .tr(namedArgs: {'count': '$mutual'}),
+                    if (friend.personalityProfile != null)
+                      friend.personalityProfile!.dominantType.displayName,
                   ];
                   return Text(
                     parts.isEmpty

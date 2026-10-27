@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:meetit/core/constants/app_colors.dart';
 import 'package:meetit/core/constants/emerald_palette.dart';
+import 'package:meetit/core/utils/text_utils.dart';
 import 'package:meetit/features/invite/personality_share_card.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/personality/quiz_page.dart';
@@ -200,7 +201,7 @@ class _ProfileHeader extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                user?.name ?? '',
+                titleCaseName(user?.name ?? ''),
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
@@ -663,7 +664,7 @@ class _ReviewPlaceholderTile extends StatelessWidget {
             painter: _MapPatternPainter(
               seed: review.placeId.hashCode,
               street: (isDark ? Colors.white : const Color(0xFF0B3D2A))
-                  .withValues(alpha: isDark ? 0.07 : 0.10),
+                  .withValues(alpha: isDark ? 0.07 : 0.06),
               water: Emerald.base.withValues(alpha: isDark ? 0.16 : 0.18),
             ),
           ),
@@ -742,6 +743,8 @@ class _MapPatternPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Desen kartın dışına taşmasın (eğik ızgara kenarlardan dışarı uzanır).
+    canvas.clipRect(Offset.zero & size);
     final rnd = math.Random(seed);
     final w = size.width, h = size.height;
 
