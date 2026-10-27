@@ -78,7 +78,7 @@ class _PollComposerPageState extends ConsumerState<PollComposerPage> {
       }
     });
     if (q.length < 3) return;
-    _debounce = Timer(const Duration(milliseconds: 450), () async {
+    _debounce = Timer(const Duration(milliseconds: 600), () async {
       final loc = ref.read(userLocationProvider);
       final anchor = widget.foundVenues.isNotEmpty
           ? widget.foundVenues.first
