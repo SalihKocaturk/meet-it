@@ -34,30 +34,35 @@ Future<void> main() async {
   await EasyLocalization.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // App Check: debug modda debug provider, release'de Play Integrity
-  await FirebaseAppCheck.instance.activate(
-    androidProvider: kDebugMode
-        ? AndroidProvider.debug
-        : AndroidProvider.playIntegrity,
-    appleProvider: kDebugMode
-        ? AppleProvider.debug
-        : AppleProvider.deviceCheck,
-  );
+  // App Check: debug modda debug provider, release'de Play Integrity.
+  // Takılırsa açılışı bekletmesin (beyaz ekranda kalmasın).
+  try {
+    await FirebaseAppCheck.instance
+        .activate(
+          androidProvider: kDebugMode
+              ? AndroidProvider.debug
+              : AndroidProvider.playIntegrity,
+          appleProvider: kDebugMode
+              ? AppleProvider.debug
+              : AppleProvider.deviceCheck,
+        )
+        .timeout(const Duration(seconds: 5));
+  } catch (e) {
+    debugPrint('[main] App Check başlatılamadı: $e');
+  }
 
   // AdMob SDK burada BAŞLATILMIYOR — bkz. runApp'ten sonraki
   // addPostFrameCallback. Sebep: iOS'taki ATT izin diyaloğu ancak uygulama
   // ekrana gelip aktif olduktan sonra açılabiliyor; main() içinde
   // çağrılırsa diyalog hiç görünmez, izin sonsuza kadar notDetermined kalır.
 
-  // Push bildirim servisini baslat
-  await NotificationService.initialize();
-
   // 3-katmanli ag izleyiciyi baslat
   NetworkService.instance.init();
 
-  // Firestore bossa mock kullanicilari ekle
-  await FirestoreSeedService.seedIfEmpty();
-
+  // NOT: Bildirim izni ve Firestore seed artık runApp'ten SONRA. iOS 27
+  // UIScene yaşam döngüsünde sistem izin diyaloğu ancak sahne aktif olup
+  // ilk kare çizildikten sonra açılabiliyor — runApp'ten önce
+  // `await requestPermission()` beklenirse uygulama beyaz ekranda kalıyordu.
   runApp(
     EasyLocalization(
       supportedLocales: const [Locale('tr'), Locale('en')],
@@ -73,8 +78,16 @@ Future<void> main() async {
   // İlk kare çizildikten sonra: önce ATT izni, sonra AdMob SDK.
   // Sıra önemli — AdMob bir kez IDFA'sız başlarsa izin sonradan verilse
   // bile o oturumda kişiselleştirme yapılmaz.
-  WidgetsBinding.instance.addPostFrameCallback((_) {
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    // Önce bildirim izni (diyalog cevaplanınca devam eder), sonra ATT + AdMob.
+    try {
+      await NotificationService.initialize();
+    } catch (e) {
+      debugPrint('[main] Bildirim servisi başlatılamadı: $e');
+    }
     AdService.initialize();
+    // Firestore boşsa örnek kullanıcıları ekle — açılışı bekletmez.
+    FirestoreSeedService.seedIfEmpty().ignore();
   });
 }
 
