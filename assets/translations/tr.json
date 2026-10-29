@@ -308,7 +308,8 @@
     "map_friend": "Arkadaşın",
     "map_no_location": "Konum bilgisi bulunamadığı için haritada gösterilemiyor.",
     "map_venue_of": "{current} / {total} mekan",
-    "change_location": "Yeni Konum Seç"
+    "change_location": "Yeni Konum Seç",
+    "pick_location_first": "Önce konumunu seç, sonra ortadaki mekanları bulalım."
   },
   "profile": {
     "title": "Profil",

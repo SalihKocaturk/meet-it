@@ -344,7 +344,18 @@ class VenueSearchNotifier extends Notifier<VenueSearchState> {
       myLng = userLng;
     } else {
       final position = await _getLocation();
-      if (position == null) return;
+      if (position == null) {
+        // _getLocation izin/servis hatalarında state'i kendisi kapatıyor;
+        // ama konum hiç alınamadığında (zaman aşımı, son konum yok) kapatmıyor
+        // ve buton 1 dakika "yükleniyor"da kalıyordu.
+        if (state.isLoading) {
+          state = state.copyWith(
+            isLoading: false,
+            errorMessage: 'Konum alınamadı. Lütfen haritadan konum seç.',
+          );
+        }
+        return;
+      }
       myLat = position.latitude;
       myLng = position.longitude;
     }

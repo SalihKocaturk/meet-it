@@ -10,6 +10,39 @@ import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/match/pages/map_location_picker_page.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 
+// ── Konum seçtirme (ortak) ────────────────────────────────────────────────────
+//
+// Haritadan konum seçtirir, seçileni anında provider'a yazar ve DB'ye
+// kaydeder. Hem konum alanı hem de "Mekan Önerilerini Gör" (konum yokken)
+// bunu kullanır — böylece arama ekranının içinde konum izni / seçimi
+// açılmaz (eskiden orada takılıp butonu yükleniyor durumunda bırakıyordu).
+Future<UserLocation?> pickUserLocation(BuildContext context, WidgetRef ref) async {
+  final current = ref.read(userLocationProvider);
+  final result = await Navigator.of(context).push<UserLocation>(
+    MaterialPageRoute(
+      builder: (_) => MapLocationPickerPage(
+        initial: current?.hasCoords == true
+            ? LatLng(current!.lat!, current.lng!)
+            : null,
+      ),
+    ),
+  );
+  if (result == null) return null;
+
+  // Anında UI geri bildirimi
+  ref.read(userLocationProvider.notifier).state = result;
+
+  // DB'ye kaydet — bir dahaki sefere konum servisine veya yeniden
+  // girişe gerek kalmasın, arkadaşlarımız da benim konumumu DB'den
+  // güvenilir şekilde okuyabilsin.
+  if (result.hasCoords) {
+    await ref
+        .read(authProvider.notifier)
+        .updateLocation(result.lat!, result.lng!, address: result.text);
+  }
+  return result;
+}
+
 // ── Konum Alanı ───────────────────────────────────────────────────────────────
 
 class LocationField extends ConsumerWidget {
@@ -28,28 +61,7 @@ class LocationField extends ConsumerWidget {
     // yeniden konum girmek zorunda değil — burada zaten kayıtlı konumu
     // gösteriyoruz. İsterse alttaki "Yeni Konum Seç" ile değiştirebilir.
     Future<void> pickLocation() async {
-      final result = await Navigator.of(context).push<UserLocation>(
-        MaterialPageRoute(
-          builder: (_) => MapLocationPickerPage(
-            initial: userLoc?.hasCoords == true
-                ? LatLng(userLoc!.lat!, userLoc.lng!)
-                : null,
-          ),
-        ),
-      );
-      if (result == null) return;
-
-      // Anında UI geri bildirimi
-      ref.read(userLocationProvider.notifier).state = result;
-
-      // DB'ye kaydet — bir dahaki sefere konum servisine veya yeniden
-      // girişe gerek kalmasın, arkadaşlarımız da benim konumumu DB'den
-      // güvenilir şekilde okuyabilsin.
-      if (result.hasCoords) {
-        await ref
-            .read(authProvider.notifier)
-            .updateLocation(result.lat!, result.lng!, address: result.text);
-      }
+      await pickUserLocation(context, ref);
     }
 
     return GestureDetector(
