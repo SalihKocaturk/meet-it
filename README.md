@@ -169,7 +169,7 @@ service cloud.firestore {
 <table>
   <tr>
     <td align="center"><img src="appimages/friends_list.jpg" width="240" /><br/>My Friends</td>
-    <td align="center"><img src="appimages/friend_code.jpg" width="240" /><br/>Add Friend by Code</td>
+    <td align="center"><img src="appimages/friend_code.jpg" width="240" /><br/>Share Your Personality Card & Invite Friends</td>
     <td></td>
   </tr>
 </table>
@@ -178,8 +178,8 @@ service cloud.firestore {
 
 <table>
   <tr>
-    <td align="center"><img src="appimages/profile_overview.jpg" width="240" /><br/>Profile — Posts</td>
-    <td align="center"><img src="appimages/profile_directions_taken.jpg" width="240" /><br/>Venues with Directions Taken</td>
+    <td align="center"><img src="appimages/profile_overview.jpg" width="240" /><br/>Profile — Reviews & Personality Type</td>
+    <td align="center"><img src="appimages/profile_directions_taken.jpg" width="240" /><br/>Saved Venues Map</td>
     <td align="center"><img src="appimages/edit_profile.jpg" width="240" /><br/>Edit Profile</td>
   </tr>
 </table>

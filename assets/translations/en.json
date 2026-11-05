@@ -308,7 +308,8 @@
     "map_friend": "Your friend",
     "map_no_location": "Can't show this on the map because location data is missing.",
     "map_venue_of": "{current} / {total} venues",
-    "change_location": "Pick New Location"
+    "change_location": "Pick New Location",
+    "pick_location_first": "Pick your location first, then we will find spots in between."
   },
   "profile": {
     "title": "Profile",
@@ -886,7 +887,7 @@
       "a": "Strategy or trivia, something that makes us think",
       "b": "A relaxed board game with two or three people",
       "c": "The game is just an excuse, it's really about the snacks everyone brings",
-      "d": "Skip the board games, let's do an escape room or paintball"
+      "d": "Skip the board games, let's do a haunted house or paintball"
     },
     "q10": {
       "question": "You're meeting a friend. Where's the first place that comes to mind?",

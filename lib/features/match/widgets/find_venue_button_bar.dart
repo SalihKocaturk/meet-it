@@ -9,6 +9,7 @@ import 'package:meetit/features/auth/providers/auth_provider.dart';
 import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/match/providers/venue_search_provider.dart';
 import 'package:meetit/features/match/pages/venue_search_loading_page.dart';
+import 'package:meetit/features/match/widgets/location_field.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/features/personality/quiz_nudge.dart';
 
@@ -255,7 +256,23 @@ class _FindVenueButtonBarState extends ConsumerState<FindVenueButtonBar>
                           final priceLevel = ref.read(
                             selectedPriceLevelProvider,
                           );
-                          final userLoc = ref.read(userLocationProvider);
+                          // Konum yoksa (ör. misafir hesap) önce haritadan
+                          // seçtir — GPS izni/konum seçimi arama ekranının
+                          // içinde açılınca arama takılıyordu.
+                          var userLoc = ref.read(userLocationProvider);
+                          if (userLoc == null || !userLoc.hasCoords) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('match.pick_location_first'.tr()),
+                              ),
+                            );
+                            userLoc = await pickUserLocation(context, ref);
+                            if (!context.mounted ||
+                                userLoc == null ||
+                                !userLoc.hasCoords) {
+                              return;
+                            }
+                          }
                           final maxDistanceKm = ref.read(
                             selectedMaxDistanceKmProvider,
                           );
