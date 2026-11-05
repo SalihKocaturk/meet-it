@@ -721,6 +721,8 @@
     "past_searches": "Önceki aramalarda bulunanlar",
     "my_polls": "Oylamalarım",
     "my_polls_badge": "Oylamalarım ({count})",
+    "tab_polls": "Oylamalar ({count})",
+    "tab_polls_empty": "Oylamalar",
     "manage_title": "Grup Oylamaları",
     "detail_title": "Oylama",
     "filter_live": "Canlı",

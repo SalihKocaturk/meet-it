@@ -10,26 +10,15 @@ import 'package:meetit/features/share_links/poll_detail_page.dart';
 import 'package:meetit/features/share_links/providers/polls_provider.dart';
 import 'package:meetit/features/share_links/widgets/poll_status_chip.dart';
 
-/// Kullanıcının oluşturduğu grup oylamalarının yönetim listesi.
+/// Kullanıcının oluşturduğu grup oylamalarının yönetim ekranı.
 ///
-/// Sahip olduğu oylamaları canlı olarak gösterir; karta dokununca detay
-/// ekranında sonuçlar izlenebilir, link paylaşılabilir, oylama kapatılabilir
-/// veya silinebilir.
-class PollManagementPage extends ConsumerStatefulWidget {
+/// Liste gövdesi [PollManagementBody] olarak ayrıldı; aynı gövde Arkadaşlar
+/// sekmesindeki "Oylamalar" sekmesinde gömülü olarak kullanılıyor.
+class PollManagementPage extends StatelessWidget {
   const PollManagementPage({super.key});
 
   @override
-  ConsumerState<PollManagementPage> createState() => _PollManagementPageState();
-}
-
-class _PollManagementPageState extends ConsumerState<PollManagementPage> {
-  /// 0 = canlı, 1 = kapananlar, 2 = tümü
-  int _filter = 0;
-
-  @override
   Widget build(BuildContext context) {
-    final pollsAsync = ref.watch(myPollsProvider);
-
     return Scaffold(
       backgroundColor: context.colors.scaffold,
       appBar: AppBar(
@@ -46,66 +35,108 @@ class _PollManagementPageState extends ConsumerState<PollManagementPage> {
         ),
         iconTheme: IconThemeData(color: context.colors.textPrimary),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-            child: _FilterTabs(
-              index: _filter,
-              labels: [
-                'poll.filter_live'.tr(),
-                'poll.filter_closed'.tr(),
-                'poll.filter_all'.tr(),
-              ],
-              onChanged: (i) => setState(() => _filter = i),
-            ),
+      body: const PollManagementBody(),
+    );
+  }
+}
+
+/// Oylama listesi + filtreleri.
+///
+/// [embedded] true iken dıştaki (Arkadaşlar sekmesi) `RefreshIndicator` ve
+/// alt navigasyon boşluğu kullanılır; kendi sayfasında ise kendi yenileme
+/// göstergesini kurar.
+class PollManagementBody extends ConsumerStatefulWidget {
+  final bool embedded;
+
+  const PollManagementBody({super.key, this.embedded = false});
+
+  @override
+  ConsumerState<PollManagementBody> createState() => _PollManagementBodyState();
+}
+
+class _PollManagementBodyState extends ConsumerState<PollManagementBody> {
+  /// 0 = canlı, 1 = kapananlar, 2 = tümü
+  int _filter = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final pollsAsync = ref.watch(myPollsProvider);
+
+    return Column(
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(20, widget.embedded ? 0 : 4, 20, 0),
+          child: _FilterTabs(
+            index: _filter,
+            labels: [
+              'poll.filter_live'.tr(),
+              'poll.filter_closed'.tr(),
+              'poll.filter_all'.tr(),
+            ],
+            onChanged: (i) => setState(() => _filter = i),
           ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: pollsAsync.when(
-              loading: () => Center(
-                child: CircularProgressIndicator(color: context.accentStrong),
-              ),
-              error: (_, _) =>
-                  _ErrorState(onRetry: () => ref.invalidate(myPollsProvider)),
-              data: (polls) {
-                final filtered = switch (_filter) {
-                  0 => polls.where((p) => p.isActive).toList(),
-                  1 => polls.where((p) => !p.isActive).toList(),
-                  _ => polls,
-                };
-                if (filtered.isEmpty) {
-                  return _EmptyState(filter: _filter, onExplore: _goToSearch);
-                }
-                return RefreshIndicator(
-                  color: context.accentStrong,
-                  backgroundColor: context.colors.card,
-                  onRefresh: () async {
-                    ref.invalidate(myPollsProvider);
-                    await Future<void>.delayed(
-                      const Duration(milliseconds: 500),
-                    );
-                  },
-                  child: ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-                    itemCount: filtered.length,
-                    itemBuilder: (context, i) => _PollCard(
-                      poll: filtered[i],
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) =>
-                              PollDetailPage(pollId: filtered[i].id),
-                        ),
-                      ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: pollsAsync.when(
+            loading: () => Center(
+              child: CircularProgressIndicator(color: context.accentStrong),
+            ),
+            error: (error, stack) {
+              // Teşhis için: konsolda gerçek Firestore hatasını ve izini
+              // göster (index eksikliği / izin hatası ayrımı buradan
+              // görülebilir).
+              debugPrint('[polls] myPollsProvider error: $error\n$stack');
+              return _ErrorState(
+                onRetry: () => ref.invalidate(myPollsProvider),
+              );
+            },
+            data: (polls) {
+              final filtered = switch (_filter) {
+                0 => polls.where((p) => p.isActive).toList(),
+                1 => polls.where((p) => !p.isActive).toList(),
+                _ => polls,
+              };
+              if (filtered.isEmpty) {
+                return _EmptyState(
+                  hasPolls: polls.isNotEmpty,
+                  onExplore: _goToSearch,
+                );
+              }
+              final list = ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  8,
+                  20,
+                  widget.embedded
+                      ? MediaQuery.paddingOf(context).bottom + 16
+                      : 32,
+                ),
+                itemCount: filtered.length,
+                itemBuilder: (context, i) => _PollCard(
+                  poll: filtered[i],
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => PollDetailPage(pollId: filtered[i].id),
                     ),
                   ),
-                );
-              },
-            ),
+                ),
+              );
+              if (widget.embedded) return list;
+              return RefreshIndicator(
+                color: context.accentStrong,
+                backgroundColor: context.colors.card,
+                onRefresh: () async {
+                  ref.invalidate(myPollsProvider);
+                  await Future<void>.delayed(const Duration(milliseconds: 500));
+                },
+                child: list,
+              );
+            },
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -327,14 +358,15 @@ class _PollCard extends StatelessWidget {
 // ── Boş / hata durumları ────────────────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
-  final int filter;
+  /// Kullanıcının hiç oylaması yok mu? (Filtre boşluğundan ayırmak için)
+  final bool hasPolls;
   final VoidCallback onExplore;
 
-  const _EmptyState({required this.filter, required this.onExplore});
+  const _EmptyState({required this.hasPolls, required this.onExplore});
 
   @override
   Widget build(BuildContext context) {
-    final isAll = filter == 2;
+    final isFirstRun = !hasPolls;
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(32, 48, 32, 32),
@@ -346,7 +378,7 @@ class _EmptyState extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          isAll ? 'poll.empty_my_polls'.tr() : 'poll.empty_filter'.tr(),
+          isFirstRun ? 'poll.empty_my_polls'.tr() : 'poll.empty_filter'.tr(),
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 15,
@@ -356,7 +388,7 @@ class _EmptyState extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          isAll
+          isFirstRun
               ? 'poll.empty_my_polls_desc'.tr()
               : 'poll.empty_filter_desc'.tr(),
           textAlign: TextAlign.center,
@@ -366,7 +398,7 @@ class _EmptyState extends StatelessWidget {
             color: context.colors.textSecondary,
           ),
         ),
-        if (isAll) ...[
+        if (isFirstRun) ...[
           const SizedBox(height: 20),
           Center(
             child: ElevatedButton.icon(

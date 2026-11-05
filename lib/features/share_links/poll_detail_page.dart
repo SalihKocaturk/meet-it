@@ -88,12 +88,17 @@ class _PollDetailPageState extends ConsumerState<PollDetailPage> {
         loading: () => Center(
           child: CircularProgressIndicator(color: context.accentStrong),
         ),
-        error: (_, _) => _MessageState(
-          icon: Iconsax.warning_2,
-          text: 'poll.load_failed'.tr(),
-          actionLabel: 'common.retry'.tr(),
-          onAction: () => ref.invalidate(pollProvider(widget.pollId)),
-        ),
+        error: (error, stack) {
+          debugPrint(
+            '[polls] pollProvider(${widget.pollId}) error: $error\n$stack',
+          );
+          return _MessageState(
+            icon: Iconsax.warning_2,
+            text: 'poll.load_failed'.tr(),
+            actionLabel: 'common.retry'.tr(),
+            onAction: () => ref.invalidate(pollProvider(widget.pollId)),
+          );
+        },
         data: (poll) {
           if (poll == null) {
             return _MessageState(

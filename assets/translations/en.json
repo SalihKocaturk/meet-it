@@ -721,6 +721,8 @@
     "past_searches": "From your previous searches",
     "my_polls": "My polls",
     "my_polls_badge": "My polls ({count})",
+    "tab_polls": "Polls ({count})",
+    "tab_polls_empty": "Polls",
     "manage_title": "Group Polls",
     "detail_title": "Poll",
     "filter_live": "Live",

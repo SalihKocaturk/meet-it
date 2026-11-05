@@ -15,10 +15,3 @@ final myPollsProvider = StreamProvider.autoDispose<List<Poll>>((ref) {
 final pollProvider = StreamProvider.autoDispose.family<Poll?, String>(
   (ref, id) => PollService.watch(id),
 );
-
-/// Arkadaşlar sekmesindeki "Oylamalarım" rozeti: hâlâ canlı olan oylama sayısı.
-final livePollCountProvider = Provider.autoDispose<int>((ref) {
-  final polls = ref.watch(myPollsProvider).valueOrNull;
-  if (polls == null) return 0;
-  return polls.where((p) => p.isActive).length;
-});

@@ -23,7 +23,7 @@ import 'package:meetit/features/share_links/providers/polls_provider.dart';
 // Arkadaşlar sekmesindeki arama metni için provider
 final friendsSearchProvider = StateProvider.autoDispose<String>((ref) => '');
 
-// Tab controller için index provider (Öneri / Bağlantılarım)
+// Tab controller için index provider (Öneri / İstekler / Arkadaşlarım / Oylamalar)
 final friendsTabIndexProvider = StateProvider.autoDispose<int>((ref) => 0);
 
 class FriendsPage extends ConsumerWidget {
@@ -35,7 +35,9 @@ class FriendsPage extends ConsumerWidget {
     final invitationsCount = ref.watch(invitationsCountProvider);
     final sentCount = ref.watch(sentRequestsProvider).length;
     final connectionsCount = ref.watch(connectionsCountProvider);
-    final livePolls = ref.watch(livePollCountProvider);
+    // Sekmedeki rozet tüm oylamaları saysın ki "Canlı" filtresi boşken
+    // sekme sayısı yanıltmasın.
+    final pollsCount = ref.watch(myPollsProvider).valueOrNull?.length ?? 0;
     final requestsBadge = invitationsCount + sentCount;
 
     // Misafir: arkadaşlık hesap gerektirir.
@@ -108,87 +110,37 @@ class FriendsPage extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  // Arkadaş kodu + oylama yönetimi butonları
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const FriendCodePage(),
-                          ),
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 7,
-                          ),
-                          decoration: Emerald.tint(radius: 20),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Iconsax.hashtag,
-                                size: 14,
-                                color: context.accentOnTint,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'friends.my_code'.tr(),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: context.accentOnTint,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                  // Arkadaş kodu butonu (oylamalar artık sekmede)
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const FriendCodePage()),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
                       ),
-                      const SizedBox(height: 6),
-                      GestureDetector(
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const PollManagementPage(),
+                      decoration: Emerald.tint(radius: 20),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Iconsax.hashtag,
+                            size: 14,
+                            color: context.accentOnTint,
                           ),
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 7,
+                          const SizedBox(width: 4),
+                          Text(
+                            'friends.my_code'.tr(),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: context.accentOnTint,
+                            ),
                           ),
-                          decoration: BoxDecoration(
-                            color: context.colors.card,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: context.colors.border),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Iconsax.people,
-                                size: 14,
-                                color: context.accentStrong,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                livePolls > 0
-                                    ? 'poll.my_polls_badge'.tr(
-                                        namedArgs: {'count': '$livePolls'},
-                                      )
-                                    : 'poll.my_polls'.tr(),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: context.colors.textPrimary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),
@@ -210,8 +162,8 @@ class FriendsPage extends ConsumerWidget {
               ),
             ),
 
-            // Tabs: Öneri / İstekler / Bağlantılarım — tek kapsül içinde
-            // segmented control; kart rengindeki zemin, seçili olmayan
+            // Tabs: Öneri / İstekler / Arkadaşlarım / Oylamalar — tek kapsül
+            // içinde segmented control; kart rengindeki zemin, seçili olmayan
             // sekmelerin de tıklanabilir olduğunu belli eder.
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -249,6 +201,16 @@ class FriendsPage extends ConsumerWidget {
                       onTap: () =>
                           ref.read(friendsTabIndexProvider.notifier).state = 2,
                     ),
+                    _TabButton(
+                      label: pollsCount > 0
+                          ? 'poll.tab_polls'.tr(
+                              namedArgs: {'count': '$pollsCount'},
+                            )
+                          : 'poll.tab_polls_empty'.tr(),
+                      isSelected: tabIndex == 3,
+                      onTap: () =>
+                          ref.read(friendsTabIndexProvider.notifier).state = 3,
+                    ),
                   ],
                 ),
               ),
@@ -263,6 +225,7 @@ class FriendsPage extends ConsumerWidget {
                 backgroundColor: context.colors.card,
                 onRefresh: () async {
                   final uid = ref.read(currentUserProvider)?.uid ?? '';
+                  if (tabIndex == 3) ref.invalidate(myPollsProvider);
                   await Future.wait([
                     if (uid.isNotEmpty)
                       ref.read(friendsProvider.notifier).loadAll(uid),
@@ -272,7 +235,8 @@ class FriendsPage extends ConsumerWidget {
                 child: switch (tabIndex) {
                   0 => const _SuggestionsTab(),
                   1 => const _RequestsTab(),
-                  _ => _ConnectionsTab(connectionsCount: connectionsCount),
+                  2 => _ConnectionsTab(connectionsCount: connectionsCount),
+                  _ => const PollManagementBody(embedded: true),
                 },
               ),
             ),
@@ -344,13 +308,13 @@ class _TabButton extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          margin: const EdgeInsets.all(4),
+          margin: const EdgeInsets.all(3),
           decoration: BoxDecoration(
             color: isSelected ? Emerald.base : Colors.transparent,
             borderRadius: BorderRadius.circular(19),
           ),
           alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
@@ -362,7 +326,7 @@ class _TabButton extends StatelessWidget {
                   label,
                   maxLines: 1,
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: isSelected
                         ? Colors.white

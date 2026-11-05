@@ -262,13 +262,34 @@ abstract final class PollService {
   }
 
   /// Kullanıcının oluşturduğu oylamalar — en yeniden eskiye.
+  ///
+  /// Sıralama BİLEREK istemci tarafında: `ownerUid` eşitliği + `createdAt`
+  /// sıralaması birleşik bir Firestore index'i gerektiriyordu ve index
+  /// deploy edilmediğinde sorgu `FAILED_PRECONDITION ("Oylamalar
+  /// yüklenemedi")` ile düşüyordu. Tek alanlı eşitlik sorgusu otomatik
+  /// index'lerle çalışır; 7 günlük oylamalar az sayıda olduğu için yerel
+  /// sıralama maliyetsiz.
   static Stream<List<Poll>> watchMine(String uid) {
-    return _col
-        .where('ownerUid', isEqualTo: uid)
-        .orderBy('createdAt', descending: true)
-        .limit(50)
-        .snapshots()
-        .map((snap) => snap.docs.map(Poll.fromDoc).toList());
+    return _col.where('ownerUid', isEqualTo: uid).snapshots().map((snap) {
+      final polls = <Poll>[];
+      for (final doc in snap.docs) {
+        // Tek bir bozuk doküman tüm listeyi düşürmesin; sebebini logla.
+        try {
+          polls.add(Poll.fromDoc(doc));
+        } catch (e, st) {
+          debugPrint('[polls] watchMine parse failed for ${doc.id}: $e\n$st');
+        }
+      }
+      polls.sort((a, b) {
+        final aDate = a.createdAt;
+        final bDate = b.createdAt;
+        if (aDate == null && bDate == null) return a.id.compareTo(b.id);
+        if (aDate == null) return 1;
+        if (bDate == null) return -1;
+        return bDate.compareTo(aDate);
+      });
+      return polls;
+    });
   }
 
   /// Tek oylamanın canlı akışı; doküman silinmişse null döner.
