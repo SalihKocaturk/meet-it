@@ -12,6 +12,8 @@ import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/match/providers/saved_venues_provider.dart';
 import 'package:meetit/features/match/services/places_service.dart';
 import 'package:meetit/features/share_links/poll.dart';
+import 'package:meetit/features/share_links/poll_detail_page.dart';
+import 'package:meetit/features/share_links/poll_management_page.dart';
 
 // ── Oylama hazırlama ekranı ──────────────────────────────────────────────────
 //
@@ -111,10 +113,16 @@ class _PollComposerPageState extends ConsumerState<PollComposerPage> {
   Future<void> _share(BuildContext btnContext) async {
     if (_sharing || _selected.length < kPollMinOptions) return;
     setState(() => _sharing = true);
-    final ok = await createAndSharePoll(btnContext, ref, List.of(_selected));
+    final id = await createAndSharePoll(btnContext, ref, List.of(_selected));
     if (!mounted) return;
     setState(() => _sharing = false);
-    if (ok) Navigator.of(context).pop();
+    if (id != null) {
+      // Oylama oluştu — kullanıcıyı doğrudan yönetim ekranına al ki linki
+      // yeniden paylaşabilsin, canlı sonuçları izleyebilsin.
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => PollDetailPage(pollId: id)),
+      );
+    }
   }
 
   @override
@@ -134,16 +142,18 @@ class _PollComposerPageState extends ConsumerState<PollComposerPage> {
     for (final record in history) {
       for (final v in record.venues) {
         if (v.placeId.isEmpty || !seen.add(v.placeId)) continue;
-        pastFound.add(PlaceResult(
-          placeId: v.placeId,
-          name: v.name,
-          vicinity: v.vicinity,
-          rating: v.rating,
-          lat: v.lat,
-          lng: v.lng,
-          types: v.types,
-          priceLevel: v.priceLevel,
-        ));
+        pastFound.add(
+          PlaceResult(
+            placeId: v.placeId,
+            name: v.name,
+            vicinity: v.vicinity,
+            rating: v.rating,
+            lat: v.lat,
+            lng: v.lng,
+            types: v.types,
+            priceLevel: v.priceLevel,
+          ),
+        );
       }
       if (pastFound.length >= 40) break;
     }
@@ -174,6 +184,17 @@ class _PollComposerPageState extends ConsumerState<PollComposerPage> {
           ),
         ),
         iconTheme: IconThemeData(color: context.colors.textPrimary),
+        actions: [
+          IconButton(
+            tooltip: 'poll.my_polls'.tr(),
+            icon: Icon(Iconsax.people, color: context.colors.textPrimary),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const PollManagementPage(),
+              ),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -194,10 +215,12 @@ class _PollComposerPageState extends ConsumerState<PollComposerPage> {
 
                 // ── Seçili seçenekler ────────────────────────────────────
                 _SectionTitle(
-                  'poll.selected_title'.tr(namedArgs: {
-                    'count': '${_selected.length}',
-                    'max': '$kPollMaxOptions',
-                  }),
+                  'poll.selected_title'.tr(
+                    namedArgs: {
+                      'count': '${_selected.length}',
+                      'max': '$kPollMaxOptions',
+                    },
+                  ),
                 ),
                 if (_selected.isEmpty)
                   Padding(
@@ -227,8 +250,10 @@ class _PollComposerPageState extends ConsumerState<PollComposerPage> {
                   textInputAction: TextInputAction.done,
                   decoration: InputDecoration(
                     hintText: 'poll.search_hint'.tr(),
-                    hintStyle:
-                        TextStyle(color: context.colors.hint, fontSize: 14),
+                    hintStyle: TextStyle(
+                      color: context.colors.hint,
+                      fontSize: 14,
+                    ),
                     prefixIcon: Icon(
                       Iconsax.search_normal_1,
                       color: context.colors.hint,
@@ -259,8 +284,10 @@ class _PollComposerPageState extends ConsumerState<PollComposerPage> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide:
-                          const BorderSide(color: Emerald.base, width: 1.5),
+                      borderSide: const BorderSide(
+                        color: Emerald.base,
+                        width: 1.5,
+                      ),
                     ),
                   ),
                 ),
@@ -269,8 +296,7 @@ class _PollComposerPageState extends ConsumerState<PollComposerPage> {
                 if (hasQuery) ...[
                   _CustomOptionTile(
                     text: _query.text.trim(),
-                    selected:
-                        _isSelected(PollOption.text(_query.text).key),
+                    selected: _isSelected(PollOption.text(_query.text).key),
                     onTap: _addCustom,
                   ),
                   if (_searching)
@@ -330,10 +356,10 @@ class _PollComposerPageState extends ConsumerState<PollComposerPage> {
                         ),
                       _PlaceTile(
                         place: source[i],
-                        selected:
-                            _isSelected(PollOption.fromPlace(source[i]).key),
-                        onTap: () =>
-                            _toggle(PollOption.fromPlace(source[i])),
+                        selected: _isSelected(
+                          PollOption.fromPlace(source[i]).key,
+                        ),
+                        onTap: () => _toggle(PollOption.fromPlace(source[i])),
                       ),
                     ],
                 ],
@@ -364,9 +390,7 @@ class _PollComposerPageState extends ConsumerState<PollComposerPage> {
                           )
                         : const Icon(Iconsax.send_2, color: Colors.white),
                     label: Text(
-                      canShare
-                          ? 'poll.share_btn'.tr()
-                          : 'poll.need_more'.tr(),
+                      canShare ? 'poll.share_btn'.tr() : 'poll.need_more'.tr(),
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -375,8 +399,9 @@ class _PollComposerPageState extends ConsumerState<PollComposerPage> {
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Emerald.base,
-                      disabledBackgroundColor:
-                          Emerald.base.withValues(alpha: 0.35),
+                      disabledBackgroundColor: Emerald.base.withValues(
+                        alpha: 0.35,
+                      ),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(24),
@@ -401,16 +426,16 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: context.colors.textPrimary,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      text,
+      style: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+        color: context.colors.textPrimary,
+      ),
+    ),
+  );
 }
 
 class _EmptyHint extends StatelessWidget {
@@ -419,15 +444,15 @@ class _EmptyHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 18),
-        child: Center(
-          child: Text(
-            text,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: context.colors.textSecondary),
-          ),
-        ),
-      );
+    padding: const EdgeInsets.symmetric(vertical: 18),
+    child: Center(
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 13, color: context.colors.textSecondary),
+      ),
+    ),
+  );
 }
 
 String _subtitle(double? rating, int? count, String? address) {
@@ -692,8 +717,9 @@ class _SourceTabs extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                         color: i == index
                             ? Colors.white
-                            : context.colors.textPrimary
-                                .withValues(alpha: 0.75),
+                            : context.colors.textPrimary.withValues(
+                                alpha: 0.75,
+                              ),
                       ),
                     ),
                   ),

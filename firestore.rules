@@ -70,6 +70,8 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         resource.data.ownerUid == request.auth.uid ||
         (
+          // Kapatılmış oylamaya sahip dışında kimse oy yazamaz.
+          (!('closed' in resource.data) || resource.data.closed == false) &&
           request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['votes', 'voterNames']) &&
           request.resource.data.votes.diff(resource.data.votes).affectedKeys()

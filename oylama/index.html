@@ -42,6 +42,8 @@
          font-weight:700; font-size:15px; background:rgba(16,185,129,.15); border:1px solid rgba(16,185,129,.45); color:#6EE7B7; }
   .err { color:#FCA5A5; text-align:center; font-size:14px; line-height:1.5; margin:16px 0; }
   .hidden { display:none; }
+  #poll.closed label, #poll.closed input { display:none; }
+  #poll.closed .opt { cursor:default; }
 </style>
 <script src="../firebase-web-config.js"></script>
 </head>
@@ -81,18 +83,23 @@
     const { db, uid } = await boot();
     const ref = doc(db, "polls", pid);
     let options = [];
+    let closed = false;
 
     onSnapshot(ref, (s) => {
       if (!s.exists()) { showErr("Bu oylama artık mevcut değil."); $("poll").classList.add("hidden"); return; }
       const d = s.data();
       options = Array.isArray(d.options) ? d.options : [];
+      closed = d.closed === true;
       const votes = d.votes || {};
       const names = d.voterNames || {};
       const counts = options.map(() => 0);
       Object.values(votes).forEach((i) => { if (counts[i] !== undefined) counts[i]++; });
       const total = counts.reduce((a, b) => a + b, 0);
       const mine = votes[uid];
+      let winner = null;
+      counts.forEach((c, i) => { if (c > 0 && (!winner || c > winner.count)) winner = { name: options[i].name, count: c }; });
       if (d.ownerName) $("title").textContent = d.ownerName + " soruyor: nerede buluşalım? 🗳️";
+      if (closed) $("desc").textContent = "Bu oylama kapandı, yeni oy alınmıyor.";
 
       $("options").innerHTML = options.map((o, i) => {
         const pct = total ? Math.round(counts[i] * 100 / total) : 0;
@@ -114,13 +121,17 @@
       }).join("");
 
       const voters = Object.keys(votes).map((k) => names[k]).filter(Boolean);
-      $("meta").textContent = total === 0
-        ? "Henüz oy yok — ilk oyu sen ver!"
-        : total + " oy" + (voters.length ? " · " + voters.slice(0, 6).join(", ") + (voters.length > 6 ? "…" : "") : "");
+      $("poll").classList.toggle("closed", closed);
+      $("meta").textContent = closed
+        ? "Oylama kapandı" + (winner ? " · Kazanan: " + winner.name : " · Oy kullanılmadı")
+        : total === 0
+          ? "Henüz oy yok — ilk oyu sen ver!"
+          : total + " oy" + (voters.length ? " · " + voters.slice(0, 6).join(", ") + (voters.length > 6 ? "…" : "") : "");
       $("poll").classList.remove("hidden");
     }, (e) => { console.error(e); showErr("Oylama yüklenemedi."); });
 
     $("options").addEventListener("click", async (ev) => {
+      if (closed) return; // oylama kapandı
       if (ev.target.closest("[data-link]")) return; // harita linki
       const el = ev.target.closest(".opt");
       if (!el) return;

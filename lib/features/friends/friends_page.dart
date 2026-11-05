@@ -17,6 +17,8 @@ import 'package:meetit/features/match/providers/match_provider.dart';
 import 'package:meetit/features/personality/models/personality_model.dart';
 import 'package:meetit/core/widgets/app_alert.dart';
 import 'package:meetit/core/widgets/network_status_banner.dart';
+import 'package:meetit/features/share_links/poll_management_page.dart';
+import 'package:meetit/features/share_links/providers/polls_provider.dart';
 
 // Arkadaşlar sekmesindeki arama metni için provider
 final friendsSearchProvider = StateProvider.autoDispose<String>((ref) => '');
@@ -33,6 +35,7 @@ class FriendsPage extends ConsumerWidget {
     final invitationsCount = ref.watch(invitationsCountProvider);
     final sentCount = ref.watch(sentRequestsProvider).length;
     final connectionsCount = ref.watch(connectionsCountProvider);
+    final livePolls = ref.watch(livePollCountProvider);
     final requestsBadge = invitationsCount + sentCount;
 
     // Misafir: arkadaşlık hesap gerektirir.
@@ -105,37 +108,87 @@ class FriendsPage extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  // Arkadaş kodu butonu
-                  GestureDetector(
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const FriendCodePage()),
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 7,
-                      ),
-                      decoration: Emerald.tint(radius: 20),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Iconsax.hashtag,
-                            size: 14,
-                            color: context.accentOnTint,
+                  // Arkadaş kodu + oylama yönetimi butonları
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const FriendCodePage(),
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'friends.my_code'.tr(),
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: context.accentOnTint,
-                            ),
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 7,
                           ),
-                        ],
+                          decoration: Emerald.tint(radius: 20),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Iconsax.hashtag,
+                                size: 14,
+                                color: context.accentOnTint,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'friends.my_code'.tr(),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: context.accentOnTint,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 6),
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const PollManagementPage(),
+                          ),
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: context.colors.card,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: context.colors.border),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Iconsax.people,
+                                size: 14,
+                                color: context.accentStrong,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                livePolls > 0
+                                    ? 'poll.my_polls_badge'.tr(
+                                        namedArgs: {'count': '$livePolls'},
+                                      )
+                                    : 'poll.my_polls'.tr(),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: context.colors.textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -179,7 +232,9 @@ class FriendsPage extends ConsumerWidget {
                     ),
                     _TabButton(
                       label: requestsBadge > 0
-                          ? 'friends.tab_requests_badge'.tr(namedArgs: {'count': '$requestsBadge'})
+                          ? 'friends.tab_requests_badge'.tr(
+                              namedArgs: {'count': '$requestsBadge'},
+                            )
                           : 'friends.tab_requests'.tr(),
                       isSelected: tabIndex == 1,
                       onTap: () =>
@@ -187,7 +242,9 @@ class FriendsPage extends ConsumerWidget {
                       hasBadge: invitationsCount > 0,
                     ),
                     _TabButton(
-                      label: 'friends.tab_my_friends'.tr(namedArgs: {'count': '$connectionsCount'}),
+                      label: 'friends.tab_my_friends'.tr(
+                        namedArgs: {'count': '$connectionsCount'},
+                      ),
                       isSelected: tabIndex == 2,
                       onTap: () =>
                           ref.read(friendsTabIndexProvider.notifier).state = 2,
@@ -353,7 +410,11 @@ class _SuggestionsTab extends ConsumerWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: _listPadding(context),
       children: [
-        _SectionHeader(title: 'friends.suggestions_section'.tr(namedArgs: {'count': '${suggestions.length}'})),
+        _SectionHeader(
+          title: 'friends.suggestions_section'.tr(
+            namedArgs: {'count': '${suggestions.length}'},
+          ),
+        ),
         ...suggestions.map((f) => _SuggestionTile(friend: f)),
         if (suggestions.isEmpty)
           Padding(
@@ -429,13 +490,21 @@ class _RequestsTab extends ConsumerWidget {
       children: [
         // Gelen istekler
         if (incoming.isNotEmpty) ...[
-          _SectionHeader(title: 'friends.incoming_section'.tr(namedArgs: {'count': '${incoming.length}'})),
+          _SectionHeader(
+            title: 'friends.incoming_section'.tr(
+              namedArgs: {'count': '${incoming.length}'},
+            ),
+          ),
           ...incoming.map((f) => _InvitationTile(friend: f)),
           const SizedBox(height: 16),
         ],
         // Gönderilen istekler
         if (sent.isNotEmpty) ...[
-          _SectionHeader(title: 'friends.sent_section'.tr(namedArgs: {'count': '${sent.length}'})),
+          _SectionHeader(
+            title: 'friends.sent_section'.tr(
+              namedArgs: {'count': '${sent.length}'},
+            ),
+          ),
           ...sent.map((f) => _SentRequestTile(friend: f)),
           const SizedBox(height: 16),
         ],
@@ -459,7 +528,11 @@ class _ConnectionsTab extends ConsumerWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: _listPadding(context),
       children: [
-        _SectionHeader(title: 'friends.my_friends_section'.tr(namedArgs: {'count': '$connectionsCount'})),
+        _SectionHeader(
+          title: 'friends.my_friends_section'.tr(
+            namedArgs: {'count': '$connectionsCount'},
+          ),
+        ),
         ...connections.map((f) => _ConnectionTile(friend: f)),
         if (connections.isEmpty)
           Padding(
@@ -532,31 +605,35 @@ class _SuggestionTile extends ConsumerWidget {
                     color: context.colors.textPrimary,
                   ),
                 ),
-                Builder(builder: (context) {
-                  // Her satırda aynı biçim: "Kişilik tipi · N ortak arkadaş"
-                  // (olanlar). Eskiden bazılarında ortak arkadaş, bazılarında
-                  // @kullaniciadi yazıyordu — dikey taramada dağınık duruyordu.
-                  final mutual =
-                      ref.watch(friendsProvider).mutualCounts[friend.uid] ?? 0;
-                  final parts = [
-                    if (mutual > 0)
-                      'friends.mutual_count'
-                          .tr(namedArgs: {'count': '$mutual'}),
-                    if (friend.personalityProfile != null)
-                      friend.personalityProfile!.dominantType.displayName,
-                  ];
-                  return Text(
-                    parts.isEmpty
-                        ? 'friends.suggestion_new'.tr()
-                        : parts.join(' · '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: context.colors.textSecondary,
-                    ),
-                  );
-                }),
+                Builder(
+                  builder: (context) {
+                    // Her satırda aynı biçim: "Kişilik tipi · N ortak arkadaş"
+                    // (olanlar). Eskiden bazılarında ortak arkadaş, bazılarında
+                    // @kullaniciadi yazıyordu — dikey taramada dağınık duruyordu.
+                    final mutual =
+                        ref.watch(friendsProvider).mutualCounts[friend.uid] ??
+                        0;
+                    final parts = [
+                      if (mutual > 0)
+                        'friends.mutual_count'.tr(
+                          namedArgs: {'count': '$mutual'},
+                        ),
+                      if (friend.personalityProfile != null)
+                        friend.personalityProfile!.dominantType.displayName,
+                    ];
+                    return Text(
+                      parts.isEmpty
+                          ? 'friends.suggestion_new'.tr()
+                          : parts.join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.colors.textSecondary,
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -571,8 +648,10 @@ class _SuggestionTile extends ConsumerWidget {
                   .read(friendsProvider.notifier)
                   .sendFriendRequest(friend.uid),
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Text(
                   'friends.add_short'.tr(),
                   style: TextStyle(
@@ -616,7 +695,9 @@ class _InvitationTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final daysAgo = DateTime.now().difference(friend.addedAt).inDays;
-    final timeText = daysAgo == 0 ? 'friends.today'.tr() : '$daysAgo ${'time.days_ago'.tr()}';
+    final timeText = daysAgo == 0
+        ? 'friends.today'.tr()
+        : '$daysAgo ${'time.days_ago'.tr()}';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -775,7 +856,9 @@ class _SentRequestTile extends ConsumerWidget {
                 context: context,
                 type: AppAlertType.confirm,
                 title: 'friends.cancel_request'.tr(),
-                text: 'friends.cancel_request_confirm'.tr(namedArgs: {'name': friend.name}),
+                text: 'friends.cancel_request_confirm'.tr(
+                  namedArgs: {'name': friend.name},
+                ),
                 confirmBtnText: 'friends.cancel_btn'.tr(),
                 cancelBtnText: 'common.cancel'.tr(),
                 confirmBtnColor: Colors.red,
@@ -793,7 +876,11 @@ class _SentRequestTile extends ConsumerWidget {
                 color: Colors.red.withOpacity(0.08),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Iconsax.close_circle, size: 16, color: Colors.red),
+              child: const Icon(
+                Iconsax.close_circle,
+                size: 16,
+                color: Colors.red,
+              ),
             ),
           ),
         ],
@@ -847,13 +934,19 @@ class _ConnectionTile extends ConsumerWidget {
                           Row(
                             children: [
                               Icon(
-                                friend.personalityProfile!.dominantType.iconsaxIcon,
+                                friend
+                                    .personalityProfile!
+                                    .dominantType
+                                    .iconsaxIcon,
                                 size: 12,
                                 color: context.colors.textSecondary,
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                friend.personalityProfile!.dominantType.displayName,
+                                friend
+                                    .personalityProfile!
+                                    .dominantType
+                                    .displayName,
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: context.colors.textSecondary,
@@ -912,7 +1005,9 @@ class _ConnectionTile extends ConsumerWidget {
                 context: context,
                 type: AppAlertType.confirm,
                 title: 'friends.unfriend_title'.tr(),
-                text: 'friends.unfriend_confirm'.tr(namedArgs: {'name': friend.name}),
+                text: 'friends.unfriend_confirm'.tr(
+                  namedArgs: {'name': friend.name},
+                ),
                 confirmBtnText: 'friends.unfriend'.tr(),
                 cancelBtnText: 'common.cancel'.tr(),
                 confirmBtnColor: Colors.red,
@@ -942,9 +1037,5 @@ class _ConnectionTile extends ConsumerWidget {
 }
 
 /// Liste kenar boşluğu — altta yüzen cam navigasyon barı kadar ek boşluk.
-EdgeInsets _listPadding(BuildContext context) => EdgeInsets.fromLTRB(
-      20,
-      0,
-      20,
-      MediaQuery.paddingOf(context).bottom + 16,
-    );
+EdgeInsets _listPadding(BuildContext context) =>
+    EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.paddingOf(context).bottom + 16);
